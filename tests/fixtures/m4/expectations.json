@@ -1,0 +1,42 @@
+{
+  "four_episodes": {
+    "N": 4,
+    "raw": 4,
+    "P": "4",
+    "Q": "4",
+    "C": 1,
+    "ratio": "1",
+    "state": "compatible_with_classical",
+    "fifths": 3
+  },
+  "four_chordal": {
+    "N": 4,
+    "raw": 4,
+    "P": "4",
+    "Q": "4",
+    "C": 1,
+    "ratio": "1",
+    "state": "compatible_with_classical",
+    "fifths": 0
+  },
+  "sixty_percent": {
+    "N": 4,
+    "raw": 4,
+    "P": "5",
+    "Q": "3",
+    "C": 1,
+    "ratio": "3/5",
+    "state": "compatible_with_classical",
+    "fifths": 3
+  },
+  "below_sixty": {
+    "N": 4,
+    "raw": 4,
+    "P": "21/4",
+    "Q": "3",
+    "C": 1,
+    "ratio": "4/7",
+    "state": "insufficient_evidence",
+    "fifths": 3
+  }
+}

@@ -1,0 +1,877 @@
+{
+  "schema_version": "0.1",
+  "profile_id": "classical",
+  "profile_version": "1.0",
+  "policy_id": "m4_classical_compatibility_v1",
+  "source_sha256": "b6acd50db9420d8b1cea131c16f75d492a669aa8cd527b078791b146e2444fb0",
+  "options": {
+    "key_override": null,
+    "target_style": null,
+    "voice_order": null,
+    "ranges": {},
+    "midi": {
+      "quantize_post": true,
+      "quarter_length_divisors": [
+        4,
+        3
+      ]
+    }
+  },
+  "context": "global",
+  "state": "compatible_with_classical",
+  "confidence": {
+    "level": "low",
+    "reason_code": "style_limited_compatibility",
+    "explanation": "V0.1 uses a provisional limited convention with low style confidence."
+  },
+  "explanation": "The available evidence meets the limited Classical compatibility convention. This does not establish a unique style, composer, authorship or musical quality. Supported features coexist with potentially intentional departures.",
+  "key_prerequisite_reason": null,
+  "raw_qualifying_span_count": 4,
+  "tonal_episode_count": 4,
+  "tonal_episode_gate": "four counted tonal episodes from recognized harmonic spans",
+  "episodes": [
+    {
+      "start": {
+        "numerator": 2,
+        "denominator": 1
+      },
+      "end": {
+        "numerator": 11,
+        "denominator": 4
+      },
+      "harmony_ids": [
+        "h000002"
+      ],
+      "spelled_classes": [
+        "C",
+        "E",
+        "G"
+      ],
+      "root": "C",
+      "quality": "major",
+      "key_reference_id": "kref0001"
+    },
+    {
+      "start": {
+        "numerator": 11,
+        "denominator": 4
+      },
+      "end": {
+        "numerator": 7,
+        "denominator": 2
+      },
+      "harmony_ids": [
+        "h000003"
+      ],
+      "spelled_classes": [
+        "A",
+        "D",
+        "F"
+      ],
+      "root": "D",
+      "quality": "minor",
+      "key_reference_id": "kref0001"
+    },
+    {
+      "start": {
+        "numerator": 7,
+        "denominator": 2
+      },
+      "end": {
+        "numerator": 17,
+        "denominator": 4
+      },
+      "harmony_ids": [
+        "h000004"
+      ],
+      "spelled_classes": [
+        "B",
+        "D",
+        "G"
+      ],
+      "root": "G",
+      "quality": "major",
+      "key_reference_id": "kref0001"
+    },
+    {
+      "start": {
+        "numerator": 17,
+        "denominator": 4
+      },
+      "end": {
+        "numerator": 5,
+        "denominator": 1
+      },
+      "harmony_ids": [
+        "h000005"
+      ],
+      "spelled_classes": [
+        "C",
+        "E",
+        "G"
+      ],
+      "root": "C",
+      "quality": "major",
+      "key_reference_id": "kref0001"
+    }
+  ],
+  "pitched_intervals": [
+    {
+      "start": {
+        "numerator": 0,
+        "denominator": 1
+      },
+      "end": {
+        "numerator": 5,
+        "denominator": 1
+      }
+    }
+  ],
+  "tonal_intervals": [
+    {
+      "start": {
+        "numerator": 2,
+        "denominator": 1
+      },
+      "end": {
+        "numerator": 5,
+        "denominator": 1
+      }
+    }
+  ],
+  "unavailable_intervals": [
+    {
+      "start": {
+        "numerator": 0,
+        "denominator": 1
+      },
+      "end": {
+        "numerator": 2,
+        "denominator": 1
+      }
+    }
+  ],
+  "pitched_duration": {
+    "numerator": 5,
+    "denominator": 1
+  },
+  "recognized_tonal_duration": {
+    "numerator": 3,
+    "denominator": 1
+  },
+  "recognized_tonal_ratio": {
+    "numerator": 3,
+    "denominator": 5
+  },
+  "cadence_candidate_count": 1,
+  "failed_gates": [],
+  "applicability": [
+    {
+      "rule_id": "harmony_classification",
+      "upstream_coverage": [
+        {
+          "id": "cv0004",
+          "rule_id": "harmony_classification",
+          "implementation_state": "implemented",
+          "status": "partial",
+          "unit": "harmonic_span",
+          "scope": {
+            "kind": "global",
+            "start": null,
+            "end": null,
+            "references": {
+              "part_ids": [],
+              "voice_ids": [],
+              "measure_ids": [],
+              "event_ids": [],
+              "source_segment_ids": [],
+              "chord_group_ids": [],
+              "region_ids": []
+            }
+          },
+          "candidate_count": 5,
+          "eligible_count": 4,
+          "checked_count": 4,
+          "skipped_count": 1,
+          "flagged_count": 0,
+          "reason_codes": [
+            "incomplete_sonority"
+          ],
+          "exclusions": [
+            {
+              "unit_ids": [
+                "[\"harmonic_span\",[{\"denominator\":1,\"numerator\":0},{\"denominator\":1,\"numerator\":2}]]"
+              ],
+              "count": 1,
+              "reason_code": "incomplete_sonority",
+              "evidence": []
+            }
+          ],
+          "stages": [
+            {
+              "stage": "chord",
+              "unit": "harmonic_span",
+              "status": "complete",
+              "candidate_count": 5,
+              "eligible_count": 5,
+              "checked_count": 5,
+              "skipped_count": 0,
+              "flagged_count": 0,
+              "reason_codes": [
+                "executed"
+              ],
+              "exclusions": []
+            },
+            {
+              "stage": "roman",
+              "unit": "harmonic_span",
+              "status": "partial",
+              "candidate_count": 5,
+              "eligible_count": 4,
+              "checked_count": 4,
+              "skipped_count": 1,
+              "flagged_count": 0,
+              "reason_codes": [
+                "incomplete_sonority"
+              ],
+              "exclusions": [
+                {
+                  "unit_ids": [
+                    "[\"harmonic_span\",[{\"denominator\":1,\"numerator\":0},{\"denominator\":1,\"numerator\":2}]]"
+                  ],
+                  "count": 1,
+                  "reason_code": "incomplete_sonority",
+                  "evidence": []
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "availability": "partial",
+      "supportive_count": 4,
+      "conflicting_count": 0,
+      "unavailable": [
+        {
+          "reason_codes": [
+            "incomplete_sonority"
+          ],
+          "source_references": {
+            "harmony_ids": [
+              "h000001"
+            ],
+            "cadence_ids": [],
+            "diagnostic_ids": [],
+            "limitation_ids": [],
+            "coverage_ids": [
+              "cv0004"
+            ]
+          },
+          "source_unit_ids": [],
+          "evidence": [
+            {
+              "kind": "harmony_analysis",
+              "references": {
+                "part_ids": [
+                  "p0001"
+                ],
+                "voice_ids": [
+                  "p0001:v0001"
+                ],
+                "measure_ids": [
+                  "p0001:m0001"
+                ],
+                "event_ids": [
+                  "p0001:v0001:e000001"
+                ],
+                "source_segment_ids": [
+                  "p0001:v0001:s000001"
+                ],
+                "chord_group_ids": [],
+                "region_ids": [
+                  "p0001:v0001:r000001",
+                  "p0002:v0001:r000001",
+                  "p0003:v0001:r000001"
+                ]
+              },
+              "spelled_classes": [
+                "C"
+              ],
+              "chromatic_classes": [
+                0
+              ],
+              "bass_event_ids": [
+                "p0001:v0001:e000001"
+              ],
+              "bass_pitch": {
+                "step": "C",
+                "alteration": 0,
+                "octave": 3,
+                "chromatic_number": 48,
+                "provenance": "concert_notation"
+              },
+              "root": null,
+              "quality": null,
+              "inversion": null,
+              "seventh": null,
+              "chord_state": "checked",
+              "chord_reason": "incomplete_sonority",
+              "shape_confidence": {
+                "level": "low",
+                "reason_code": "m3_surface_harmony",
+                "explanation": "Confidence concerns the stated observation under the explicit policy, not score quality or intent."
+              },
+              "roman_state": "skipped",
+              "roman_reason": "incomplete_sonority",
+              "scale_degree": null,
+              "alteration": null,
+              "figure": null,
+              "function_state": "skipped",
+              "function_reason": "incomplete_sonority",
+              "function_branch": "unknown",
+              "surface_flags": [],
+              "changed_event_ids": [],
+              "held_event_ids": []
+            }
+          ]
+        },
+        {
+          "reason_codes": [
+            "incomplete_sonority"
+          ],
+          "source_references": {
+            "harmony_ids": [],
+            "cadence_ids": [],
+            "diagnostic_ids": [],
+            "limitation_ids": [],
+            "coverage_ids": [
+              "cv0004"
+            ]
+          },
+          "source_unit_ids": [
+            "[\"harmonic_span\",[{\"denominator\":1,\"numerator\":0},{\"denominator\":1,\"numerator\":2}]]"
+          ],
+          "evidence": [
+            {
+              "kind": "coverage",
+              "coverage_ids": [
+                "cv0004"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "rule_id": "harmonic_function",
+      "upstream_coverage": [
+        {
+          "id": "cv0005",
+          "rule_id": "harmonic_function",
+          "implementation_state": "implemented",
+          "status": "partial",
+          "unit": "harmonic_span",
+          "scope": {
+            "kind": "global",
+            "start": null,
+            "end": null,
+            "references": {
+              "part_ids": [],
+              "voice_ids": [],
+              "measure_ids": [],
+              "event_ids": [],
+              "source_segment_ids": [],
+              "chord_group_ids": [],
+              "region_ids": []
+            }
+          },
+          "candidate_count": 5,
+          "eligible_count": 4,
+          "checked_count": 4,
+          "skipped_count": 1,
+          "flagged_count": 0,
+          "reason_codes": [
+            "incomplete_sonority"
+          ],
+          "exclusions": [
+            {
+              "unit_ids": [
+                "[\"harmonic_span\",[{\"denominator\":1,\"numerator\":0},{\"denominator\":1,\"numerator\":2}]]"
+              ],
+              "count": 1,
+              "reason_code": "incomplete_sonority",
+              "evidence": []
+            }
+          ],
+          "stages": []
+        }
+      ],
+      "availability": "partial",
+      "supportive_count": 4,
+      "conflicting_count": 0,
+      "unavailable": [
+        {
+          "reason_codes": [
+            "incomplete_sonority"
+          ],
+          "source_references": {
+            "harmony_ids": [
+              "h000001"
+            ],
+            "cadence_ids": [],
+            "diagnostic_ids": [],
+            "limitation_ids": [],
+            "coverage_ids": [
+              "cv0005"
+            ]
+          },
+          "source_unit_ids": [],
+          "evidence": [
+            {
+              "kind": "harmony_analysis",
+              "references": {
+                "part_ids": [
+                  "p0001"
+                ],
+                "voice_ids": [
+                  "p0001:v0001"
+                ],
+                "measure_ids": [
+                  "p0001:m0001"
+                ],
+                "event_ids": [
+                  "p0001:v0001:e000001"
+                ],
+                "source_segment_ids": [
+                  "p0001:v0001:s000001"
+                ],
+                "chord_group_ids": [],
+                "region_ids": [
+                  "p0001:v0001:r000001",
+                  "p0002:v0001:r000001",
+                  "p0003:v0001:r000001"
+                ]
+              },
+              "spelled_classes": [
+                "C"
+              ],
+              "chromatic_classes": [
+                0
+              ],
+              "bass_event_ids": [
+                "p0001:v0001:e000001"
+              ],
+              "bass_pitch": {
+                "step": "C",
+                "alteration": 0,
+                "octave": 3,
+                "chromatic_number": 48,
+                "provenance": "concert_notation"
+              },
+              "root": null,
+              "quality": null,
+              "inversion": null,
+              "seventh": null,
+              "chord_state": "checked",
+              "chord_reason": "incomplete_sonority",
+              "shape_confidence": {
+                "level": "low",
+                "reason_code": "m3_surface_harmony",
+                "explanation": "Confidence concerns the stated observation under the explicit policy, not score quality or intent."
+              },
+              "roman_state": "skipped",
+              "roman_reason": "incomplete_sonority",
+              "scale_degree": null,
+              "alteration": null,
+              "figure": null,
+              "function_state": "skipped",
+              "function_reason": "incomplete_sonority",
+              "function_branch": "unknown",
+              "surface_flags": [],
+              "changed_event_ids": [],
+              "held_event_ids": []
+            }
+          ]
+        },
+        {
+          "reason_codes": [
+            "incomplete_sonority"
+          ],
+          "source_references": {
+            "harmony_ids": [],
+            "cadence_ids": [],
+            "diagnostic_ids": [],
+            "limitation_ids": [],
+            "coverage_ids": [
+              "cv0005"
+            ]
+          },
+          "source_unit_ids": [
+            "[\"harmonic_span\",[{\"denominator\":1,\"numerator\":0},{\"denominator\":1,\"numerator\":2}]]"
+          ],
+          "evidence": [
+            {
+              "kind": "coverage",
+              "coverage_ids": [
+                "cv0005"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "rule_id": "cadence_detection",
+      "upstream_coverage": [
+        {
+          "id": "cv0011",
+          "rule_id": "cadence_detection",
+          "implementation_state": "implemented",
+          "status": "partial",
+          "unit": "candidate_ending_boundary",
+          "scope": {
+            "kind": "global",
+            "start": null,
+            "end": null,
+            "references": {
+              "part_ids": [],
+              "voice_ids": [],
+              "measure_ids": [],
+              "event_ids": [],
+              "source_segment_ids": [],
+              "chord_group_ids": [],
+              "region_ids": []
+            }
+          },
+          "candidate_count": 5,
+          "eligible_count": 4,
+          "checked_count": 4,
+          "skipped_count": 1,
+          "flagged_count": 1,
+          "reason_codes": [
+            "incomplete_sonority"
+          ],
+          "exclusions": [
+            {
+              "unit_ids": [
+                "[\"candidate_ending_boundary\",[{\"denominator\":1,\"numerator\":0},{\"denominator\":1,\"numerator\":2}],[\"h000001\"]]"
+              ],
+              "count": 1,
+              "reason_code": "incomplete_sonority",
+              "evidence": []
+            }
+          ],
+          "stages": []
+        }
+      ],
+      "availability": "partial",
+      "supportive_count": 1,
+      "conflicting_count": 0,
+      "unavailable": [
+        {
+          "reason_codes": [
+            "incomplete_sonority"
+          ],
+          "source_references": {
+            "harmony_ids": [],
+            "cadence_ids": [],
+            "diagnostic_ids": [],
+            "limitation_ids": [],
+            "coverage_ids": [
+              "cv0011"
+            ]
+          },
+          "source_unit_ids": [
+            "[\"candidate_ending_boundary\",[{\"denominator\":1,\"numerator\":0},{\"denominator\":1,\"numerator\":2}],[\"h000001\"]]"
+          ],
+          "evidence": [
+            {
+              "kind": "coverage",
+              "coverage_ids": [
+                "cv0011"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "rule_id": "parallel_fifths",
+      "upstream_coverage": [
+        {
+          "id": "cv0006",
+          "rule_id": "parallel_fifths",
+          "implementation_state": "implemented",
+          "status": "partial",
+          "unit": "voice_pair_transition",
+          "scope": {
+            "kind": "global",
+            "start": null,
+            "end": null,
+            "references": {
+              "part_ids": [],
+              "voice_ids": [],
+              "measure_ids": [],
+              "event_ids": [],
+              "source_segment_ids": [],
+              "chord_group_ids": [],
+              "region_ids": []
+            }
+          },
+          "candidate_count": 12,
+          "eligible_count": 9,
+          "checked_count": 9,
+          "skipped_count": 3,
+          "flagged_count": 3,
+          "reason_codes": [
+            "rest"
+          ],
+          "exclusions": [
+            {
+              "unit_ids": [
+                "[\"voice_pair_transition\",\"p0001:v0001\",\"p0002:v0001\",[{\"denominator\":1,\"numerator\":0},{\"denominator\":1,\"numerator\":2}],[{\"denominator\":1,\"numerator\":2},{\"denominator\":4,\"numerator\":11}]]",
+                "[\"voice_pair_transition\",\"p0001:v0001\",\"p0003:v0001\",[{\"denominator\":1,\"numerator\":0},{\"denominator\":1,\"numerator\":2}],[{\"denominator\":1,\"numerator\":2},{\"denominator\":4,\"numerator\":11}]]",
+                "[\"voice_pair_transition\",\"p0002:v0001\",\"p0003:v0001\",[{\"denominator\":1,\"numerator\":0},{\"denominator\":1,\"numerator\":2}],[{\"denominator\":1,\"numerator\":2},{\"denominator\":4,\"numerator\":11}]]"
+              ],
+              "count": 3,
+              "reason_code": "rest",
+              "evidence": []
+            }
+          ],
+          "stages": []
+        }
+      ],
+      "availability": "partial",
+      "supportive_count": 0,
+      "conflicting_count": 3,
+      "unavailable": [
+        {
+          "reason_codes": [
+            "rest"
+          ],
+          "source_references": {
+            "harmony_ids": [],
+            "cadence_ids": [],
+            "diagnostic_ids": [],
+            "limitation_ids": [],
+            "coverage_ids": [
+              "cv0006"
+            ]
+          },
+          "source_unit_ids": [
+            "[\"voice_pair_transition\",\"p0001:v0001\",\"p0002:v0001\",[{\"denominator\":1,\"numerator\":0},{\"denominator\":1,\"numerator\":2}],[{\"denominator\":1,\"numerator\":2},{\"denominator\":4,\"numerator\":11}]]",
+            "[\"voice_pair_transition\",\"p0001:v0001\",\"p0003:v0001\",[{\"denominator\":1,\"numerator\":0},{\"denominator\":1,\"numerator\":2}],[{\"denominator\":1,\"numerator\":2},{\"denominator\":4,\"numerator\":11}]]",
+            "[\"voice_pair_transition\",\"p0002:v0001\",\"p0003:v0001\",[{\"denominator\":1,\"numerator\":0},{\"denominator\":1,\"numerator\":2}],[{\"denominator\":1,\"numerator\":2},{\"denominator\":4,\"numerator\":11}]]"
+          ],
+          "evidence": [
+            {
+              "kind": "coverage",
+              "coverage_ids": [
+                "cv0006"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "rule_id": "parallel_octaves",
+      "upstream_coverage": [
+        {
+          "id": "cv0007",
+          "rule_id": "parallel_octaves",
+          "implementation_state": "implemented",
+          "status": "partial",
+          "unit": "voice_pair_transition",
+          "scope": {
+            "kind": "global",
+            "start": null,
+            "end": null,
+            "references": {
+              "part_ids": [],
+              "voice_ids": [],
+              "measure_ids": [],
+              "event_ids": [],
+              "source_segment_ids": [],
+              "chord_group_ids": [],
+              "region_ids": []
+            }
+          },
+          "candidate_count": 12,
+          "eligible_count": 9,
+          "checked_count": 9,
+          "skipped_count": 3,
+          "flagged_count": 0,
+          "reason_codes": [
+            "rest"
+          ],
+          "exclusions": [
+            {
+              "unit_ids": [
+                "[\"voice_pair_transition\",\"p0001:v0001\",\"p0002:v0001\",[{\"denominator\":1,\"numerator\":0},{\"denominator\":1,\"numerator\":2}],[{\"denominator\":1,\"numerator\":2},{\"denominator\":4,\"numerator\":11}]]",
+                "[\"voice_pair_transition\",\"p0001:v0001\",\"p0003:v0001\",[{\"denominator\":1,\"numerator\":0},{\"denominator\":1,\"numerator\":2}],[{\"denominator\":1,\"numerator\":2},{\"denominator\":4,\"numerator\":11}]]",
+                "[\"voice_pair_transition\",\"p0002:v0001\",\"p0003:v0001\",[{\"denominator\":1,\"numerator\":0},{\"denominator\":1,\"numerator\":2}],[{\"denominator\":1,\"numerator\":2},{\"denominator\":4,\"numerator\":11}]]"
+              ],
+              "count": 3,
+              "reason_code": "rest",
+              "evidence": []
+            }
+          ],
+          "stages": []
+        }
+      ],
+      "availability": "partial",
+      "supportive_count": 0,
+      "conflicting_count": 0,
+      "unavailable": [
+        {
+          "reason_codes": [
+            "rest"
+          ],
+          "source_references": {
+            "harmony_ids": [],
+            "cadence_ids": [],
+            "diagnostic_ids": [],
+            "limitation_ids": [],
+            "coverage_ids": [
+              "cv0007"
+            ]
+          },
+          "source_unit_ids": [
+            "[\"voice_pair_transition\",\"p0001:v0001\",\"p0002:v0001\",[{\"denominator\":1,\"numerator\":0},{\"denominator\":1,\"numerator\":2}],[{\"denominator\":1,\"numerator\":2},{\"denominator\":4,\"numerator\":11}]]",
+            "[\"voice_pair_transition\",\"p0001:v0001\",\"p0003:v0001\",[{\"denominator\":1,\"numerator\":0},{\"denominator\":1,\"numerator\":2}],[{\"denominator\":1,\"numerator\":2},{\"denominator\":4,\"numerator\":11}]]",
+            "[\"voice_pair_transition\",\"p0002:v0001\",\"p0003:v0001\",[{\"denominator\":1,\"numerator\":0},{\"denominator\":1,\"numerator\":2}],[{\"denominator\":1,\"numerator\":2},{\"denominator\":4,\"numerator\":11}]]"
+          ],
+          "evidence": [
+            {
+              "kind": "coverage",
+              "coverage_ids": [
+                "cv0007"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "rule_id": "unresolved_seventh",
+      "upstream_coverage": [
+        {
+          "id": "cv0010",
+          "rule_id": "unresolved_seventh",
+          "implementation_state": "implemented",
+          "status": "skipped",
+          "unit": "seventh_voice_harmony_transition",
+          "scope": {
+            "kind": "global",
+            "start": null,
+            "end": null,
+            "references": {
+              "part_ids": [],
+              "voice_ids": [],
+              "measure_ids": [],
+              "event_ids": [],
+              "source_segment_ids": [],
+              "chord_group_ids": [],
+              "region_ids": []
+            }
+          },
+          "candidate_count": 0,
+          "eligible_count": 0,
+          "checked_count": 0,
+          "skipped_count": 0,
+          "flagged_count": 0,
+          "reason_codes": [
+            "no_candidate_units"
+          ],
+          "exclusions": [],
+          "stages": []
+        }
+      ],
+      "availability": "unavailable",
+      "supportive_count": 0,
+      "conflicting_count": 0,
+      "unavailable": [
+        {
+          "reason_codes": [
+            "no_candidate_units"
+          ],
+          "source_references": {
+            "harmony_ids": [],
+            "cadence_ids": [],
+            "diagnostic_ids": [],
+            "limitation_ids": [],
+            "coverage_ids": [
+              "cv0010"
+            ]
+          },
+          "source_unit_ids": [],
+          "evidence": [
+            {
+              "kind": "coverage",
+              "coverage_ids": [
+                "cv0010"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "omissions": [
+    {
+      "start": {
+        "numerator": 0,
+        "denominator": 1
+      },
+      "end": {
+        "numerator": 2,
+        "denominator": 1
+      },
+      "reason_codes": [
+        "incomplete_sonority",
+        "style_upstream_unavailable"
+      ],
+      "references": {
+        "part_ids": [],
+        "voice_ids": [],
+        "measure_ids": [],
+        "event_ids": [
+          "p0001:v0001:e000001"
+        ],
+        "source_segment_ids": [],
+        "chord_group_ids": [],
+        "region_ids": []
+      },
+      "source_references": {
+        "harmony_ids": [
+          "h000001"
+        ],
+        "cadence_ids": [],
+        "diagnostic_ids": [],
+        "limitation_ids": [],
+        "coverage_ids": [
+          "cv0004",
+          "cv0005"
+        ]
+      }
+    }
+  ],
+  "limitations": [
+    "style_profile_v1",
+    "style_limited_compatibility",
+    "style_upstream_unavailable",
+    "style_potentially_intentional_conflict"
+  ],
+  "assumptions": [
+    "One global M2 reference; no local-key tracking.",
+    "M3 surface collections are not structural harmony.",
+    "Independent voices only where M3 supports them; source spelling and concert pitch retained.",
+    "Actual M3 ending cues required; incomplete contexts remain incomplete.",
+    "Provisional engineering convention; one supported profile, no comparison against other styles.",
+    "Selected key, recognized chord or supported cadence alone does not establish compatibility."
+  ],
+  "supportive_observation_count": 9,
+  "conflicting_observation_count": 3,
+  "unavailable_observation_count": 8
+}

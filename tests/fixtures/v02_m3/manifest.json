@@ -1,0 +1,13 @@
+{
+  "authorship": "Original bounded M3 engineering controls; no acquisition.",
+  "files": {
+    "ambiguity.musicxml": "3d934d4c51d1ada400cbfef692824bf40aa698079ca3c109ce51af9fe162fd59",
+    "enharmonic.musicxml": "dc146721eeac08b6d30da259f0a2afe4100ed33b3e573f1026ca91af98eec6de",
+    "expectations.json": "a3b559e7ea25f458be1823ac66a6593ce7415d4ec75fd1abc66cf7f67e147610",
+    "long.musicxml": "fb45dba0c402c0576d06cf6c827dd96986ecba7127e9a886c70a037e90d1b2f0",
+    "orchestra.musicxml": "0d4f1c85d72bf7acdb1dd97bf887827dea52798f2000e4aaffbee28a7bc40663",
+    "sequence.musicxml": "e2a32197c2bbf90d79fa0f36c011153d7bac59cb1ca72024aa7d273e0bcaac82",
+    "solo.musicxml": "2b3d079652d6e50280f5854eb88dd47ecfdb59d844ab9de606e404f6a9c799c0",
+    "trio.musicxml": "c8b15a4be6d14f94993a75e39bd5bbfc447cf03229e242fd2f92e508272d54e4"
+  }
+}

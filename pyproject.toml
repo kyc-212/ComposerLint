@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "composerlint"
+version = "0.2.0"
+description = "Local evidence-based score review and verified bounded editing through MCP"
+authors = [{ name = "Kenneth" }]
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+dependencies = ["music21==10.5.0", "pydantic>=2.11,<3", "mcp==2.3.0"]
+
+[project.scripts]
+composerlint-mcp = "composerlint.server:main"
+
+[dependency-groups]
+dev = ["pytest>=8,<10", "hatchling==1.27.0"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/composerlint"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+# Source archives use a reviewed allowlist rather than the developer workspace.
+[tool.hatch.build.targets.sdist]
+only-include = ["src", "skills", "tests", "examples", "LICENSES", "patches", ".gitignore", "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md", "pyproject.toml", "uv.lock", "requirements-viewer.txt", "docs/INSTALL.md", "docs/licensing", "docs/examples", "docs/M4-upstream-baseline.json", "docs/V0.2-M1-evidence/legacy-schemas.json", "docs/V0.2-M3-evidence/baseline-tool-schemas.json", "docs/V0.2-M4-evidence/baseline.json", "docs/V0.2-M5-simplification-evidence/baseline.json", "docs/V0.2-M5-release-checklist.md", "docs/V0.2-cross-platform-foundation.md"]
+exclude = ["**/__pycache__/**", "**/*.pyc", "**/.DS_Store", "/docs/licensing/collect_inventory.py", "/docs/licensing/third-party-inventory.json"]

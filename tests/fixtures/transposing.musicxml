@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<score-partwise version="4.0"><work><work-title>B flat clarinet</work-title></work>
+<part-list><score-part id="P1"><part-name>Clarinet</part-name><score-instrument id="I1"><instrument-name>Clarinet</instrument-name></score-instrument></score-part></part-list>
+<part id="P1"><measure number="1"><attributes><divisions>12</divisions><time><beats>4</beats><beat-type>4</beat-type></time><transpose><diatonic>-1</diatonic><chromatic>-2</chromatic></transpose></attributes><note><pitch><step>C</step><alter>0</alter><octave>4</octave></pitch><duration>48</duration><voice>1</voice><type>quarter</type><staff>1</staff></note></measure></part></score-partwise>

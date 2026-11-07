@@ -1,0 +1,4509 @@
+[
+  {
+    "name": "fifths_positive",
+    "source": "fifths_positive.musicxml",
+    "lanes": [
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ]
+      ],
+      [
+        [
+          "G4",
+          1
+        ],
+        [
+          "A4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "parallel_fifths": 1,
+      "parallel_octaves": 0,
+      "pair_counts": [
+        1,
+        1,
+        1,
+        0,
+        1
+      ]
+    }
+  },
+  {
+    "name": "fifths_compound",
+    "source": "fifths_compound.musicxml",
+    "lanes": [
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ]
+      ],
+      [
+        [
+          "G4",
+          1
+        ],
+        [
+          "A5",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "parallel_fifths": 1,
+      "parallel_octaves": 0,
+      "pair_counts": [
+        1,
+        1,
+        1,
+        0,
+        1
+      ]
+    }
+  },
+  {
+    "name": "fifths_negative",
+    "source": "fifths_negative.musicxml",
+    "lanes": [
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ]
+      ],
+      [
+        [
+          "G4",
+          1
+        ],
+        [
+          "F4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "parallel_fifths": 0,
+      "parallel_octaves": 0,
+      "pair_counts": [
+        1,
+        1,
+        1,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "name": "fifths_oblique",
+    "source": "fifths_oblique.musicxml",
+    "lanes": [
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ]
+      ],
+      [
+        [
+          "G4",
+          2
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "parallel_fifths": 0,
+      "parallel_octaves": 0,
+      "pair_counts": [
+        1,
+        1,
+        1,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "name": "fifths_spelling",
+    "source": "fifths_spelling.musicxml",
+    "lanes": [
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ]
+      ],
+      [
+        [
+          "Abb4",
+          1
+        ],
+        [
+          "Bbb4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "parallel_fifths": 0,
+      "parallel_octaves": 0,
+      "pair_counts": [
+        1,
+        1,
+        1,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "name": "fifths_altered",
+    "source": "fifths_altered.musicxml",
+    "lanes": [
+      [
+        [
+          "C#4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ]
+      ],
+      [
+        [
+          "G4",
+          1
+        ],
+        [
+          "A4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "parallel_fifths": 0,
+      "parallel_octaves": 0,
+      "pair_counts": [
+        1,
+        1,
+        1,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "name": "fifths_async",
+    "source": "fifths_async.musicxml",
+    "lanes": [
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "D4",
+          2
+        ]
+      ],
+      [
+        [
+          "G4",
+          2
+        ],
+        [
+          "A4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "parallel_fifths": 0,
+      "parallel_octaves": 0,
+      "pair_counts": [
+        2,
+        2,
+        2,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "name": "fifths_blocked_recovery",
+    "source": "fifths_blocked_recovery.musicxml",
+    "lanes": [
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          null,
+          1
+        ],
+        [
+          "D4",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ],
+      [
+        [
+          "G4",
+          1
+        ],
+        [
+          null,
+          1
+        ],
+        [
+          "A4",
+          1
+        ],
+        [
+          "B4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "parallel_fifths": 1,
+      "parallel_octaves": 0,
+      "pair_counts": [
+        3,
+        1,
+        1,
+        2,
+        1
+      ]
+    }
+  },
+  {
+    "name": "fifths_gap",
+    "source": "fifths_gap.musicxml",
+    "lanes": [
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "gap",
+          1
+        ],
+        [
+          "D4",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ],
+      [
+        [
+          "G4",
+          1
+        ],
+        [
+          "gap",
+          1
+        ],
+        [
+          "A4",
+          1
+        ],
+        [
+          "B4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "parallel_fifths": 1,
+      "parallel_octaves": 0,
+      "pair_counts": [
+        3,
+        1,
+        1,
+        2,
+        1
+      ]
+    }
+  },
+  {
+    "name": "fifths_ties",
+    "source": "fifths_ties.musicxml",
+    "lanes": [
+      [
+        [
+          "C4",
+          1,
+          "<tie type=\"start\"/>"
+        ],
+        [
+          "C4",
+          1,
+          "<tie type=\"stop\"/>"
+        ]
+      ],
+      [
+        [
+          "G4",
+          1
+        ],
+        [
+          "A4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "parallel_fifths": 0,
+      "parallel_octaves": 0,
+      "pair_counts": [
+        1,
+        1,
+        1,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "name": "octaves_positive",
+    "source": "octaves_positive.musicxml",
+    "lanes": [
+      [
+        [
+          "C3",
+          1
+        ],
+        [
+          "D3",
+          1
+        ]
+      ],
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "parallel_fifths": 0,
+      "parallel_octaves": 1,
+      "pair_counts": [
+        1,
+        1,
+        1,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "name": "octaves_compound",
+    "source": "octaves_compound.musicxml",
+    "lanes": [
+      [
+        [
+          "C3",
+          1
+        ],
+        [
+          "D3",
+          1
+        ]
+      ],
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "D5",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "parallel_fifths": 0,
+      "parallel_octaves": 1,
+      "pair_counts": [
+        1,
+        1,
+        1,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "name": "octaves_unison",
+    "source": "octaves_unison.musicxml",
+    "lanes": [
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ]
+      ],
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "parallel_fifths": 0,
+      "parallel_octaves": 0,
+      "pair_counts": [
+        1,
+        1,
+        1,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "name": "octaves_contrary",
+    "source": "octaves_contrary.musicxml",
+    "lanes": [
+      [
+        [
+          "C3",
+          1
+        ],
+        [
+          "D3",
+          1
+        ]
+      ],
+      [
+        [
+          "C5",
+          1
+        ],
+        [
+          "D4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "parallel_fifths": 0,
+      "parallel_octaves": 0,
+      "pair_counts": [
+        1,
+        1,
+        1,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "name": "octaves_enharmonic",
+    "source": "octaves_enharmonic.musicxml",
+    "lanes": [
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ]
+      ],
+      [
+        [
+          "B#4",
+          1
+        ],
+        [
+          "C##5",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "parallel_fifths": 0,
+      "parallel_octaves": 0,
+      "pair_counts": [
+        1,
+        1,
+        1,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "name": "octaves_async",
+    "source": "octaves_async.musicxml",
+    "lanes": [
+      [
+        [
+          "C3",
+          1
+        ],
+        [
+          "D3",
+          2
+        ]
+      ],
+      [
+        [
+          "C4",
+          2
+        ],
+        [
+          "D4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "parallel_fifths": 0,
+      "parallel_octaves": 0,
+      "pair_counts": [
+        2,
+        2,
+        2,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "name": "octaves_blocked",
+    "source": "octaves_blocked.musicxml",
+    "lanes": [
+      [
+        [
+          "C3",
+          1
+        ],
+        [
+          null,
+          1
+        ],
+        [
+          "D3",
+          1
+        ]
+      ],
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          null,
+          1
+        ],
+        [
+          "D4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "parallel_fifths": 0,
+      "parallel_octaves": 0,
+      "pair_counts": [
+        2,
+        0,
+        0,
+        2,
+        0
+      ]
+    }
+  },
+  {
+    "name": "fifths_unrelated_voice",
+    "source": "fifths_unrelated_voice.musicxml",
+    "lanes": [
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ]
+      ],
+      [
+        [
+          "G4",
+          1
+        ],
+        [
+          "A4",
+          1
+        ]
+      ],
+      [
+        [
+          "E5",
+          0.5
+        ],
+        [
+          "F5",
+          1.5
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "original_pair_fifths": 1
+    }
+  },
+  {
+    "name": "crossing_positive",
+    "source": "crossing_positive.musicxml",
+    "lanes": [
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ]
+      ],
+      [
+        [
+          "E4",
+          2
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "crossing_cells": 2,
+      "crossing_diagnostics": 1
+    }
+  },
+  {
+    "name": "crossing_negative",
+    "source": "crossing_negative.musicxml",
+    "lanes": [
+      [
+        [
+          "G4",
+          1
+        ],
+        [
+          "G4",
+          1
+        ]
+      ],
+      [
+        [
+          "E4",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "crossing_cells": 0
+    }
+  },
+  {
+    "name": "crossing_equal",
+    "source": "crossing_equal.musicxml",
+    "lanes": [
+      [
+        [
+          "E4",
+          1
+        ],
+        [
+          "Fb4",
+          1
+        ]
+      ],
+      [
+        [
+          "E4",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "crossing_cells": 0
+    }
+  },
+  {
+    "name": "crossing_gap_recovery",
+    "source": "crossing_gap_recovery.musicxml",
+    "lanes": [
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          null,
+          1
+        ],
+        [
+          "D4",
+          1
+        ]
+      ],
+      [
+        [
+          "E4",
+          1
+        ],
+        [
+          null,
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "crossing_cells": 2,
+      "crossing_diagnostics": 2
+    }
+  },
+  {
+    "name": "crossing_chordal",
+    "source": "crossing_chordal.musicxml",
+    "lanes": [
+      [
+        [
+          [
+            "C4",
+            "G4"
+          ],
+          1
+        ]
+      ],
+      [
+        [
+          "E4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "crossing_checked": 0
+    }
+  },
+  {
+    "name": "range_positive",
+    "source": "range_positive.musicxml",
+    "lanes": [
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "C#6",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "range_flags": 2
+    }
+  },
+  {
+    "name": "range_bounds",
+    "source": "range_bounds.musicxml",
+    "lanes": [
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "C6",
+          1
+        ],
+        [
+          "B#3",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "range_flags": 0
+    }
+  },
+  {
+    "name": "range_chord_tie",
+    "source": "range_chord_tie.musicxml",
+    "lanes": [
+      [
+        [
+          [
+            "B3",
+            "E4"
+          ],
+          1,
+          "<tie type=\"start\"/>"
+        ],
+        [
+          [
+            "B3",
+            "E4"
+          ],
+          1,
+          "<tie type=\"stop\"/>"
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "range_flags": 1
+    }
+  },
+  {
+    "name": "chords_triads",
+    "source": "chords_triads.musicxml",
+    "lanes": [
+      [
+        [
+          "C3",
+          1
+        ],
+        [
+          "A2",
+          1
+        ],
+        [
+          "B2",
+          1
+        ],
+        [
+          "C3",
+          1
+        ]
+      ],
+      [
+        [
+          "E4",
+          1
+        ],
+        [
+          "C4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ],
+      [
+        [
+          "G4",
+          1
+        ],
+        [
+          "E4",
+          1
+        ],
+        [
+          "F4",
+          1
+        ],
+        [
+          "G#4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": [
+        "C:major",
+        "A:minor",
+        "B:diminished",
+        "C:augmented"
+      ],
+      "figures": null,
+      "functions": null
+    }
+  },
+  {
+    "name": "chords_sevenths",
+    "source": "chords_sevenths.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "C3",
+          1
+        ],
+        [
+          "D3",
+          1
+        ],
+        [
+          "B2",
+          1
+        ],
+        [
+          "G#3",
+          1
+        ],
+        [
+          "A2",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "E4",
+          1
+        ],
+        [
+          "F4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ],
+        [
+          "B3",
+          1
+        ],
+        [
+          "C4",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "G4",
+          1
+        ],
+        [
+          "A4",
+          1
+        ],
+        [
+          "F4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ],
+      [
+        [
+          "F4",
+          1
+        ],
+        [
+          "B4",
+          1
+        ],
+        [
+          "C5",
+          1
+        ],
+        [
+          "A4",
+          1
+        ],
+        [
+          "F4",
+          1
+        ],
+        [
+          "G#4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": [
+        "G:dominant7",
+        "C:major7",
+        "D:minor7",
+        "B:half_diminished7",
+        "G#:diminished7",
+        "A:minor_major7"
+      ],
+      "figures": null,
+      "functions": null
+    }
+  },
+  {
+    "name": "chords_inversions_doublings",
+    "source": "chords_inversions_doublings.musicxml",
+    "lanes": [
+      [
+        [
+          "E3",
+          1
+        ],
+        [
+          "G2",
+          1
+        ]
+      ],
+      [
+        [
+          "G3",
+          1
+        ],
+        [
+          "C4",
+          1
+        ]
+      ],
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ],
+      [
+        [
+          "C5",
+          1
+        ],
+        [
+          "C5",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": [
+        "C:major",
+        "C:major"
+      ],
+      "figures": [
+        "I6",
+        "I64"
+      ],
+      "functions": null
+    }
+  },
+  {
+    "name": "chords_incomplete_cluster",
+    "source": "chords_incomplete_cluster.musicxml",
+    "lanes": [
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "C4",
+          1
+        ],
+        [
+          "C4",
+          1
+        ],
+        [
+          "C4",
+          1
+        ]
+      ],
+      [
+        [
+          "G4",
+          1
+        ],
+        [
+          "E4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ],
+        [
+          null,
+          1
+        ]
+      ],
+      [
+        [
+          null,
+          1
+        ],
+        [
+          "B4",
+          1
+        ],
+        [
+          "E4",
+          1
+        ],
+        [
+          null,
+          1
+        ]
+      ],
+      [
+        [
+          null,
+          1
+        ],
+        [
+          null,
+          1
+        ],
+        [
+          "G4",
+          1
+        ],
+        [
+          null,
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "figures": null,
+      "functions": null
+    }
+  },
+  {
+    "name": "chords_spelling",
+    "source": "chords_spelling.musicxml",
+    "lanes": [
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "C4",
+          1
+        ],
+        [
+          "C4",
+          1
+        ]
+      ],
+      [
+        [
+          "E4",
+          1
+        ],
+        [
+          "E4",
+          1
+        ],
+        [
+          "B#3",
+          1
+        ]
+      ],
+      [
+        [
+          "F##4",
+          1
+        ],
+        [
+          "G4",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ],
+      [
+        [
+          null,
+          1
+        ],
+        [
+          null,
+          1
+        ],
+        [
+          "G4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": [
+        null,
+        "C:major",
+        null
+      ],
+      "figures": null,
+      "functions": null
+    }
+  },
+  {
+    "name": "chords_neighbor",
+    "source": "chords_neighbor.musicxml",
+    "lanes": [
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "B3",
+          1
+        ],
+        [
+          "C4",
+          1
+        ]
+      ],
+      [
+        [
+          "E4",
+          3
+        ]
+      ],
+      [
+        [
+          "G4",
+          3
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "transient": [
+        1
+      ]
+    }
+  },
+  {
+    "name": "chords_passing",
+    "source": "chords_passing.musicxml",
+    "lanes": [
+      [
+        [
+          "C3",
+          1
+        ],
+        [
+          "D3",
+          1
+        ],
+        [
+          "E3",
+          1
+        ]
+      ],
+      [
+        [
+          "E4",
+          3
+        ]
+      ],
+      [
+        [
+          "G4",
+          3
+        ]
+      ],
+      [
+        [
+          "B4",
+          3
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "transient": [
+        1
+      ]
+    }
+  },
+  {
+    "name": "roman_major",
+    "source": "roman_major.musicxml",
+    "lanes": [
+      [
+        [
+          "C3",
+          1
+        ],
+        [
+          "D3",
+          1
+        ],
+        [
+          "G3",
+          1
+        ],
+        [
+          "A3",
+          1
+        ]
+      ],
+      [
+        [
+          "E4",
+          1
+        ],
+        [
+          "F4",
+          1
+        ],
+        [
+          "B4",
+          1
+        ],
+        [
+          "C4",
+          1
+        ]
+      ],
+      [
+        [
+          "G4",
+          1
+        ],
+        [
+          "A4",
+          1
+        ],
+        [
+          "D5",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": null,
+      "figures": [
+        "I",
+        "ii",
+        "V",
+        "vi"
+      ],
+      "functions": [
+        "tonic",
+        "predominant",
+        "dominant",
+        "unknown"
+      ]
+    }
+  },
+  {
+    "name": "function_major",
+    "source": "function_major.musicxml",
+    "lanes": [
+      [
+        [
+          "C3",
+          1
+        ],
+        [
+          "D3",
+          1
+        ],
+        [
+          "G3",
+          1
+        ],
+        [
+          "C3",
+          1
+        ]
+      ],
+      [
+        [
+          "E4",
+          1
+        ],
+        [
+          "F4",
+          1
+        ],
+        [
+          "B4",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ],
+      [
+        [
+          "G4",
+          1
+        ],
+        [
+          "A4",
+          1
+        ],
+        [
+          "D5",
+          1
+        ],
+        [
+          "G4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": [
+        "tonic",
+        "predominant",
+        "dominant",
+        "tonic"
+      ]
+    }
+  },
+  {
+    "name": "roman_minor",
+    "source": "roman_minor.musicxml",
+    "lanes": [
+      [
+        [
+          "A2",
+          1
+        ],
+        [
+          "D3",
+          1
+        ],
+        [
+          "E3",
+          1
+        ],
+        [
+          "E3",
+          1
+        ],
+        [
+          "G#3",
+          1
+        ]
+      ],
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "F4",
+          1
+        ],
+        [
+          "G#4",
+          1
+        ],
+        [
+          "G4",
+          1
+        ],
+        [
+          "B3",
+          1
+        ]
+      ],
+      [
+        [
+          "E4",
+          1
+        ],
+        [
+          "A4",
+          1
+        ],
+        [
+          "B4",
+          1
+        ],
+        [
+          "B4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ]
+      ]
+    ],
+    "key": "minor",
+    "expected": {
+      "labels": null,
+      "figures": [
+        "i",
+        "iv",
+        "V",
+        "v",
+        "viio"
+      ],
+      "functions": null
+    }
+  },
+  {
+    "name": "roman_inversions",
+    "source": "roman_inversions.musicxml",
+    "lanes": [
+      [
+        [
+          "E3",
+          1
+        ],
+        [
+          "G2",
+          1
+        ],
+        [
+          "B2",
+          1
+        ],
+        [
+          "D3",
+          1
+        ],
+        [
+          "F3",
+          1
+        ]
+      ],
+      [
+        [
+          "G3",
+          1
+        ],
+        [
+          "C4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ],
+        [
+          "F4",
+          1
+        ],
+        [
+          "G3",
+          1
+        ]
+      ],
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "E4",
+          1
+        ],
+        [
+          "F4",
+          1
+        ],
+        [
+          "G4",
+          1
+        ],
+        [
+          "B3",
+          1
+        ]
+      ],
+      [
+        [
+          null,
+          1
+        ],
+        [
+          null,
+          1
+        ],
+        [
+          "G4",
+          1
+        ],
+        [
+          "B4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": null,
+      "figures": [
+        "I6",
+        "I64",
+        "V65",
+        "V43",
+        "V42"
+      ],
+      "functions": null
+    }
+  },
+  {
+    "name": "roman_missing_key",
+    "source": "roman_missing_key.musicxml",
+    "lanes": [
+      [
+        [
+          "C3",
+          1
+        ],
+        [
+          "G3",
+          1
+        ]
+      ],
+      [
+        [
+          "E4",
+          1
+        ],
+        [
+          "B4",
+          1
+        ]
+      ],
+      [
+        [
+          "G4",
+          1
+        ],
+        [
+          "D5",
+          1
+        ]
+      ]
+    ],
+    "key": null,
+    "expected": {
+      "labels": null,
+      "figures": [
+        null,
+        null
+      ],
+      "functions": null
+    }
+  },
+  {
+    "name": "roman_chromatic",
+    "source": "roman_chromatic.musicxml",
+    "lanes": [
+      [
+        [
+          "D3",
+          1
+        ]
+      ],
+      [
+        [
+          "F#4",
+          1
+        ]
+      ],
+      [
+        [
+          "A4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": null,
+      "figures": [
+        "II"
+      ],
+      "functions": [
+        "unknown"
+      ]
+    }
+  },
+  {
+    "name": "function_minor",
+    "source": "function_minor.musicxml",
+    "lanes": [
+      [
+        [
+          "A2",
+          1
+        ],
+        [
+          "D3",
+          1
+        ],
+        [
+          "E3",
+          1
+        ],
+        [
+          "A2",
+          1
+        ]
+      ],
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "F4",
+          1
+        ],
+        [
+          "G#4",
+          1
+        ],
+        [
+          "C4",
+          1
+        ]
+      ],
+      [
+        [
+          "E4",
+          1
+        ],
+        [
+          "A4",
+          1
+        ],
+        [
+          "B4",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ]
+    ],
+    "key": "minor",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": [
+        "tonic",
+        "predominant",
+        "dominant",
+        "tonic"
+      ]
+    }
+  },
+  {
+    "name": "function_leading_tone",
+    "source": "function_leading_tone.musicxml",
+    "lanes": [
+      [
+        [
+          "B2",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ]
+      ],
+      [
+        [
+          "F4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": [
+        "dominant"
+      ]
+    }
+  },
+  {
+    "name": "function_six_four",
+    "source": "function_six_four.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "G2",
+          1
+        ],
+        [
+          "C3",
+          1
+        ]
+      ],
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "B3",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ],
+      [
+        [
+          "E4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ],
+        [
+          "G4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": [
+        "unknown",
+        "dominant",
+        "tonic"
+      ]
+    }
+  },
+  {
+    "name": "seventh_positive_up",
+    "source": "seventh_positive_up.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "C3",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "G3",
+          1
+        ]
+      ],
+      [
+        [
+          "F4",
+          1
+        ],
+        [
+          "G4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": null,
+      "seventh_flags": 1,
+      "seventh_candidates": 1
+    }
+  },
+  {
+    "name": "seventh_negative_down",
+    "source": "seventh_negative_down.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "C3",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "G3",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "C4",
+          1
+        ]
+      ],
+      [
+        [
+          "F4",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": null,
+      "seventh_flags": 0,
+      "seventh_candidates": 1
+    }
+  },
+  {
+    "name": "seventh_wrong_voice",
+    "source": "seventh_wrong_voice.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "C3",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "G3",
+          1
+        ]
+      ],
+      [
+        [
+          "F4",
+          1
+        ],
+        [
+          "G4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": null,
+      "seventh_flags": 1,
+      "seventh_candidates": 1
+    }
+  },
+  {
+    "name": "seventh_exception",
+    "source": "seventh_exception.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "G2",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "C4",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ],
+      [
+        [
+          "F4",
+          1
+        ],
+        [
+          "G4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": null,
+      "seventh_flags": 0,
+      "seventh_candidates": 1
+    }
+  },
+  {
+    "name": "seventh_negative_whole_step",
+    "source": "seventh_negative_whole_step.musicxml",
+    "lanes": [
+      [
+        [
+          "C3",
+          1
+        ],
+        [
+          "D3",
+          1
+        ]
+      ],
+      [
+        [
+          "E4",
+          1
+        ],
+        [
+          "F4",
+          1
+        ]
+      ],
+      [
+        [
+          "G4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ]
+      ],
+      [
+        [
+          "B4",
+          1
+        ],
+        [
+          "A4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": null,
+      "seventh_flags": 0,
+      "seventh_candidates": 1
+    }
+  },
+  {
+    "name": "seventh_no_successor",
+    "source": "seventh_no_successor.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ]
+      ],
+      [
+        [
+          "F4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": null,
+      "seventh_flags": 0,
+      "seventh_candidates": 1
+    }
+  },
+  {
+    "name": "seventh_rest_gap",
+    "source": "seventh_rest_gap.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          null,
+          1
+        ],
+        [
+          "C3",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          null,
+          1
+        ],
+        [
+          "G3",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          null,
+          1
+        ],
+        [
+          "C4",
+          1
+        ]
+      ],
+      [
+        [
+          "F4",
+          1
+        ],
+        [
+          null,
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": null,
+      "seventh_flags": 0,
+      "seventh_candidates": 1
+    }
+  },
+  {
+    "name": "seventh_chordal_lane",
+    "source": "seventh_chordal_lane.musicxml",
+    "lanes": [
+      [
+        [
+          [
+            "G2",
+            "B3",
+            "D4",
+            "F4"
+          ],
+          1
+        ],
+        [
+          [
+            "C3",
+            "E4",
+            "G4"
+          ],
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "seventh_flags": 0,
+      "seventh_candidates": 1
+    }
+  },
+  {
+    "name": "seventh_held_delayed",
+    "source": "seventh_held_delayed.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "C3",
+          1
+        ],
+        [
+          "C3",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "G3",
+          1
+        ],
+        [
+          "G3",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "C4",
+          1
+        ],
+        [
+          "C4",
+          1
+        ]
+      ],
+      [
+        [
+          "F4",
+          2
+        ],
+        [
+          "E4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "seventh_flags": 0,
+      "seventh_candidates": 1
+    }
+  },
+  {
+    "name": "seventh_minor",
+    "source": "seventh_minor.musicxml",
+    "lanes": [
+      [
+        [
+          "E3",
+          1
+        ],
+        [
+          "A2",
+          1
+        ]
+      ],
+      [
+        [
+          "G#3",
+          1
+        ],
+        [
+          "E3",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "A3",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "C4",
+          1
+        ]
+      ]
+    ],
+    "key": "minor",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": null,
+      "seventh_flags": 0,
+      "seventh_candidates": 1
+    }
+  },
+  {
+    "name": "seventh_doubled",
+    "source": "seventh_doubled.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "C3",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "G3",
+          1
+        ]
+      ],
+      [
+        [
+          "F4",
+          1
+        ],
+        [
+          "G4",
+          1
+        ]
+      ],
+      [
+        [
+          "F5",
+          1
+        ],
+        [
+          "E5",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": null,
+      "seventh_flags": 1,
+      "seventh_candidates": 2
+    }
+  },
+  {
+    "name": "cadence_authentic_end",
+    "source": "cadence_authentic_end.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "C3",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "G4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": null,
+      "cadences": [
+        "authentic"
+      ],
+      "cadence_counts": [
+        2,
+        2,
+        2,
+        0,
+        1
+      ]
+    }
+  },
+  {
+    "name": "cadence_half",
+    "source": "cadence_half.musicxml",
+    "lanes": [
+      [
+        [
+          "D3",
+          1
+        ],
+        [
+          "G2",
+          1
+        ]
+      ],
+      [
+        [
+          "F4",
+          1
+        ],
+        [
+          "B3",
+          1
+        ]
+      ],
+      [
+        [
+          "A4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": null,
+      "cadences": [
+        "half"
+      ],
+      "cadence_counts": [
+        2,
+        2,
+        2,
+        0,
+        1
+      ]
+    }
+  },
+  {
+    "name": "cadence_deceptive",
+    "source": "cadence_deceptive.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "A2",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "C4",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": null,
+      "cadences": [
+        "deceptive"
+      ],
+      "cadence_counts": [
+        2,
+        2,
+        2,
+        0,
+        1
+      ]
+    }
+  },
+  {
+    "name": "cadence_plagal",
+    "source": "cadence_plagal.musicxml",
+    "lanes": [
+      [
+        [
+          "F3",
+          1
+        ],
+        [
+          "C3",
+          1
+        ]
+      ],
+      [
+        [
+          "A3",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ],
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "G4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": null,
+      "cadences": [
+        "plagal"
+      ],
+      "cadence_counts": [
+        2,
+        2,
+        2,
+        0,
+        1
+      ]
+    }
+  },
+  {
+    "name": "cadence_authentic_continuing",
+    "source": "cadence_authentic_continuing.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "C3",
+          1
+        ],
+        [
+          "D3",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "E4",
+          1
+        ],
+        [
+          "F4",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "G4",
+          1
+        ],
+        [
+          "A4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": null,
+      "cadences": []
+    }
+  },
+  {
+    "name": "cadence_minor",
+    "source": "cadence_minor.musicxml",
+    "lanes": [
+      [
+        [
+          "E3",
+          1
+        ],
+        [
+          "A2",
+          1
+        ]
+      ],
+      [
+        [
+          "G#3",
+          1
+        ],
+        [
+          "C4",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ]
+    ],
+    "key": "minor",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": null,
+      "cadences": [
+        "authentic"
+      ]
+    }
+  },
+  {
+    "name": "cadence_minor_natural",
+    "source": "cadence_minor_natural.musicxml",
+    "lanes": [
+      [
+        [
+          "E3",
+          1
+        ],
+        [
+          "A2",
+          1
+        ]
+      ],
+      [
+        [
+          "G3",
+          1
+        ],
+        [
+          "C4",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ]
+    ],
+    "key": "minor",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": null,
+      "cadences": []
+    }
+  },
+  {
+    "name": "cadence_inversions",
+    "source": "cadence_inversions.musicxml",
+    "lanes": [
+      [
+        [
+          "B2",
+          1
+        ],
+        [
+          "E3",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "G3",
+          1
+        ]
+      ],
+      [
+        [
+          "G4",
+          1
+        ],
+        [
+          "C4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": null,
+      "cadences": [
+        "authentic"
+      ]
+    }
+  },
+  {
+    "name": "cadence_six_four",
+    "source": "cadence_six_four.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "G2",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "C4",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": null,
+      "cadences": []
+    }
+  },
+  {
+    "name": "cadence_silence_exact",
+    "source": "cadence_silence_exact.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "C3",
+          1
+        ],
+        [
+          null,
+          1
+        ],
+        [
+          "D3",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "E4",
+          1
+        ],
+        [
+          null,
+          1
+        ],
+        [
+          "F4",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "G4",
+          1
+        ],
+        [
+          null,
+          1
+        ],
+        [
+          "A4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "cadences": [
+        "authentic"
+      ]
+    }
+  },
+  {
+    "name": "cadence_silence_short",
+    "source": "cadence_silence_short.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "C3",
+          1
+        ],
+        [
+          null,
+          0.75
+        ],
+        [
+          "D3",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "E4",
+          1
+        ],
+        [
+          null,
+          0.75
+        ],
+        [
+          "F4",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "G4",
+          1
+        ],
+        [
+          null,
+          0.75
+        ],
+        [
+          "A4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "cadences": []
+    }
+  },
+  {
+    "name": "cadence_barline",
+    "source": "cadence_barline.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "C3",
+          1
+        ],
+        [
+          "D3",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "E4",
+          1
+        ],
+        [
+          "F4",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "G4",
+          1
+        ],
+        [
+          "A4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": null,
+      "cadences": [
+        "authentic"
+      ]
+    }
+  },
+  {
+    "name": "cadence_barline_conflict",
+    "source": "cadence_barline_conflict.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "C3",
+          1
+        ],
+        [
+          "D3",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "E4",
+          1
+        ],
+        [
+          "F4",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "G4",
+          1
+        ],
+        [
+          "A4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": null,
+      "cadences": []
+    }
+  },
+  {
+    "name": "cadence_regular",
+    "source": "cadence_regular.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "C3",
+          1
+        ],
+        [
+          "D3",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "E4",
+          1
+        ],
+        [
+          "F4",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "G4",
+          1
+        ],
+        [
+          "A4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": null,
+      "cadences": []
+    }
+  },
+  {
+    "name": "cadence_dominant_suppression",
+    "source": "cadence_dominant_suppression.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "C3",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "G4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": null,
+      "cadences": [
+        "authentic"
+      ]
+    }
+  },
+  {
+    "name": "cadence_transient",
+    "source": "cadence_transient.musicxml",
+    "lanes": [
+      [
+        [
+          "G3",
+          3
+        ]
+      ],
+      [
+        [
+          "B3",
+          3
+        ]
+      ],
+      [
+        [
+          "E4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "cadences": []
+    }
+  },
+  {
+    "name": "fifths_orientation_reversal",
+    "source": "fifths_orientation_reversal.musicxml",
+    "lanes": [
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "G5",
+          1
+        ]
+      ],
+      [
+        [
+          "G4",
+          1
+        ],
+        [
+          "C5",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "parallel_fifths": 0,
+      "parallel_octaves": 0,
+      "pair_counts": [
+        1,
+        1,
+        1,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "name": "fifths_static",
+    "source": "fifths_static.musicxml",
+    "lanes": [
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "C4",
+          1
+        ]
+      ],
+      [
+        [
+          "G4",
+          1
+        ],
+        [
+          "G4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "parallel_fifths": 0,
+      "parallel_octaves": 0,
+      "pair_counts": [
+        1,
+        1,
+        1,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "name": "octaves_static",
+    "source": "octaves_static.musicxml",
+    "lanes": [
+      [
+        [
+          "C3",
+          1
+        ],
+        [
+          "C3",
+          1
+        ]
+      ],
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "C4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "parallel_fifths": 0,
+      "parallel_octaves": 0,
+      "pair_counts": [
+        1,
+        1,
+        1,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "name": "octaves_unrelated_voice",
+    "source": "octaves_unrelated_voice.musicxml",
+    "lanes": [
+      [
+        [
+          "C3",
+          1
+        ],
+        [
+          "D3",
+          1
+        ]
+      ],
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ]
+      ],
+      [
+        [
+          "E5",
+          0.5
+        ],
+        [
+          "F5",
+          1.5
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "original_pair_octaves": 1
+    }
+  },
+  {
+    "name": "crossing_partial_order",
+    "source": "crossing_partial_order.musicxml",
+    "lanes": [
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ]
+      ],
+      [
+        [
+          "E4",
+          2
+        ]
+      ],
+      [
+        [
+          "G4",
+          2
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "crossing_counts": [
+        5,
+        2,
+        2,
+        3,
+        2
+      ]
+    }
+  },
+  {
+    "name": "range_unknown_inspection",
+    "source": "range_unknown_inspection.musicxml",
+    "lanes": [
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "B3",
+          0,
+          "<grace/>"
+        ],
+        [
+          "C#6",
+          0
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "range_counts": [
+        3,
+        1,
+        1,
+        2,
+        0
+      ]
+    }
+  },
+  {
+    "name": "chords_silence",
+    "source": "chords_silence.musicxml",
+    "lanes": [
+      [
+        [
+          "C3",
+          1
+        ],
+        [
+          null,
+          1
+        ],
+        [
+          "G2",
+          1
+        ]
+      ],
+      [
+        [
+          "E4",
+          1
+        ],
+        [
+          null,
+          1
+        ],
+        [
+          "B3",
+          1
+        ]
+      ],
+      [
+        [
+          "G4",
+          1
+        ],
+        [
+          null,
+          1
+        ],
+        [
+          "D4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "stage_counts": [
+        [
+          3,
+          2,
+          2,
+          1,
+          0
+        ],
+        [
+          3,
+          2,
+          2,
+          1,
+          0
+        ]
+      ]
+    }
+  },
+  {
+    "name": "function_negative",
+    "source": "function_negative.musicxml",
+    "lanes": [
+      [
+        [
+          "E3",
+          1
+        ],
+        [
+          "A2",
+          1
+        ]
+      ],
+      [
+        [
+          "G4",
+          1
+        ],
+        [
+          "C4",
+          1
+        ]
+      ],
+      [
+        [
+          "B4",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": [
+        "unknown",
+        "unknown"
+      ]
+    }
+  },
+  {
+    "name": "function_minor_negative",
+    "source": "function_minor_negative.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "E3",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "G4",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "B4",
+          1
+        ]
+      ]
+    ],
+    "key": "minor",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": [
+        "unknown",
+        "unknown"
+      ]
+    }
+  },
+  {
+    "name": "function_minor_leading",
+    "source": "function_minor_leading.musicxml",
+    "lanes": [
+      [
+        [
+          "G#2",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ]
+      ],
+      [
+        [
+          "F4",
+          1
+        ]
+      ]
+    ],
+    "key": "minor",
+    "expected": {
+      "labels": null,
+      "figures": null,
+      "functions": [
+        "dominant"
+      ]
+    }
+  },
+  {
+    "name": "seventh_tie_inversion",
+    "source": "seventh_tie_inversion.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "B2",
+          1
+        ],
+        [
+          "C3",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "D3",
+          1
+        ],
+        [
+          "G3",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "G3",
+          1
+        ],
+        [
+          "C4",
+          1
+        ]
+      ],
+      [
+        [
+          "F4",
+          1,
+          "<tie type=\"start\"/>"
+        ],
+        [
+          "F4",
+          1,
+          "<tie type=\"stop\"/>"
+        ],
+        [
+          "E4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "seventh_counts": [
+        1,
+        1,
+        1,
+        0,
+        0
+      ],
+      "source_hids": [
+        "h000001",
+        "h000002"
+      ]
+    }
+  },
+  {
+    "name": "seventh_repeated_pitch",
+    "source": "seventh_repeated_pitch.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "D3",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "A3",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ]
+      ],
+      [
+        [
+          "F4",
+          1
+        ],
+        [
+          "F4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "seventh_counts": [
+        1,
+        1,
+        1,
+        0,
+        1
+      ]
+    }
+  },
+  {
+    "name": "seventh_held_recognized",
+    "source": "seventh_held_recognized.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "D3",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "A3",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ]
+      ],
+      [
+        [
+          "F4",
+          2
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "seventh_counts": [
+        1,
+        1,
+        0,
+        1,
+        0
+      ]
+    }
+  },
+  {
+    "name": "seventh_invalid_tie",
+    "source": "seventh_invalid_tie.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "C3",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "G3",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "C4",
+          1
+        ]
+      ],
+      [
+        [
+          "F4",
+          1,
+          "<tie type=\"start\"/>"
+        ],
+        [
+          "E4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "seventh_counts": [
+        1,
+        0,
+        0,
+        1,
+        0
+      ]
+    }
+  },
+  {
+    "name": "seventh_ornament",
+    "source": "seventh_ornament.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "C3",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "G3",
+          1
+        ]
+      ],
+      [
+        [
+          "F4",
+          1
+        ],
+        [
+          "G4",
+          1,
+          "<notations><ornaments><trill-mark/></ornaments></notations>"
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "seventh_counts": [
+        1,
+        1,
+        0,
+        1,
+        0
+      ]
+    }
+  },
+  {
+    "name": "seventh_neighbor",
+    "source": "seventh_neighbor.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          3
+        ],
+        [
+          "C3",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          3
+        ],
+        [
+          "G3",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          3
+        ],
+        [
+          "C4",
+          1
+        ]
+      ],
+      [
+        [
+          "F4",
+          1
+        ],
+        [
+          "G4",
+          1
+        ],
+        [
+          "F4",
+          1
+        ],
+        [
+          "E4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "seventh_counts": [
+        2,
+        2,
+        1,
+        1,
+        0
+      ]
+    }
+  },
+  {
+    "name": "cadence_gap_silence",
+    "source": "cadence_gap_silence.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "C3",
+          1
+        ],
+        [
+          "gap",
+          1
+        ],
+        [
+          "D3",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "E4",
+          1
+        ],
+        [
+          "gap",
+          1
+        ],
+        [
+          "F4",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "G4",
+          1
+        ],
+        [
+          "gap",
+          1
+        ],
+        [
+          "A4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "cadences": [
+        "authentic"
+      ],
+      "confidence": "low"
+    }
+  },
+  {
+    "name": "cadence_isolated_dominant",
+    "source": "cadence_isolated_dominant.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "cadences": [
+        "half"
+      ],
+      "confidence": "low"
+    }
+  },
+  {
+    "name": "cadence_sustain_no_silence",
+    "source": "cadence_sustain_no_silence.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "C3",
+          1
+        ],
+        [
+          null,
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "E4",
+          1
+        ],
+        [
+          null,
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "G4",
+          2
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "cadences": []
+    }
+  },
+  {
+    "name": "cadence_plagal_negative",
+    "source": "cadence_plagal_negative.musicxml",
+    "lanes": [
+      [
+        [
+          "F3",
+          1
+        ],
+        [
+          "G2",
+          1
+        ]
+      ],
+      [
+        [
+          "A3",
+          1
+        ],
+        [
+          "B3",
+          1
+        ]
+      ],
+      [
+        [
+          "C4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "cadences": [
+        "half"
+      ]
+    }
+  },
+  {
+    "name": "seventh_minor_missing_key",
+    "source": "seventh_minor_missing_key.musicxml",
+    "lanes": [
+      [
+        [
+          "E3",
+          1
+        ],
+        [
+          "A2",
+          1
+        ]
+      ],
+      [
+        [
+          "G#3",
+          1
+        ],
+        [
+          "E3",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "A3",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "C4",
+          1
+        ]
+      ]
+    ],
+    "key": null,
+    "expected": {
+      "seventh_counts": [
+        1,
+        0,
+        0,
+        1,
+        0
+      ]
+    }
+  },
+  {
+    "name": "seventh_unknown_next",
+    "source": "seventh_unknown_next.musicxml",
+    "lanes": [
+      [
+        [
+          "G2",
+          1
+        ],
+        [
+          "C3",
+          1
+        ]
+      ],
+      [
+        [
+          "B3",
+          1
+        ],
+        [
+          "G3",
+          1
+        ]
+      ],
+      [
+        [
+          "D4",
+          1
+        ],
+        [
+          "C4",
+          1
+        ]
+      ],
+      [
+        [
+          "F4",
+          1
+        ],
+        [
+          "D4",
+          1
+        ]
+      ]
+    ],
+    "key": "major",
+    "expected": {
+      "seventh_counts": [
+        1,
+        0,
+        0,
+        1,
+        0
+      ]
+    }
+  }
+]

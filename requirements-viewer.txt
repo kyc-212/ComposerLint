@@ -1,0 +1,4 @@
+# Optional M2 renderer. Core M1 does not require this package.
+# Approved/tested wheel: macOS 13+ ARM64, CPython 3.10+ stable ABI.
+# Other platforms require their own artifact verification and installation approval.
+verovio==6.3.0 --hash=sha256:c842f5d21d31c3d47e835e07565a9b8623b78feef527affe149ceadd9ecaa55a

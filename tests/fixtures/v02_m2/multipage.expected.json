@@ -1,0 +1,19 @@
+{
+  "authorship": "Synthetic MIT-licensed ComposerLint control, 2026-10-16. No source layout breaks or page quotas. Expectations written before rendering.",
+  "source_sha256": "75ff0f92246bf68a4c79cd7ad5cb34fa0ad9742a0fa7d4ccf2bb51e7eadd705f",
+  "measures_per_part": 96,
+  "parts": 2,
+  "staves": 3,
+  "measure_9": {
+    "printed_label": "9",
+    "p0001": {
+      "staff_1": "D5"
+    },
+    "p0002": {
+      "staff_1": "D4",
+      "staff_2": "A2"
+    }
+  },
+  "rhythm": "One whole note per staff in every 4/4 measure; inherited clef/key/time.",
+  "page_expectation": "At least three natural finite pages, at least one page over eight measures. Exact membership recorded only after rendering."
+}

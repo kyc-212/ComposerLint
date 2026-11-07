@@ -1,0 +1,144 @@
+{
+  "date": "2026-11-07",
+  "status": "NOT_CLEARED_FOR_DISTRIBUTION",
+  "wheel": {
+    "filename": "verovio-6.3.0+composerlint.tie1-cp310-abi3-macosx_13_0_arm64.whl",
+    "sha256": "07d86e287e8ccede499bf312ac12412662f4f8a25b42a6c5964aa474b0a28fb5",
+    "members": 2690,
+    "record_entries_verified": 2689,
+    "record_mismatches": [],
+    "resources": 2680,
+    "resource_manifest_sha256": "bb3079e236ef5d63a8a2aa22064cc3f549f542e904c7d36940b0059bb42a23e0",
+    "license_members": [
+      "verovio-6.3.0+composerlint.tie1.dist-info/licenses/COPYING.LESSER",
+      "verovio-6.3.0+composerlint.tie1.dist-info/licenses/COPYING"
+    ]
+  },
+  "source": {
+    "filename": "verovio-6.3.0.tar.gz",
+    "sha256": "33dc3b6816896a649198acd7cce291f54636fbfffa893dd78d84c3073b40d87c",
+    "changed_original_files": [
+      "src/iomusxml.cpp",
+      "tools/__pycache__/python_metadata.cpython-312.pyc"
+    ],
+    "missing_original_files": []
+  },
+  "patch_sha256": "10965e05ca1ffca8e9dd8dbf940a8f9313a95b4b414979afac2ff12b91edcd60",
+  "native_linkage": {
+    "platform": "macOS ARM64 only",
+    "external_libraries": [
+      "/usr/lib/libc++.1.dylib",
+      "/usr/lib/libSystem.B.dylib"
+    ],
+    "method": "otool -L on the installed selected extension"
+  },
+  "open_gates": [
+    "Separately readable font notices not collected for every family; compressed WOFF2 metadata uninspected (Brotli decoder unavailable)",
+    "Local modification notice absent from wheel",
+    "Embedded native component notice reconciliation pending",
+    "Exact Corresponding Source/build-material release bundle not prepared",
+    "Independent rebuild and per-target workflow verification pending",
+    "User replacement/rebuild route needs verification with server-owner hash configuration"
+  ],
+  "reconciliation": {
+    "date": "2026-11-07",
+    "resource_files_compared": 2680,
+    "resource_differences": [],
+    "embedded_components": [
+      {
+        "component": "JSON++",
+        "evidence": "include/json/LICENSE",
+        "sha256": "3e85b6b2dafb95819f34cabbf91f6faf79bcf107567d10486dec9935bd38c308",
+        "collected_text": "LICENSES/third-party/verovio/JSONplusplus-LICENSE.txt",
+        "status": "license text collected; final binary notice reconciliation pending",
+        "collected_text_sha256": "3e85b6b2dafb95819f34cabbf91f6faf79bcf107567d10486dec9935bd38c308"
+      },
+      {
+        "component": "tuning-library",
+        "evidence": "include/tuning-library/LICENSE.md",
+        "sha256": "ee3bd73591efbb9272e28d066fc430790a1e9eeb75b6658864f4377fe79dc558",
+        "collected_text": "LICENSES/third-party/verovio/tuning-library-LICENSE.txt",
+        "status": "license text collected; final binary notice reconciliation pending",
+        "collected_text_sha256": "ee3bd73591efbb9272e28d066fc430790a1e9eeb75b6658864f4377fe79dc558"
+      },
+      {
+        "component": "humlib",
+        "evidence": "include/hum/humlib.h",
+        "sha256": "f1a2640e75cb9ca012fc5eb4c0875b85e35f0b888adcce1b55818a140937531a",
+        "collected_text": "LICENSES/third-party/verovio/humlib-NOTICES.txt",
+        "status": "original notice blocks collected; final binary reconciliation pending",
+        "collected_text_sha256": "75f809789b17dab929433c70dbf501e7326270398edcba40ac21af71472e4f06"
+      },
+      {
+        "component": "pugixml",
+        "evidence": "include/pugi/pugixml.hpp",
+        "sha256": "0b7c94701df3d50981ffafe57f177c77b940e347c6e5d01073e4161f61299212",
+        "collected_text": "LICENSES/third-party/verovio/pugixml-NOTICES.txt",
+        "status": "original notice blocks collected; final binary reconciliation pending",
+        "collected_text_sha256": "03425a580fe7947a8308bfb287db67603d5a0e6fc850ec319e24591c05a22f86"
+      },
+      {
+        "component": "MINIZ-CPP-miniz",
+        "evidence": "include/zip/zip_file.hpp",
+        "sha256": "3fcd948eb1a91e4102c9af0314906831ec4f3129048ca55b307cc6c61f8f3c21",
+        "collected_text": "LICENSES/third-party/verovio/MINIZ-CPP-miniz-NOTICES.txt",
+        "status": "original notice blocks collected; final binary reconciliation pending",
+        "collected_text_sha256": "c20ed9c2afe2858850a8674f36bf439aa73171da621cee5e80547072ac5faf4f"
+      },
+      {
+        "component": "CRC",
+        "evidence": "include/crc/crc.h",
+        "sha256": "baab798e3502e370f1d748962a58674abd1eeeaff365787e17f59bb4b6e0ec70",
+        "collected_text": "LICENSES/third-party/verovio/CRC-NOTICES.txt",
+        "status": "original notice blocks collected; final binary reconciliation pending",
+        "collected_text_sha256": "aad5d54f08f993a6f26258ccea83dfe1544c453058eabe94ef6025564c01bba1"
+      }
+    ],
+    "source_font_metadata": [
+      {
+        "family": "Bravura",
+        "source": "fonts/Bravura/Bravura.otf",
+        "sha256": "dca2d90c88437a701b1c2e71fa54e76f9fa41d7deee935d74dc871ea66ecfdd2",
+        "full_ofl_in_source_metadata": true,
+        "status": "source-font evidence only; converted wheel metadata/RFN mapping pending"
+      },
+      {
+        "family": "Gootville",
+        "source": "fonts/Gootville/Gootville.otf",
+        "sha256": "43fac30a9607ad3d6bc7501c351c763fa9c0a9ed3f5a5fc5c3a09213c56263b0",
+        "full_ofl_in_source_metadata": false,
+        "status": "source-font evidence only; converted wheel metadata/RFN mapping pending"
+      },
+      {
+        "family": "Leipzig",
+        "source": "fonts/Leipzig/Leipzig.ttf",
+        "sha256": "77914189fbc8c2a74beb33a0098002a62524616caa45e9ddc27155fc5a373e6f",
+        "full_ofl_in_source_metadata": false,
+        "status": "source-font evidence only; converted wheel metadata/RFN mapping pending"
+      },
+      {
+        "family": "Leland",
+        "source": "fonts/Leland/Leland.otf",
+        "sha256": "293788a40584b1908e3a0f219833f6a13e9a1aaf671e08fd26ad18fad2631b35",
+        "full_ofl_in_source_metadata": true,
+        "status": "source-font evidence only; converted wheel metadata/RFN mapping pending"
+      }
+    ],
+    "other_resources": [
+      "Petaluma source SVG/CSS",
+      "Liberation CSS, including four embedded fonts",
+      "Times text bounding-box XML",
+      "footer SVG"
+    ],
+    "unresolved_components": [
+      "MidiFile exact imported revision/license pairing",
+      "generated LibMEI complete notice/license pairing",
+      "generated SWIG binding applicable notices",
+      "font conversion provenance, original font copyright/OFL/reserved-name pairing including Petaluma/Liberation",
+      "remaining bundled resource attribution"
+    ],
+    "source_font_notice_file": "LICENSES/third-party/verovio/SOURCE-FONT-METADATA.txt",
+    "source_font_notice_sha256": "cc6d91d0902ec09a49f7b5f5a650b483d9e4b62f95daac979c45844bd4e1df9d",
+    "scope_note": "Notice evidence collected; no binary redistribution clearance. Raw scan did not inspect compressed WOFF2 metadata."
+  }
+}

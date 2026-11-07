@@ -1,0 +1,32 @@
+.venv/
+.uv-cache/
+__pycache__/
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+.DS_Store
+*.pyc
+.m1-test-tmp/
+.m1-wheel-check/
+.m1-example.json
+
+.m1-audit/
+
+.m2-audit/
+
+.m3-audit/
+.workbuddy/
+
+.venv-m2-renderer/
+.m2-dependencies/
+
+# Converted working scores / local export content
+output/
+composerlint-import-*/
+
+# Server-owner renderer paths and machine-specific artifact pins
+renderer.local.json
+
+# Private release verification environments and logs
+.release-audit/

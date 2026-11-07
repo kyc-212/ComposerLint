@@ -1,0 +1,108 @@
+{
+  "core_tools": {
+    "analyze_score": {
+      "input_sha256": "c254eec309f262dc069b77f0348806136f5ac58e5cfbadae811afc2f084d9288",
+      "output_sha256": "7f5cd9fa1150d214fa4e322ad065b34c9a3424cb0c0a77feb20e3474b9aa9470",
+      "description_sha256": "0ff94ffb1fb1a2308a01aa4cd5fb015270e78b6fe4a417ed9e52fddf2f852f24"
+    },
+    "detect_style": {
+      "input_sha256": "c254eec309f262dc069b77f0348806136f5ac58e5cfbadae811afc2f084d9288",
+      "output_sha256": "4e82b056d37d7ed22430c6ce5efb9cbb122a7a2ab8daf2ebcdc366c0caa81e9b",
+      "description_sha256": "aaeac19e269da775acac497ffe24e234aa6b0a4bab4c2f78a439f5adadd01be5"
+    },
+    "inspect_measure": {
+      "input_sha256": "ae44cce3606740439b3e2e4b1d7044ce689d953d46b7dc45fd0d9c21c560cfbc",
+      "output_sha256": "0f7a48a6106abb1964d6c9b86ae36f4eb7d41656bdda84f4e853b0a2c9967f65",
+      "description_sha256": "5f38d3a97d2804e6233a582cf57b23d1fb045cd6fd16ba016db46ae02b4ede0f"
+    },
+    "check_harmony": {
+      "input_sha256": "c254eec309f262dc069b77f0348806136f5ac58e5cfbadae811afc2f084d9288",
+      "output_sha256": "f9da4ab1ddaee8d3f24558a844dddcffc9c6e4526334eaecec7d0da4bebcdc68",
+      "description_sha256": "28102427d3db1c62d91f93fea74aa662bb5c05f93ba6b604274434af372dd225"
+    },
+    "check_voice_leading": {
+      "input_sha256": "c254eec309f262dc069b77f0348806136f5ac58e5cfbadae811afc2f084d9288",
+      "output_sha256": "1f2d42af97bed83416f2c391ceb67fbd951a84672ba7537f8b883ec8a0f4ab01",
+      "description_sha256": "095947bef37e15f3a1df006333651206324cbc91afb657d4d8a02bb9e20099cf"
+    },
+    "get_style_evidence": {
+      "input_sha256": "37344b62a6ce66e2402dd427c80b6728350ddcc0d7b21c6dc51a7d75412e9d1b",
+      "output_sha256": "1c08b31c14eacf1e75c5fd29f6a609df92399d9d089d9d53e80b5ab35e9c8a67",
+      "description_sha256": "2b2a2865b080ed55c543021b38cb9d4ff1afb36cfac0e90d6d53e8bf1512143c"
+    },
+    "get_review_page": {
+      "input_sha256": "439c0640f265b1c4bbe59e45d6afe57d8d5084bacddbfdf09bfcdf0e2881289a",
+      "output_sha256": "ea57e457e676dff377cd9de97d52ec8acfc1a7bc5d5e8fb8210b52ff6eac5dde",
+      "description_sha256": "4c60e555450c7a2fe5a456a79313abccd6e17276ec8e5d1a41ba3f0ca8501af8"
+    },
+    "get_score_view": {
+      "input_sha256": "44f0b373c5239de34a771e203169e808496687adcaa5e47ff3222a08d82a5fa8",
+      "output_sha256": "71c37406d588e918f80e82a1cee55cc964c6b9f77c43475904cddccd42d95dc8",
+      "description_sha256": "09ee80ffd65711215002531d081045dcc8cf991ff30c81693ca2759e18cdd142"
+    },
+    "resolve_score_selection": {
+      "input_sha256": "0ff9a8dd640d1b6bb3998e9a4cec3e7d67c7f192f5ad5b986a7cceb335441fd2",
+      "output_sha256": "71c37406d588e918f80e82a1cee55cc964c6b9f77c43475904cddccd42d95dc8",
+      "description_sha256": "089262295a3f21f357e5e23505efba2321bb8faedc903a3719a734f1942fa08a"
+    },
+    "get_musical_evaluation": {
+      "input_sha256": "330551220684a911351475f42053132e5c7c2fdfd027b3abed199cb2b5bc02cd",
+      "output_sha256": "392987f99a359fe32e7edcc0fa235d7583a3be1024f6dc15077d4f316bc3b93a",
+      "description_sha256": "37773ea78e1f4ef2ee65098b4a27e450afccbf78fd4866b6c2f14bbbe1f1fac4"
+    },
+    "get_edit_workspace": {
+      "input_sha256": "04d9b5160ea4f1bd1d8e3048712d377aff2a9d92bd1e84e68ab2fa00e5c771a2",
+      "output_sha256": "53f3dd3f2ec786d7d453a08fb0f1836afee0082674b0f8e07cbdc6fe44e3ed09",
+      "description_sha256": "d9301f1589cbb55e517600bd5d5c354a772dd556710fb369bb1951cdfc8c7068"
+    },
+    "prepare_score_edit": {
+      "input_sha256": "6c6f4468bf4aab0b84a61403e091c66b306b751b4c6cf57eafcdd907ba2ed439",
+      "output_sha256": "53f3dd3f2ec786d7d453a08fb0f1836afee0082674b0f8e07cbdc6fe44e3ed09",
+      "description_sha256": "b04880ba64b41d942b2ecd35394dbf0cd111d9ec5e37c2c572bee422ac3a5ca0"
+    },
+    "get_edit_proposal": {
+      "input_sha256": "72ddc6be6cb6f0da9d12ff1c895b5435af7b5e760c1a125e3277a7c7f7fd29e5",
+      "output_sha256": "53f3dd3f2ec786d7d453a08fb0f1836afee0082674b0f8e07cbdc6fe44e3ed09",
+      "description_sha256": "b3d6ee4b9ab2403e0ffcbfc4c4e267d0f8ba7bbb8b00c0868344e2cde7461996"
+    },
+    "discard_edit_proposal": {
+      "input_sha256": "48ba5be2056f366776190518165a82646e411a5993695f6f514e17645d2d21b8",
+      "output_sha256": "53f3dd3f2ec786d7d453a08fb0f1836afee0082674b0f8e07cbdc6fe44e3ed09",
+      "description_sha256": "0f125cbd4b4ae9d192f5e1191a7ab55d10b41f6ec497c877642dea0d99078500"
+    },
+    "get_advanced_analysis": {
+      "input_sha256": "a64a05b622b1612c47e942fcfe12a9b47e92046ad101d164b7315fe08fcf9569",
+      "output_sha256": "6384c908fe5fc547f28cd43073fc9247877704dd0f0467ad2d2d749468769294",
+      "description_sha256": "b83d4c38d59e926f561d80da92ebb7fd4045f2c2f45760ee4590b2dde74064ff"
+    }
+  },
+  "protected_sources": {
+    "src/composerlint/editing_models.py": "08c3ca016a6a8c7b0dc5ac680f0c4bd2fc5276d6facf637a27612ae590be0156",
+    "src/composerlint/service.py": "b1dbf6e3f108a1765c7a5dad6063602e8f459777c6b83d8b89adfcc4740237de",
+    "src/composerlint/server.py": "780befe8d129606743f9bef0e8ef5d87361f8c6d7f8dc5f5c8b7ae9c8fbb49d8",
+    "src/composerlint/advanced_worker.py": "61af15a0b69af98d566e4d8c1fc239567f8136c01708aa294a851a93b615f8ab",
+    "src/composerlint/evaluation_models.py": "a3e5573b5e52cc4dc3df29aab7818ce91d2502debd9070a7e81c21bb1f28ac14",
+    "src/composerlint/viewer.py": "6a8ac9c56137ee79e683144ee47d894df61e2b00ba33c2f8f5325e978aba8b38",
+    "src/composerlint/advanced_models.py": "7dc48df312eef9ecc4eb34923029d2a6755684e1ce6c3f2c5453a9866acab42e",
+    "src/composerlint/evaluation_worker.py": "a2e712bcfc304384936ee0a211d104340b6c0fc77ab3cbc8c8dab53247edc118",
+    "src/composerlint/models.py": "74c621f06ece31d15dce50d1d2c9c6276faf952283851fcd90ede86f4b5c0b6d",
+    "src/composerlint/focused.py": "5a8dd1435722eec0acaa87b122260b7bee3af46d37d4b2ebac5638d95b8f98ac",
+    "src/composerlint/editing_worker.py": "0acee775ddabaa58af83a7d096ab99bb86d7b5164022af9ae2ed4d1a2b29c9b8",
+    "src/composerlint/viewer_source.py": "9553252c2e9ef57658b862a8d12ebb7dae2a7410d85c9d95cb9615d6d9d688a3",
+    "src/composerlint/evaluation_policy.py": "199782d623b64ccdd8a25943a1e58d1d5a6c7861461604fe43d23ff233c3fad1",
+    "src/composerlint/evaluation_review.py": "bd9380ddaf47e6a12c059e5976d406731f1e7cbd2af76c2f0cd2fc3571251aa3",
+    "src/composerlint/__init__.py": "92a83a6b90d378144976824247542a96a0dcb5149b4d8719bcbb4fe45bed12e3",
+    "src/composerlint/advanced_review.py": "081ed65dbd4cba1f8576a034515ca85a4b2e93c018130a50d4fd2eabe6d45567",
+    "src/composerlint/review_models.py": "a69328dd497b0da3f4dd0c84485b4307ea55c377b08f010fbcc6e72f770be97f",
+    "src/composerlint/review.py": "2abc73600657e064322a03b358c2672e49991950039c3314eac67a1b013a13e0",
+    "src/composerlint/advanced_runtime.py": "9f097593fb59a801d3492594a7a8b3fe3f097ac3c300add9a5c8d51ecc8435d5",
+    "src/composerlint/viewer_models.py": "6a6eb286e6b6dc2ec191954235404f04fc6e7940d190f83f0e74310e145b7627",
+    "src/composerlint/evaluation_runtime.py": "bedc973cc20b62a9e0152c6dcb3058c8803edbe33ad1d919307729067801fc3f",
+    "src/composerlint/musical_validation.py": "6fa9e14664c7e4a714bf42e9c2a628e39909d0eb8edf44ee6f03685646ad897a",
+    "src/composerlint/errors.py": "2b79cdaa2078f1afc9448a1833a7c41aa64527ae500acfd743d3c4641957ffae",
+    "src/composerlint/editing_source.py": "1573f2aad41f0e2289add244b5b34e3494ce9eaf6ea3ce286609c8649d6a1452",
+    "src/composerlint/editing_runtime.py": "3195f869fe09956f76dcd00d8a44457976b28bd741ca0a48779c145a8eb5d90d",
+    "src/composerlint/analysis_models.py": "e5c38a51bb075dc7a16ecec6d0592c09cafa8325c254f3294617b086e5160820",
+    "src/composerlint/editing_verify.py": "d47ef71587143647d3cff1b0a29e03a00351f12ce52f653f96fcacaea6057a94"
+  }
+}

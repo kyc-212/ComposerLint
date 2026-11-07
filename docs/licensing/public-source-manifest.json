@@ -1,0 +1,3330 @@
+{
+  "status": "VERIFIED_SOURCE_CANDIDATE_AWAITING_USER_REVIEW_AND_PUBLICATION_APPROVAL",
+  "scope": "Explicit V0.2.0 source-only file set; no renderer binaries/resources/vendor trees or private workspaces",
+  "candidate": {
+    "id": "V0.2.0-source-only-RC3",
+    "base_git_commit": "0387bc8639b3a3059aac44fed782c3ea801b19ed",
+    "previous_candidate": {
+      "id": "V0.2.0-source-only-RC2",
+      "archive": "ComposerLint-0.2.0-source-rc2.tar.gz",
+      "archive_sha256": "bd69b03c86ec589e98389c05088ea0d4f886ade143bfbe78713a9ed6b6dd2144",
+      "manifest_sha256": "7dfcc2c73f5fa7aa5976fc1ad6679f2f147c69875dda97c3f9363bf99b7fffde"
+    },
+    "change_scope": "Privacy-normalize fourteen historical custody-folder path components; manifest and candidate review metadata only; retain RC2 documentation correction",
+    "public_history": "Requires a new parentless initial commit; original local history remains private; history procedure approval pending"
+  },
+  "files": [
+    {
+      "path": ".gitignore",
+      "sha256": "e6d1156b845197946136757f5de7108e180e7a14efeba938839bc492d69719c7",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "b626b13a6f27e893a7e40becd76caf946a2c0726f9a30272c2ea3bde3a3c3bb4",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/annotated-types/annotated_types-0.8.0.dist-info/licenses/LICENSE",
+      "sha256": "fe1049884b1a0d9342901e88e07f32925d24b3121d9972b6a6805fb9824b095d",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/anyio/anyio-4.15.1.dist-info/licenses/LICENSE",
+      "sha256": "5361ac9dc58f2ef5fd2e9b09c68297c17f04950909bbc8023bdb82eacf22c2b0",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/attrs/attrs-26.1.0.dist-info/licenses/LICENSE",
+      "sha256": "882115c95dfc2af1eeb6714f8ec6d5cbcabf667caff8729f42420da63f714e9f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/certifi/certifi-2026.7.22.dist-info/licenses/LICENSE",
+      "sha256": "e93716da6b9c0d5a4a1df60fe695b370f0695603d21f6f83f053e42cfc10caf7",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/cffi/cffi-2.1.1.dist-info/licenses/LICENSE",
+      "sha256": "5ba24ddc57067f9249add644c3afc41a5d6dc37e23433ef759d95df370b0af63",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/chardet/chardet-7.6.0.dist-info/licenses/LICENSE",
+      "sha256": "0d4cf67e7a26e9957b8948e7dfc0e380e61b427a94b061e618889aba89bb9616",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/charset-normalizer/charset_normalizer-3.5.2.dist-info/licenses/LICENSE",
+      "sha256": "6d0d41bfe170ac6c7dc248c9a63e254d0fb45a60d50a8257d0af92c6e249b887",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/click/click-8.5.0.dist-info/licenses/LICENSE.txt",
+      "sha256": "9a8ad106a394e853bfe21f42f4e72d592819a22805d991b5f3275029292b658d",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/cloudpickle/cloudpickle-3.1.2.dist-info/licenses/LICENSE",
+      "sha256": "3029ea34173e9fdc233ad315dc6b100bd1ea71f529b1c1af97664a272fdc55f5",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/contourpy/contourpy-1.4.0.dist-info/licenses/LICENSE",
+      "sha256": "11401c428c7014a75728e8679f9c000aacf262015aaba65a760d41aa1130b3af",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/cryptography/cryptography-50.0.2.dist-info/licenses/LICENSE",
+      "sha256": "3e0c7c091a948b82533ba98fd7cbb40432d6f1a9acbf85f5922d2f99a93ae6bb",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/cryptography/cryptography-50.0.2.dist-info/licenses/LICENSE.APACHE",
+      "sha256": "aac73b3148f6d1d7111dbca32099f68d26c644c6813ae1e4f05f6579aa2663fe",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/cryptography/cryptography-50.0.2.dist-info/licenses/LICENSE.BSD",
+      "sha256": "602c4c7482de6479dd2e9793cda275e5e63d773dacd1eca689232ab7008fb4fb",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/cycler/cycler-0.12.1.dist-info/LICENSE",
+      "sha256": "f1218143d766da3fea66f13396b7f15df46a83303f29bf96ba6e98eb4d42f408",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/development-renderer-build/build-1.6.1/distribution/LICENSE",
+      "sha256": "aaf9a29ca5907971ccf07de025375db34539a8d5eeebce20b46099805722106f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/development-renderer-build/cmake-4.4.4/bundled/CONTRIBUTORS.rst",
+      "sha256": "f8889722aada0968f9b2aa22e6ab5e0263d8d654b637a32002c420fe910507ea",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/development-renderer-build/cmake-4.4.4/bundled/LICENSE.rst",
+      "sha256": "4382e7c1879ac90e3f101a395d23846fa4dbcaa1eed7265b43681e348754825d",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/development-renderer-build/cmake-4.4.4/bundled/cmcppdap/NOTICE",
+      "sha256": "3103ac74433b12f1728cc0e09babe67620c5e3ab15d79d222b49d5d226681a6c",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/development-renderer-build/cmake-4.4.4/bundled/cmlibarchive/COPYING",
+      "sha256": "30e556b3959e3985d66efefec5eaac51d4995053caa1d3cffe6eb916f146f229",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/development-renderer-build/cmake-4.4.4/bundled/cmliblzma/COPYING",
+      "sha256": "ee3b35b82f7bb0ba5fd9f13ca34ebbe757a59c05bfde5ab9d50ff4188ed33396",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/development-renderer-build/cmake-4.4.4/bundled/cmlibrhash/COPYING",
+      "sha256": "953e55838353335148c90b5a38a4894292680b1d4c37228ffddddbf18ce54bf5",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/development-renderer-build/cmake-4.4.4/bundled/cmlibuv/LICENSE",
+      "sha256": "16de0c32b265cb7d46a6d3bd614f259dd4d693a5e26b3407b04aae8d73041f0c",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/development-renderer-build/cmake-4.4.4/bundled/cmsys/Copyright.txt",
+      "sha256": "7aa92ae0b86f73f81947d177639556fe7f8ea42a74762ecdf563e3daf7106a40",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/development-renderer-build/cmake-4.4.4/bundled/cmzstd/LICENSE",
+      "sha256": "7055266497633c9025b777c78eb7235af13922117480ed5c674677adc381c9d8",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/development-renderer-build/cmake-4.4.4/distribution/AUTHORS.rst",
+      "sha256": "9cbfc78a28479dd1ef553021f5841c295d89669f3be2e60d1824bdddd997a1b1",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/development-renderer-build/cmake-4.4.4/distribution/LICENSE_Apache_20",
+      "sha256": "73ba74dfaa520b49a401b5d21459a8523a146f3b7518a833eea5efa85130bf68",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/development-renderer-build/cmake-4.4.4/distribution/LICENSE_BSD_3",
+      "sha256": "a39f63ec8a8e9d63ee8fd85eac9eda615995216eff43c500f68c08d4c922bf3f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/development-renderer-build/ninja-1.13.2/distribution/LICENSE_Apache_20",
+      "sha256": "73ba74dfaa520b49a401b5d21459a8523a146f3b7518a833eea5efa85130bf68",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/development-renderer-build/packaging-26.3/distribution/LICENSE",
+      "sha256": "cad1ef5bd340d73e074ba614d26f7deaca5c7940c3d8c34852e65c4909686c48",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/development-renderer-build/packaging-26.3/distribution/LICENSE.APACHE",
+      "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/development-renderer-build/packaging-26.3/distribution/LICENSE.BSD",
+      "sha256": "b70e7e9b742f1cc6f948b34c16aa39ffece94196364bc88ff0d2180f0028fac5",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/development-renderer-build/pathspec-1.1.1/distribution/LICENSE",
+      "sha256": "fab3dd6bdab226f1c08630b1dd917e11fcb4ec5e1e020e2c16f83a0a13863e85",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/development-renderer-build/pyproject_hooks-1.3.3/distribution/LICENSE",
+      "sha256": "1b22b049b5267d6dfc23a67bf4a84d8ec04b9fdfb1a51d360e42b4342c8b4154",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/development-renderer-build/scikit_build_core-1.1.1/distribution/LICENSE",
+      "sha256": "203fb4d261f202242333928424e101de19abf5bf166620124418fb6dd6b279b5",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/development-renderer-build/swig-4.5.1/distribution/LICENSE",
+      "sha256": "73ba74dfaa520b49a401b5d21459a8523a146f3b7518a833eea5efa85130bf68",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/development-renderer-build/swig-4.5.1/distribution/LICENSE-GPL",
+      "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/development-renderer-build/swig-4.5.1/distribution/LICENSE-SWIG",
+      "sha256": "39d44240ada6f78e14aa73646d37785f2e25852fc24d9b3c70c53cf466ef364c",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/development-renderer-build/swig-4.5.1/distribution/LICENSE-UNIVERSITIES",
+      "sha256": "f812dcab2306bef514565e3628e8805c3ce8bab7e2fe83e4dac22896d12e40c0",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/fonttools/fonttools-4.66.1.dist-info/licenses/LICENSE",
+      "sha256": "6787208f83f659ccbc2223b2fde952ffa6f7e8aca62f1a8a2bf5bc51bb1b2383",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/fonttools/fonttools-4.66.1.dist-info/licenses/LICENSE.external",
+      "sha256": "94a83aaee0729a0f302d34acc4acecbd9d58366f262429075fe557e4a54b2e69",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/h11/h11-0.16.0.dist-info/licenses/LICENSE.txt",
+      "sha256": "37db5bb85926db28a427a25867f10b1232003aea1be69ccb851138adb8e6f361",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/hatchling/hatchling-1.27.0.dist-info/licenses/LICENSE.txt",
+      "sha256": "7f143a8127ad4873862d70854b5bd2abd0085aa73e64fd2b08704a3b9f5c07fc",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/httpcore2/httpcore2-2.13.1.dist-info/licenses/LICENSE.md",
+      "sha256": "c4df125c807b0613501e943a5c92496dd11d2c16604ce396097a8dde396304d9",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/httpx2/httpx2-2.13.1.dist-info/licenses/LICENSE.md",
+      "sha256": "7e7d6dbaf7fe160d39fd6e84fd02c33cab96bcbea34d36998d545bceb4a19c30",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/idna/idna-3.20.dist-info/licenses/LICENSE.md",
+      "sha256": "1a9a4f0e3d479a27240ddd59a9137a66ab4a0f9dfdc8ca6188cc0bfd85187f04",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/iniconfig/iniconfig-2.3.1.dist-info/licenses/LICENSE",
+      "sha256": "3409fa91f7ace557894632676656e32264fe5ef7581535725dc9a23774551bd4",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/joblib/joblib-1.6.0.dist-info/licenses/LICENSE.txt",
+      "sha256": "42612911c1872c5e4b43f6ae0e8ee59467cd350332241cf72ce90640264fae6a",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/jsonpickle/jsonpickle-4.1.3.dist-info/licenses/LICENSE",
+      "sha256": "da4d740e7bfe1e9777baeda3cf6534f568ecb2abb27b80e7e2c2f9f2864d839d",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/jsonschema/jsonschema-4.26.0.dist-info/licenses/COPYING",
+      "sha256": "4f92a015a13c4d1a040bef018aa13430b4f1bc73b41b16bb846c346766de7439",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/jsonschema-specifications/jsonschema_specifications-2025.9.1.dist-info/licenses/COPYING",
+      "sha256": "42dcd63495f87b4eb7c7757afa379bb55a53f94afd7a5f657d9adf57236e515c",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/kiwisolver/kiwisolver-1.5.1.dist-info/licenses/LICENSE",
+      "sha256": "529c40e5f67f2f88904657a9f7879ae2f8dc76bc9bfef9cb10d988b48804ed61",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/matplotlib/matplotlib/mpl-data/fonts/ttf/LICENSE_DEJAVU",
+      "sha256": "d75938dec098f06f0ac3c00853065d94f020be1c3c62ef1dc2975ba15b4d9b0e",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/matplotlib/matplotlib/mpl-data/fonts/ttf/LICENSE_STIX",
+      "sha256": "bab3d31dfef07f483624f2f65f2711e76065b8e7273278b1c071ede1041c9959",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/matplotlib/matplotlib-3.11.2.dist-info/LICENSE",
+      "sha256": "822e8e528147569a41975592aee19c11992ab667ba50451cd929031d5fc74491",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/mcp/mcp-2.3.0.dist-info/licenses/LICENSE",
+      "sha256": "5e13dbbc1d120fc2a03cecde7c91424ae2d7de11b63d58ded2f4431e261ee50d",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/mcp-types/mcp_types-2.3.0.dist-info/licenses/LICENSE",
+      "sha256": "5e13dbbc1d120fc2a03cecde7c91424ae2d7de11b63d58ded2f4431e261ee50d",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/more-itertools/more_itertools-11.1.0.dist-info/licenses/LICENSE",
+      "sha256": "09f1c8c9e941af3e584d59641ea9b87d83c0cb0fd007eb5ef391a7e2643c1a46",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/music21/music21/corpus/essenFolksong/license.txt",
+      "sha256": "52ed4652fdaaca16a0bce329b74912de50a9d67ac29d0acc9ca4eed9705cd27f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/music21/music21/corpus/license.txt",
+      "sha256": "334fce4085e8ea9d0927ad437477e23367dbe2987030e6676760eebb6b0996db",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/music21/music21/scale/scala/scl/license.txt",
+      "sha256": "650ac5dc4e5eab832a097d6ccb38fbcc1038e2349bc0af0c53265d563cf866c2",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/music21/music21-10.5.0.dist-info/licenses/LICENSE",
+      "sha256": "425c3fc0701ab4f07e9520bbc52d596a92c0ae81f5603ef7a44e93d567f2ffb2",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/numpy/numpy/_core/include/numpy/random/LICENSE.txt",
+      "sha256": "fbc539f47d0cf83bc61378080fb873d5c14630126cacbfe754035c3926daa5ec",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/numpy/numpy/ma/LICENSE",
+      "sha256": "05f3b88351988ecfad10abe92c0c50e5875c6452d5009a0084cc291551ffcca6",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/numpy/numpy/random/LICENSE.md",
+      "sha256": "103166b62b80443afb9eb3488e052ea06be0cff566b908f199e561fde49af19f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/numpy/numpy-2.5.3.dist-info/licenses/LICENSE.txt",
+      "sha256": "649a589ab31076e79e9ce62ba24eae9959598124176640dbc95f87bd10f34fcf",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/numpy/numpy-2.5.3.dist-info/licenses/numpy/_core/include/numpy/libdivide/LICENSE.txt",
+      "sha256": "fbc539f47d0cf83bc61378080fb873d5c14630126cacbfe754035c3926daa5ec",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/numpy/numpy-2.5.3.dist-info/licenses/numpy/_core/src/common/pythoncapi-compat/COPYING",
+      "sha256": "3f2c1ffa76383a55ae0aac01c9737cd70050dff63e1f026694fbe9d662573c98",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/numpy/numpy-2.5.3.dist-info/licenses/numpy/_core/src/highway/LICENSE",
+      "sha256": "e340270d4f64384569a91d546acb5b094d69ce47f0c015db77abb74dc6f815af",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/numpy/numpy-2.5.3.dist-info/licenses/numpy/_core/src/multiarray/dragon4_LICENSE.txt",
+      "sha256": "f7b14309e5f54e5022b26448eefd419988ada2aec01d3c1162d84a0ea8f21f2c",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/numpy/numpy-2.5.3.dist-info/licenses/numpy/_core/src/npysort/x86-simd-sort/LICENSE.md",
+      "sha256": "211e7d737d6179a08f791ebb0a99897ce7cd2457410c542876d125576edfe910",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/numpy/numpy-2.5.3.dist-info/licenses/numpy/_core/src/umath/svml/LICENSE",
+      "sha256": "c17011467b4fe6e20fbfbeda4df09e58c2bca5480a063e55735a4000a379aad9",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/numpy/numpy-2.5.3.dist-info/licenses/numpy/fft/pocketfft/LICENSE.md",
+      "sha256": "a85ca13fdf90160b64a0698215868c13b74d835ad0a4e2ba44713b8c5058a056",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/numpy/numpy-2.5.3.dist-info/licenses/numpy/linalg/lapack_lite/LICENSE.txt",
+      "sha256": "a14cc25e10d40a3aa705b7de2fb764a6535d8ee9b2db4e1724900585457dfd55",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/numpy/numpy-2.5.3.dist-info/licenses/numpy/ma/LICENSE",
+      "sha256": "05f3b88351988ecfad10abe92c0c50e5875c6452d5009a0084cc291551ffcca6",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/numpy/numpy-2.5.3.dist-info/licenses/numpy/random/LICENSE.md",
+      "sha256": "103166b62b80443afb9eb3488e052ea06be0cff566b908f199e561fde49af19f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/numpy/numpy-2.5.3.dist-info/licenses/numpy/random/src/distributions/LICENSE.md",
+      "sha256": "469778be8f33d54e1bcaab28c281cc472916d2d273f835e55bc487d30503face",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/numpy/numpy-2.5.3.dist-info/licenses/numpy/random/src/mt19937/LICENSE.md",
+      "sha256": "0e111337b25494a773106695f0e799f642b8567aaacca4f116a74a8177179156",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/numpy/numpy-2.5.3.dist-info/licenses/numpy/random/src/pcg64/LICENSE.md",
+      "sha256": "e7d4f4fb20358f314210a892ae17351e04993813646f697ec387385ca2a36918",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/numpy/numpy-2.5.3.dist-info/licenses/numpy/random/src/philox/LICENSE.md",
+      "sha256": "6f5828a57223d4cc7f8ea505a2623e7b978b242752c1515e355f46ba2cec1800",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/numpy/numpy-2.5.3.dist-info/licenses/numpy/random/src/sfc64/LICENSE.md",
+      "sha256": "9d4098846018319cd68e228ee6220361787f73bccbf00237a85e4fc9621b998f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/numpy/numpy-2.5.3.dist-info/licenses/numpy/random/src/splitmix64/LICENSE.md",
+      "sha256": "268b0ca06759d31ea3ca68dd35f20e877916e927b1c2a835e4592a3c4354b1f9",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/opentelemetry-api/opentelemetry_api-1.45.1.dist-info/licenses/LICENSE",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/packaging/packaging-26.3.dist-info/licenses/LICENSE",
+      "sha256": "cad1ef5bd340d73e074ba614d26f7deaca5c7940c3d8c34852e65c4909686c48",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/packaging/packaging-26.3.dist-info/licenses/LICENSE.APACHE",
+      "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/packaging/packaging-26.3.dist-info/licenses/LICENSE.BSD",
+      "sha256": "b70e7e9b742f1cc6f948b34c16aa39ffece94196364bc88ff0d2180f0028fac5",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/pathspec/pathspec-1.1.1.dist-info/licenses/LICENSE",
+      "sha256": "fab3dd6bdab226f1c08630b1dd917e11fcb4ec5e1e020e2c16f83a0a13863e85",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/pillow/pillow-12.3.0.dist-info/licenses/LICENSE",
+      "sha256": "dda12a98c1979cf3d94df1cff45d27a4cb3f04a60c76f76902ac54cac03ec0ce",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/pluggy/pluggy-1.6.0.dist-info/licenses/LICENSE",
+      "sha256": "d6b65e6c213a5d0b577911d34d6e5949b9f59d76c238c5071a2f3fc16cfb2606",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/pycparser/pycparser-3.0.dist-info/licenses/LICENSE",
+      "sha256": "0c846399369ea76ddd7b5c44fe6d16497415fcf015f5cbb508c24bf98b81c5b1",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/pydantic/pydantic-2.13.5.dist-info/licenses/LICENSE",
+      "sha256": "a9e186f3ca16b5eef84318e7a701721351a00cb7b8ae3a4394b67b49e3529ef3",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/pydantic-core/pydantic_core-2.46.5.dist-info/licenses/LICENSE",
+      "sha256": "2afdd30d54b4d62b6f488a6bcc1546e84ec5061f13f4209c03d012348783795a",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/pygments/pygments-2.21.0.dist-info/licenses/AUTHORS",
+      "sha256": "71a83872ad82f57be692cf827e048e2cd51d45169cfa1ea3f28706d97a872c0f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/pygments/pygments-2.21.0.dist-info/licenses/LICENSE",
+      "sha256": "a9d66f1d526df02e29dce73436d34e56e8632f46c275bbdffc70569e882f9f17",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/pyjwt/pyjwt-2.15.1.dist-info/licenses/AUTHORS.rst",
+      "sha256": "925ce43461029eedbf558ec0b7cf7fc4b045def5120ebb97937c70814071cf07",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/pyjwt/pyjwt-2.15.1.dist-info/licenses/LICENSE",
+      "sha256": "797a7a20231d4c433e9f1911db1731d06b5828b98f499819a034f7c0f56f5ce5",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/pyparsing/pyparsing-3.3.3.dist-info/licenses/LICENSE",
+      "sha256": "a5425f9dc14ac74d4c5f0b679e941f2442e32cca7452a4418d5b1a49893ebe4e",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/pytest/pytest-9.1.1.dist-info/licenses/LICENSE",
+      "sha256": "ca836a5f9ecca3b2f350230faa20a48fb8b145653b5568d784862df864706b9b",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/python-dateutil/python_dateutil-2.9.0.post0.dist-info/LICENSE",
+      "sha256": "ba00f51a0d92823b5a1cde27d8b5b9d2321e67ed8da9bc163eff96d5e17e577e",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/python-multipart/python_multipart-0.0.32.dist-info/licenses/LICENSE.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/referencing/referencing-0.37.0.dist-info/licenses/COPYING",
+      "sha256": "42dcd63495f87b4eb7c7757afa379bb55a53f94afd7a5f657d9adf57236e515c",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/requests/requests-2.34.2.dist-info/licenses/LICENSE",
+      "sha256": "09e8a9bcec8067104652c168685ab0931e7868f9c8284b66f5ae6edae5f1130b",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/requests/requests-2.34.2.dist-info/licenses/NOTICE",
+      "sha256": "f5110972dedad2b4e9d314518daf3b7d72d6e02e499acd802181de6f74571dcc",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/rpds-py/rpds_py-2026.9.1.dist-info/licenses/LICENSE",
+      "sha256": "314e4e91be3baa93c0fb4bccc9e4e97cd643eb839b065af921782c2175fe9909",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/six/six-1.17.0.dist-info/LICENSE",
+      "sha256": "4375ba20e2b9c6c4e7cad2940a628fd90e95cc3d50ee92aae755715d8ba1fbd0",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/sse-starlette/sse_starlette-3.5.0.dist-info/licenses/AUTHORS",
+      "sha256": "c2ff63d2ecf128bbda8ab1b2016830a5da124202fbb97168685bb9946aed3f1a",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/sse-starlette/sse_starlette-3.5.0.dist-info/licenses/LICENSE",
+      "sha256": "80af6bfccbebd2c14d4aab96695cab9950e177190cc80f5ef819e99996883e8e",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/starlette/starlette-1.7.0.dist-info/licenses/LICENSE.md",
+      "sha256": "dcb95677a02240243187e964f941847d19b17821cf99e5afae684fab328c19bf",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/trove-classifiers/trove_classifiers-2026.9.21.13.dist-info/licenses/LICENSE",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/truststore/truststore-0.10.4.dist-info/licenses/LICENSE",
+      "sha256": "33be7b7e8fa4fd19b1760e1a8ed8a668bdab852c91b692dd41424bcb725a9fca",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/typing-extensions/typing_extensions-4.16.0.dist-info/licenses/LICENSE",
+      "sha256": "3b2f81fe21d181c499c59a256c8e1968455d6689d269aa85373bfb6af41da3bf",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/typing-inspection/typing_inspection-0.4.4.dist-info/licenses/LICENSE",
+      "sha256": "804b59b25f2c31bd278f9202a19ae49a3945aa2664387e2d0a128c7cacc61ec3",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/urllib3/urllib3-2.8.0.dist-info/licenses/LICENSE.txt",
+      "sha256": "130e3a64d5fdd5d096a752694634a7d9df284469de86e5732100268041e3d686",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/uvicorn/uvicorn-0.54.0.dist-info/licenses/LICENSE.md",
+      "sha256": "efe1acf3e62fb99c288b0ec73e5a773b7268ef4320fe757ea994214e4b63c371",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/verovio/COPYING",
+      "sha256": "8b1ba204bb69a0ade2bfcf65ef294a920f6bb361b317dba43c7ef29d96332b9b",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/verovio/COPYING.LESSER",
+      "sha256": "a5681bf9b05db14d86776930017c647ad9e6e56ff6bbcfdf21e5848288dfaf1b",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/verovio/CRC-NOTICES.txt",
+      "sha256": "aad5d54f08f993a6f26258ccea83dfe1544c453058eabe94ef6025564c01bba1",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/verovio/JSONplusplus-LICENSE.txt",
+      "sha256": "3e85b6b2dafb95819f34cabbf91f6faf79bcf107567d10486dec9935bd38c308",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/verovio/LOCAL-TIE-FIX-NOTICE.txt",
+      "sha256": "c37dd67c74f873c4ced341f79e77236c374d62b6a0e1c23c793492f0e8eddf8d",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/verovio/MINIZ-CPP-miniz-NOTICES.txt",
+      "sha256": "c20ed9c2afe2858850a8674f36bf439aa73171da621cee5e80547072ac5faf4f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/verovio/SOURCE-FONT-METADATA.txt",
+      "sha256": "cc6d91d0902ec09a49f7b5f5a650b483d9e4b62f95daac979c45844bd4e1df9d",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/verovio/humlib-NOTICES.txt",
+      "sha256": "75f809789b17dab929433c70dbf501e7326270398edcba40ac21af71472e4f06",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/verovio/pugixml-NOTICES.txt",
+      "sha256": "03425a580fe7947a8308bfb287db67603d5a0e6fc850ec319e24591c05a22f86",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/verovio/tuning-library-LICENSE.txt",
+      "sha256": "ee3bd73591efbb9272e28d066fc430790a1e9eeb75b6658864f4377fe79dc558",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "LICENSES/third-party/webcolors/webcolors-25.10.0.dist-info/licenses/LICENSE",
+      "sha256": "224bb9063d1204f687477a680fab945debff8cf717c629510c1d7083d9a7969a",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "README.md",
+      "sha256": "64fe90136dd47d31fb2f70d8940ca530e25e7b7e90ab0461deeed30b00ed3bf7",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "THIRD_PARTY_NOTICES.md",
+      "sha256": "c39bbcff5120af9fdbb713fa35fcc7ed96c2ec49fe5af3ec65c19f259ad30c4e",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/M4-upstream-baseline.json",
+      "sha256": "90a8c1fd419394c0c9c4e0790931423f361682f510564f46858aab162818d8db",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/V0.2-M1-evidence/legacy-schemas.json",
+      "sha256": "f3157606eb5ccaf81c7e251fa4d27e70cdfdaf332feb061f40671473fed9fcf8",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/V0.2-M3-evidence/baseline-tool-schemas.json",
+      "sha256": "32be082ca83d136ff7bef27b0d22ca219900ed8ad5c5430640e35e0876d31418",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/V0.2-M4-evidence/baseline.json",
+      "sha256": "4df545dd709e08b6060f239f1ed8b37d8618a66648282fbdefa8cf65cbd6c97e",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/V0.2-M5-release-checklist.md",
+      "sha256": "654af7e226f6a6b7777ef1e02fad55c4d8918516860abca3f532370beb25a319",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/V0.2-M5-simplification-evidence/baseline.json",
+      "sha256": "60d058fc3e19de07032eff63e2666401aa3aa6542323639e0d6092aef354d51c",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/V0.2-cross-platform-foundation.md",
+      "sha256": "c32bbf6da9c00a2ff4c51da242b3ff788b6f3c5488ac38ffeeb7df822a077f2c",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/examples/M2-inspection.json",
+      "sha256": "27766c41a8929bae5dbad1d56a5dc49149ffcf18a2a5d65d519861fba1b78f84",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/examples/M2-report.json",
+      "sha256": "92c976a7a53ee317b0c6bf1c493b4b8377c649a574a8bae3e38aab1783c21259",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/examples/M3-inspection.json",
+      "sha256": "c0e18f830485c4610762098ac267bd6f251535653aa67b041dbf7a8d011a44be",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/examples/M3-pitch-report.json",
+      "sha256": "5cdb6ab624813785104130dd3a228eafb15538c8392c710f595dab8ffe6e064a",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/examples/M3-report.json",
+      "sha256": "3cfc306b54b3095e9c9cc2fdb7a5785ef779e6e00f2bd1e43ab5857e8da5a9db",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/examples/M4-detect-style.json",
+      "sha256": "584a68f96b947f973b3068769d35976fd2abc65fd211fe53c0a5c1ced76fcdd9",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/examples/M4-inspection.json",
+      "sha256": "344e5ffe170dec1dbe375d5a38d68564a16325b601d155ec540470a81dec9a99",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/examples/M4-insufficient-style.json",
+      "sha256": "3b640bf376461a5b8d60ecdb97f6bc0f15a649b1baaedfb730063f20f344cb2d",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/examples/M4-parallel-fifths.json",
+      "sha256": "1e766dcd2327329f4eca23068d2bb459e7e12460324048ef1bd6325705ff4de5",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/examples/M4-style-evidence.json",
+      "sha256": "5dfd506e2d2df08e5b0009d9bcbc9c9a9f4f729f6d65619460ff8c7138af9481",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/examples/M5-analyze_score.json",
+      "sha256": "b546c91d7a29ea9ec0d220c5a467402d28d5a31ada827980ac39b1876e92d541",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/examples/M5-check_harmony.json",
+      "sha256": "1439dfc76f28a842d4a257c2ec1563256fa47cb19796e66d01f257df1fc8f586",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/examples/M5-check_voice_leading.json",
+      "sha256": "83eaefb3b9b1c7c486701addc060cbe0275352691716c07102d39e9307f6d70e",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/examples/M5-detect_style.json",
+      "sha256": "07276dcb6a2182ebb13902b882760f520c46d3922d6fd0d8cc99e331083893c5",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/examples/M5-domain-error.json",
+      "sha256": "3000cd21f725655eb1b8494fdcd8d66649a14cf0a0660a1a625b80aeea8ad71f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/examples/M5-get_style_evidence.json",
+      "sha256": "384ce00f907a5f36e212c3ecb47ada4f6dca9ceb1f800ef26983e1e81d5a4334",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/examples/M5-inspect_measure.json",
+      "sha256": "90c9af94dcb8c4a20b0ac65594f4c3a10d61bb8ac9478de8770112ff8787086e",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/licensing/renderer-artifact-audit.json",
+      "sha256": "6785f327501be878a45cc6407b13bc104e3492b536ea33942822323e97cd2dd6",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/licensing/renderer-redistribution.md",
+      "sha256": "95980556e406ef7ab257dad53c2ea0b5092ecbe50c3e59244fcba796e45d93e6",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "examples/analyze.py",
+      "sha256": "f8a71d702bf4189726545f59e39bbc40f5c0190456aa434b7fd668854f4adfcc",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "examples/normalize.py",
+      "sha256": "2c7cbb38d699e16948f56cbb603a772850572aadf69479492976b370fc5aa406",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "patches/README.md",
+      "sha256": "ebf0ad1919d2139d8cb0cce798aa69ad761ed1a5dbb867e523a71b9d2c3967bb",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "patches/verovio-6.3.0-deferred-tie-stops.patch",
+      "sha256": "10965e05ca1ffca8e9dd8dbf940a8f9313a95b4b414979afac2ff12b91edcd60",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "pyproject.toml",
+      "sha256": "59edd2658be3e6164b8b324f017460b9edd2459979029bcf50465b5565948717",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "requirements-viewer.txt",
+      "sha256": "7fcd85b305cb14d35ac5aeca71ce24a56e0f044d89b400c12a5fdf1142abc09f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "skills/composer-edit/SKILL.md",
+      "sha256": "8e9e01b818c28b688f866d020ff09befa92d82333eeaf5f5c7f4f3d0d58c85be",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "skills/composer-import/SKILL.md",
+      "sha256": "6aa375fe404c3e83f9caf7088b1ba0b6793e6bbd08257c2f812919b3b8baf36e",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "skills/composer-review/README.md",
+      "sha256": "6c24d33d344a85f258d2626c34ae3c1c511ae00d37e01b16d05a868813037e12",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "skills/composer-review/SKILL.md",
+      "sha256": "cd4b604733d5336103489dad7bde809e86fd8a2889053d803d59d5327539c947",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/__init__.py",
+      "sha256": "92a83a6b90d378144976824247542a96a0dcb5149b4d8719bcbb4fe45bed12e3",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/advanced_models.py",
+      "sha256": "ad32622b1393536d81c8f1390b063c4934343411104f7e72f00f9381c1bad302",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/advanced_review.py",
+      "sha256": "f10dd4d5a6f3a5ec6ec758ce4a05d5f18ec45ab5b203d7e2d3bbb972389597e7",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/advanced_runtime.py",
+      "sha256": "fadf563d4d851c79695b2b131c3318e059960f69245320a2a8bbe69fffcd0d62",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/advanced_worker.py",
+      "sha256": "7c76e85609e1c13e63ba7eca879e6263b156872cbfb575c681d221f8000da798",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/analysis_models.py",
+      "sha256": "e5c38a51bb075dc7a16ecec6d0592c09cafa8325c254f3294617b086e5160820",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/editing.py",
+      "sha256": "7e6a56d2f91cac86efa5b751197021508397c15c1fa3809e387f8573caa51a2f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/editing_creation.py",
+      "sha256": "0acad30774d9e3830fe5f6b13433569dded49a8d5c53a2ab29d7bc03fa59a70e",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/editing_creation_verify.py",
+      "sha256": "89f304799939e7d18e1bce29b53904dc4257b923aaa0fd878b346355569eb8bc",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/editing_export.py",
+      "sha256": "5bd17a1ad34726999d4f2bf11605343d7b26d5afc9f548aec746a2bca63d4b30",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/editing_expression.py",
+      "sha256": "494da91b40e7185bf082cc6d7a0cfca17344edba4faf146d3ed14577aca8eaba",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/editing_expression_verify.py",
+      "sha256": "bf00cb96a56e203af8d265fc23101ef9736568c4700f90e26a60d4eed72ab090",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/editing_models.py",
+      "sha256": "bd91995ef72257ff1577da56e4a8dff2f637cea20aacafb5c6d98908bb0572bf",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/editing_pitch.py",
+      "sha256": "1fd0ad7feaf764197c8d5fe125bc970a2111b09b220d25871233403f5b58cb4a",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/editing_rhythm.py",
+      "sha256": "ca24a36f9d38048daa4fe1b89892502f9682c3fdb088d5315f096b75f0ce8872",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/editing_rhythm_verify.py",
+      "sha256": "881b2ad9431e8224233540ada9693d916080c435082eb44a45ec1f18b792661d",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/editing_runtime.py",
+      "sha256": "492b92de0ffa3b2bf8c875f5b4a87b2834b3b3f7d69cf4e0698ee6f4b754634a",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/editing_source.py",
+      "sha256": "6925f00b4b9f311836047c68eca048e55de2a53b3f6ad9b297df7bc2d7b0f82d",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/editing_verify.py",
+      "sha256": "4ed3196df362ee8af5ce86b7d394c1b0bada371d625c34ef4b87e252be72f2d7",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/editing_worker.py",
+      "sha256": "f0c3def76feec4862671727733a6df40c37bed046c2b25f1c364e33d8b4fb38f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/engine/__init__.py",
+      "sha256": "d9e6bf11002d50c11f1fdd5fcd22107104612836790b1c1061bfb46f05e5dbce",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/engine/advanced.py",
+      "sha256": "e764b49ca0ea1bfd51f190e683ae356b9525d7af95d19d91299aa14e855c3851",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/engine/advanced_context.py",
+      "sha256": "975f25b1a89c2c477846defc1d781e7012602a31169373de06589df2e26147d1",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/engine/classical_relations.py",
+      "sha256": "bcc184b990575bd2244ad1e838956f9eee367270ecbc8bc68975bdd9d8a70d21",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/engine/composer_feedback.py",
+      "sha256": "b2c9f4c9ed4cea29e8715aa464142462e416c4eb05a5afb293a10346662fdbfc",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/engine/ensemble.py",
+      "sha256": "3544f6fa9d60c38438df409cfe7e5e8d859407123969869e4435893e2e200b2f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/engine/evaluation.py",
+      "sha256": "aa10abe6eed70fe46ff7ac7c5cf054d29427b41677b616098e1c1f66ed14d44c",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/engine/evaluation_evidence.py",
+      "sha256": "3c9adddd360aa884c846898ecad6d1c7146aee79c9165331d24288ed3e1b2c07",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/engine/harmonic_checks.py",
+      "sha256": "410b214ace209d9a001bb4ef9b7ca0b134a4c179323680ff38f6a4ae2c95e813",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/engine/harmony.py",
+      "sha256": "562715426492345ef1fee34816fd148a6fb90cd1c5378cb0b70a9e972ff5f809",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/engine/key_analysis.py",
+      "sha256": "76aeec58057b7e7d2afcb558bbf79012b3be22cd08aad40151065dcb3dee1128",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/engine/melody.py",
+      "sha256": "916b061168e87a94291b01f618e41da5ba66d3034b57547d6f6c8b3219c26e42",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/engine/musical.py",
+      "sha256": "2d3e0f0cd74378e8b3a0880dfa19575377a2f3149fe5e218956d6014059af552",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/engine/parser.py",
+      "sha256": "6da792a66ae961d7d0a1ce9edfb8de04605b42756943b8445df956a4f711fd47",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/engine/relationship_assessment.py",
+      "sha256": "e6ba2120c9c59b25b6bafc0b127f60dbcf0e75d70272e34c4f0fac8cc3edb31d",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/engine/sonorities.py",
+      "sha256": "63c8499d36144e433893ed586f09a6e395ba032f10a8cfb200ae092b09d6c6e3",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/engine/source_context.py",
+      "sha256": "055d845c36ef266659b70b3d651fac845141078d52fe35a9652b868725ab98a1",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/engine/timeline.py",
+      "sha256": "c58011186d67140a298dc32128165a1d9f4211a23621b7d0121fece9c60c6a7a",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/engine/two_part_harmony.py",
+      "sha256": "0e6a795e882c97628efd1d418d5066346f7784b19cc1ec74f5b48f39d4591cb8",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/engine/voice_leading.py",
+      "sha256": "6c7c972c58cf2121455147c86dcfd26d1dc42c0c5a2c648688b22c1fbee6fc41",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/errors.py",
+      "sha256": "2b79cdaa2078f1afc9448a1833a7c41aa64527ae500acfd743d3c4641957ffae",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/evaluation_models.py",
+      "sha256": "25d58e5f0277afac5076b03a9d551292f911ed7e40d57b51962f6338158e2bcd",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/evaluation_policy.py",
+      "sha256": "4ac7fb14a5ae4bb5737799fc06ce468640f0c73827adf2bf28d2306e85afc256",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/evaluation_projection.py",
+      "sha256": "692e3adbfe6d9e1ea50ed542f0315cc54d052e340e5f695a416c670a499cabbc",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/evaluation_review.py",
+      "sha256": "b55db290a2774295b0063cbeb10d71568515b558b462c622aada2467ead4aa62",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/evaluation_runtime.py",
+      "sha256": "df4760be06bb4ffe88866b4a6e6a567c96190bcb6c6d42482ebec5ed17b5b624",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/evaluation_worker.py",
+      "sha256": "c937d60c6e4741ee2e2c12f620602c6613e9b8e0d6bf173074138a7aa0ec6593",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/expression.py",
+      "sha256": "fdd40e07354810253c95ae6775b18cfb9a01529872d7df98d900cd7d9ea2f1d9",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/expression_models.py",
+      "sha256": "ccca98f993941e863bc0c01cff11a5102fc32d7ab160f44ea5e540052fa31774",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/expressive_brief.py",
+      "sha256": "2857eb37e1ff93ba635019a57721980f54a7d74fcd71241ff0c91bb0899822c3",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/expressive_models.py",
+      "sha256": "1c44b8a1bae8a39b8fae30d6a253b63fbe1ec2ba81c3d8dfa86e331ffb992e69",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/focused.py",
+      "sha256": "6f7615f871129dca0d10de83ecd9f67368ff199614ee5aaec70461353fe4d4dc",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/import_recovery.py",
+      "sha256": "d613144b632223b62edaf4de8e67be6c359f4b3a349e81089a01e270cdf9470e",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/models.py",
+      "sha256": "74c621f06ece31d15dce50d1d2c9c6276faf952283851fcd90ede86f4b5c0b6d",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/musical_validation.py",
+      "sha256": "6fa9e14664c7e4a714bf42e9c2a628e39909d0eb8edf44ee6f03685646ad897a",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/passage.py",
+      "sha256": "011a5d962ba3b6b7ea616f6d1c9f8128df1f021c1d9fd232e28c931b6f0b95b1",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/passage_codec.py",
+      "sha256": "dc0bc5df849a71674202c75c09c4ed8e41991d1f266667dabcdde0d8d664b1c0",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/passage_delivery.py",
+      "sha256": "1d233320b40d2eb589f2647c7367745f3b977ce1251f8ae74805f6f94a6a06dd",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/passage_session.py",
+      "sha256": "dd6739f2dcf1525abbb8fe052d48c434bf18d871f9b8d416bd43776ecceea4a3",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/presentation_models.py",
+      "sha256": "707db3cdd7f989b54b07c076a3d5d94f0cbe017e3217ae9e07c701f130a2dc39",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/renderers/__init__.py",
+      "sha256": "7b753fd8b0abc9395c3308cd00e914e38e3b6f408ff99641f50e553a8b31a4d6",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/renderers/verovio.py",
+      "sha256": "9fb29f81930d55c3c8b884cecd8f982ac288df38638b6ee4634d907a09e4c710",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/renderers/verovio_worker.py",
+      "sha256": "5b55ede7d6fb706acf043333a6bf00dfb1066fdaad1cbcff48b922ce5cb1b88e",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/repair/__init__.py",
+      "sha256": "d9e6bf11002d50c11f1fdd5fcd22107104612836790b1c1061bfb46f05e5dbce",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/repair/interfaces.py",
+      "sha256": "b367f8d78395dcec1432095f32b351ed6ec206cdc549efda4fb7397e4ecc866b",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/report_reuse.py",
+      "sha256": "79560215a44d5342a50e07819de979ae1ad5aa79d5c2ca4c53da84bbf330c2bf",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/review.py",
+      "sha256": "3e373fffd51e8f8a7b14780ebb9c081d73dc5936884f5e6b8d637749fa2683eb",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/review_models.py",
+      "sha256": "a69328dd497b0da3f4dd0c84485b4307ea55c377b08f010fbcc6e72f770be97f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/runtime_paths.py",
+      "sha256": "3498f5f2ecdadc39b54168550def855d685daeb80a24f8dc9f73cecdf227395e",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/score_import.py",
+      "sha256": "20f05569b3e6d03015c976843e10d4f7feceac350b192315bb450786750cee34",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/server.py",
+      "sha256": "2e62b41cf39226862ce49fe003e95eee7d6031f18a86b90d78530168c957602e",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/service.py",
+      "sha256": "bc6a37ccabfdd0cbcb3edd9cecaf45814bb179590a1e613e7cc8fe1944ada5a8",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/styles/__init__.py",
+      "sha256": "d9e6bf11002d50c11f1fdd5fcd22107104612836790b1c1061bfb46f05e5dbce",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/styles/classical.py",
+      "sha256": "ec40493d269461be5d6ff098085aea0eabaf3d3f9d61e6ecec6aad4dd567e585",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/tool_contracts.py",
+      "sha256": "7f75fcd57f2db82e1708d5cd49e3c4a8cff2427c72f53741a5cc229157cecc2a",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/viewer.py",
+      "sha256": "f4fa721e3efc106d9df33ca42cc63cc2b9e25cf0c54f14fb27f44142ff144933",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/viewer_assets/viewer.css",
+      "sha256": "9dc97fbd406f1aa7b6db5bc637fc12c9634d8b2336c983b215a9121e66e40715",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/viewer_assets/viewer.html",
+      "sha256": "927f82d21f57bf50b87c042515146adb341ae089ba1dfdd5bc990b1ba1ee7609",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/viewer_assets/viewer.js",
+      "sha256": "6fe67599446eef1190f0a24759595e6bd1a4b369a57282c3b4a532b064256181",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/viewer_assets/workspace.js",
+      "sha256": "ab2052e29f15cc23cee244bc8eda05080890f1b239434f35fa88176c59bdb520",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/viewer_models.py",
+      "sha256": "ebc08188ebfb42cfc503067a169b3cf1c98eb7fe1be9362866be17d6d37abde7",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/viewer_pages.py",
+      "sha256": "3328c9ed8ff03e801543c905210f5cb8bd596010bc92029e09eb7493b4db23a1",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/viewer_passage.py",
+      "sha256": "48f93d9dafc6419cfbfadf9feb89fb15779e0d4149e7fda9e702262dd68a39db",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/viewer_runtime.py",
+      "sha256": "fc5a0af2dbad386cf0d9190f3540fd397abbaf6ea5b25d1983f3190f87d898ae",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "src/composerlint/viewer_source.py",
+      "sha256": "d9d72f5bcf760fea81edb971eb84f013fc8a87899630c1655efa579181f109e0",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/README.md",
+      "sha256": "b25ee8eb56ff9ae3f0a9a90e6ec3028b9c878079121aee400d719ca82073eecf",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/aligned_chord.mid",
+      "sha256": "4b35ce9c3d284621b3227d117a033b79296ca75cd5a06b08b296df7cc92147f9",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/all_rest.musicxml",
+      "sha256": "098e8a61ef0d9243fc6a6657c14598cb7fb11144631f736426b0d06a2cb18e15",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/basic.mid",
+      "sha256": "c6f17b71dadbc0116111ae8890305013be2a01f63d14ca809d50bc8bfe9e8166",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/basic.musicxml",
+      "sha256": "febc969a8e65ff6798074aec4566e5b4b63d95184d2748013a0b8608269125a2",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/classical_intelligence/README.md",
+      "sha256": "62ddad2bf602e86dfedc000b246706814a383e28d81c7eea92b8f5f1b3b6e858",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/classical_intelligence/ambiguous.musicxml",
+      "sha256": "de1b2fe44ae9e12aee0c8523f9dc6c17192f3caa2154469e414e809433865ae5",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/classical_intelligence/bach_contrast.musicxml",
+      "sha256": "03eb7366798dfb9102daf04d952425e2161f369b0598e50920d815b1aa1a4456",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/classical_intelligence/bach_positive.musicxml",
+      "sha256": "03d59d81dc4ec93771bbaaadf0e0dbbd0f4615192fb43732b48fe2e3c65daee6",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/classical_intelligence/beethoven_contrast.musicxml",
+      "sha256": "82abc80cb934f8a48f3260c1af253d49b7970eb4d16dd39a16085c381f74ee0d",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/classical_intelligence/beethoven_positive.musicxml",
+      "sha256": "cda4c5adc5246b2c3db82c236c929bb038989c3cd8ff033b34fd718d55301a2e",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/classical_intelligence/mozart_contrast.musicxml",
+      "sha256": "15e82b4f6d74070696dc61995c4f8ec54ba2092bea7d28a22a75d954afc04183",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/classical_intelligence/mozart_positive.musicxml",
+      "sha256": "174ced63bd357b853f7874f918cbdd46e44b86459ae9a42d53be22776af859bb",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/classical_intelligence/romantic_contrast.musicxml",
+      "sha256": "4be7cd3a5e9aafb31e19a394f80e6627ac7738ea48f3fbfae682072076a26c61",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/classical_intelligence/romantic_positive.musicxml",
+      "sha256": "302c6160e0862a06bf6bdf7fceaa87874b0bd8187dee27d8320ba2d27f33f6ec",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/classical_intelligence/unknown.musicxml",
+      "sha256": "8ffab26aa6b32eda35b1a934d7ec4259c98b9a10d7c8dcbf770ed0a263222c3c",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/empty.musicxml",
+      "sha256": "d87d57bd643b91e552e35ef288bb4bf39953b0adf45db1e5bfeba86a6956f657",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/generate.py",
+      "sha256": "70a86b55e18b4d4ed6b004234442d0e845f40e4be2d273c2c30c733d6bcbd764",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/inspection_tie_stop.musicxml",
+      "sha256": "cac61260524b2eb010d2c0c647300ee06baca4c4dba746c8879e4e85f3cf84cc",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/invalid_ties.musicxml",
+      "sha256": "c01956bebbe99821a46a8f6f1ce1351b9ab76fd3769fb15cfcc9df4e310ebf76",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m2/README.md",
+      "sha256": "d07bf801ccb2bf1a4856c21fd4d813dc8a7c621171a64f297ca0ff7f24d637ff",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m2/conductor_key.mid",
+      "sha256": "3c4df1b1456a6cff335cf83c2491386ee9561decbe2cd3d8ba702c963a5c948e",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m2/conflicting_parts.musicxml",
+      "sha256": "da21452168305d7522acf9491b0a4a1fe9c0b96c1b90bda11d06bd47eab9828b",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m2/conflicting_tracks.mid",
+      "sha256": "015611ec7f117bd2375ca361c7d8e9aaf26f364faf792759c7b45c0d5a17da0e",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m2/declared_major.musicxml",
+      "sha256": "ebd616832d40aabf827bdd73d9fdd75d6db19a34d772a8d39f7f6810ddb93186",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m2/declared_minor.musicxml",
+      "sha256": "9ffe6fe83feec71fc152b75f7ec0edfb3100a95e18668532bc3997ff42e8f789",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m2/estimate_major.musicxml",
+      "sha256": "b10697557c3831b44d5b23b590673ce4ebafbbdc5daa6a4cf403763d2573f9b6",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m2/estimate_minor.musicxml",
+      "sha256": "d3e9754fd5326b6c0c16c9cac316557eea631ad943f4a052101786e6edf734df",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m2/generate.py",
+      "sha256": "8671aefbc566da9d577e3b53948f58d0404b67cc96787ea6928d853d874eb176",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m2/inspection_multivoice.musicxml",
+      "sha256": "1b2ef563a49c67751d5629f21d14e1866f10acfd6c8ffc9eb166e71954d85a07",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m2/key_change.musicxml",
+      "sha256": "1c7ef919ab9ac56d6f5f076fbeb30ad6e6d64cfdb68b8927813d86160c766783",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m2/late_key.musicxml",
+      "sha256": "856e1899869b853a105783dd537b50abf6e9f6dd0863b412571239a819439ef3",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m2/signature_only.musicxml",
+      "sha256": "a10c587b0f74cedb755a696499736b475aa9a4c028bc48cfaebcb55a8161ec33",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m2/sparse.musicxml",
+      "sha256": "2938986bff39febe46b9b62457e8718b560b5a773654709e30f7e0760e514e4a",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m2/trailing_key.musicxml",
+      "sha256": "40c5eaf36c413cc89956f2d82b3063dfb2b374f7a3bc0cdd1d75b2b236d75a90",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m2/transposing_keys.musicxml",
+      "sha256": "e4061ab44cbf5657ccf995c4c8b8d1228da8085348bdfe4f28a78ee2a9d15ea6",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m2/uniform_distribution.musicxml",
+      "sha256": "84175f5389557f0e6abc2028c745a0f8639b2024245f86dea09578720093568c",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m2/unknown_transposing_keys.musicxml",
+      "sha256": "9741fe6c3c90b8df0bec36259a482fb90a1a5a5a0b1430a4cebbad1716447493",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m2/unlocated_key.musicxml",
+      "sha256": "bbf8ab6dd11e35e0b34c2bcc55bfce01faed97f59a49ed5b5116da825d749da0",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m2/weights_base.musicxml",
+      "sha256": "66d7474c8bfd232484a9f464b9f05e794d5e8dae74f6a9fb356ce78712de9102",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m2/weights_ties_grace.musicxml",
+      "sha256": "5bf214b096ea9e2771961776b8e616856ac70a0b82035d368baa3682f0a7396f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/README.md",
+      "sha256": "3e486d919e7faaee526d696cd8ea25966ad402a637e6cbc33cbac42e7e3d0188",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/cadence_authentic_continuing.musicxml",
+      "sha256": "6031dee0fe10a7fac226ee97e59f4c1f0db854282eb2dd36e1554fd89c02bbf2",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/cadence_authentic_end.musicxml",
+      "sha256": "79d34a27b411ed924f6bb212f6c1f19664907750b91c0ef58acde31d7b3c9d33",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/cadence_barline.musicxml",
+      "sha256": "88d346a85b2d14f12306276e60a0985e5ff0e02b218cb7d407919d6c8541dde9",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/cadence_barline_conflict.musicxml",
+      "sha256": "931b4e9fea8d692598cfd29785b1f91393b3aa37b692d5d489e748951e1f62e1",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/cadence_deceptive.musicxml",
+      "sha256": "cde16328ae9bd4d23919a90dea98d92eac3ec0733066d16fd8b476879a4b6a74",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/cadence_dominant_suppression.musicxml",
+      "sha256": "232eea928eba33404dafc4cc575c3592677a99476947818b78f3a8efae945713",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/cadence_excerpt_tail.mid",
+      "sha256": "593a752536a510df85a04dccf2b413e00d9c9c02d38ca1c9fdc8299d90fa1cef",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/cadence_gap_silence.musicxml",
+      "sha256": "8443a66386a9bb3d163697a6675cb88845a66d7cbfacbcefe8cda8333fa8cea8",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/cadence_half.musicxml",
+      "sha256": "f59da7d2f0401ef4eda10caf7e4c94b079c3b0492d90856b828d8f386f7271ab",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/cadence_inversions.musicxml",
+      "sha256": "0a326a912543992fe5463c1642494708891f8432ed1bf2520e7480a79863b6ec",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/cadence_isolated_dominant.musicxml",
+      "sha256": "e539476623d6a016ccc615c37020c09b361ea9ed450bfa41c0d2d5ba8b084e0a",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/cadence_midi_exact_end.mid",
+      "sha256": "2ba41a477f86dbd3c170853346bd0e8a169fa5b7baa1895f527c4e1c1d4b36e0",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/cadence_midi_silence.mid",
+      "sha256": "46341af2f6b02fe6c318fd316b6f1b8745f02990063f3ebfb967be7cc9f03136",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/cadence_minor.musicxml",
+      "sha256": "453cb6442947595396cf9212806057a97bf44c5e7ac2409a18d9b856aecb4f61",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/cadence_minor_natural.musicxml",
+      "sha256": "0cbbb59ba3b6027568266728cee909480358c6e465d39602d5bcdba98fccb3db",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/cadence_plagal.musicxml",
+      "sha256": "565001fecc576af585c92ad153c2fb15d5469883e5a3054b0f928c1af6667bfa",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/cadence_plagal_negative.musicxml",
+      "sha256": "1fd5dede62dc6af582c11fd4229fcb6413d18b98b5acf3f9e933ce2b54b8040f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/cadence_regular.musicxml",
+      "sha256": "690b19e53b78f3c826ae57a427a172fc22e3f17648067bcebe06b376a5edbc43",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/cadence_silence_exact.musicxml",
+      "sha256": "2ab165fe98951c930571b74ec81fb549e47ec09e94e864db3046161b49182f3f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/cadence_silence_short.musicxml",
+      "sha256": "f3a7c83f062742bae1cb926703b4fc5d9a8dad330b0f6b8b24f81b822a8bcc13",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/cadence_six_four.musicxml",
+      "sha256": "aa246731daa76b0172fb8330c0c1127801a1b4aeeb173531e3e6934068fec753",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/cadence_sustain_no_silence.musicxml",
+      "sha256": "31b4590f3fdbc0c0b105a5741107b62d35f27f74bb0fe3b66695104b5e62b664",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/cadence_transient.musicxml",
+      "sha256": "8c889d28957050dae995aaeb8f52d13506104530fae401beb2da19319b380f56",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/chords_incomplete_cluster.musicxml",
+      "sha256": "2850baa839684f88e995baf77e3f9d0514d1161fdc9f464eff4374f90d461b1a",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/chords_inversions_doublings.musicxml",
+      "sha256": "23264ff10e303468785b429c32bd0e882190a9006e01bfdc35c74a75193a8ed8",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/chords_neighbor.musicxml",
+      "sha256": "a2ce17eb654b7d167a9c8e547abc64cd68139888178f369aed9a7d7c858acae6",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/chords_passing.musicxml",
+      "sha256": "3cb4ca8575bdb1602b7edea8f98af938dd2e05d12cc81ede2e178b92c8c290ee",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/chords_sevenths.musicxml",
+      "sha256": "538fec3a108618cc915a0cade50131c4ea61ff1a7ce8f97f64a68239072c3be9",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/chords_silence.musicxml",
+      "sha256": "9e7379a020ecd09ceb924e4784ea52dcefbf1de67242206c3262538700252b08",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/chords_spelling.musicxml",
+      "sha256": "f1846e7e6d6f82abb14f248864256a1ed7bc5ae89e517117a95d08603b7219d3",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/chords_triads.musicxml",
+      "sha256": "6643e45f19f2f78809f45defa916b2a83c609aa08e98ce39d3634bac1fca4f6a",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/chords_unknown_lower.musicxml",
+      "sha256": "f3518a5a03fd1feef1516dd6518ecd7921fcf4fb18598fbe03a2b294de36678f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/crossing_chordal.musicxml",
+      "sha256": "105968a149c5e2f7dfe3bc656589e6b12251a37ce9b318cf3c91dd7f5ce32683",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/crossing_equal.musicxml",
+      "sha256": "e6133e5afb4d6ee6ba80221d3bc63155459f45c241527a5beda9f43a4d0becf7",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/crossing_gap_recovery.musicxml",
+      "sha256": "5b797cae26b3d261068454f387ae3a130b032e0a8457a31edb2ac90133c835f9",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/crossing_negative.musicxml",
+      "sha256": "9ca476bd64ffec6dc1513c0c94353d77a53a4b6c6b6a30395e57f2f97d05eeee",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/crossing_partial_order.musicxml",
+      "sha256": "a115e1644e97fe0b727725d6430567e8f78156f61b9b62c2fc2590467d3048f1",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/crossing_positive.musicxml",
+      "sha256": "19f8932a3c9af8d7cfd53100adb4bbb97bf5a8b8479e8946960624fd756c8ee9",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/expectations.json",
+      "sha256": "962f805b1a6955974629808fe46256414a0a75379492602484b11841f44a8e9a",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/extra.py",
+      "sha256": "b6b53931dabeca8a26b662faf61ecbc251bcf94877f4e711c17944581fa54ea6",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/fifths_altered.musicxml",
+      "sha256": "640cb404070e2b97f0162a39e5906bc3f2d22b194e03825a264e282ae23738b3",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/fifths_async.musicxml",
+      "sha256": "5b2562593b0f963d6f759a4c18c3d13aae9a40b512fe588881473f4308624b1d",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/fifths_blocked_recovery.musicxml",
+      "sha256": "011a6f344c4d13d865b39e0cdc764cac90df04a8d8560c9934e2f2be808143a2",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/fifths_compound.musicxml",
+      "sha256": "bcec0f4aca6161c369fd320e69788a3febcb45194c5d15fbe28fca1938596a99",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/fifths_gap.musicxml",
+      "sha256": "37edd955e2e8201ae2dcdfde96ea34a40cd6f39e2ae0dcc27a85347a60f15b24",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/fifths_negative.mid",
+      "sha256": "f42daa09e91943490709a1cef410695b01546094ce3586234736d68a28a92825",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/fifths_negative.musicxml",
+      "sha256": "b97ad6cf288d6f1bfe2d73e9fcb36d410d74979bbd484636376fdbd72c0e3aa9",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/fifths_oblique.musicxml",
+      "sha256": "bb0497c75242345ce14e9a6541ac67429f9d57732cdeb8d093127074a490aa9e",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/fifths_orientation_reversal.musicxml",
+      "sha256": "92d1b7d0c15675c7ccf0ddb6c15508ea600b56b308218456e12f524112bea8e4",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/fifths_positive.mid",
+      "sha256": "2bd23306b2c82af228574d4c7ec8002ed6625f3e49d087652f81bb1129367f10",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/fifths_positive.musicxml",
+      "sha256": "e611193e8c34e9df5366d00742d2b360419dc83fcd2d522280886847e42adde0",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/fifths_spelling.musicxml",
+      "sha256": "3a871879dff0916fb3d0f096b35f641f8b73e4c287a6d025c31a90fd0d852d5a",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/fifths_static.musicxml",
+      "sha256": "9945d1384789330caa0d9c70ad2a4f9b403472fa543a92fc25470f9f55ba39e6",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/fifths_ties.musicxml",
+      "sha256": "8d567af159143127ab7fcc199d8808fd3c530967da6a9ba4e3fc828aa878a264",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/fifths_unrelated_voice.musicxml",
+      "sha256": "98b744968c7fe224f75a7973679d15838984c000bd1ca15d1f417925686fe94f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/function_leading_tone.musicxml",
+      "sha256": "9f24cb2433316f5fb08630d8ff74a265dc6151e04a0e7b64015b1e51fba576f7",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/function_major.musicxml",
+      "sha256": "0d58b4c7ecee4be7a5176d1d5a223eba236818b591e6e1e88146c3027c3a8c5a",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/function_minor.musicxml",
+      "sha256": "6da6e1a4cd2e55e50411225cf2a8e149e761c99d8dea1dc0366ec56eee6a9084",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/function_minor_leading.musicxml",
+      "sha256": "f0b0fc0e2eff635ca89dd1773cd291df6dd56ffd219b351d768b7ac2914f7c39",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/function_minor_negative.musicxml",
+      "sha256": "0ddc58a0ea92796d5af10ef162fbd46dbf68686f824b504cad76026de36c8ae2",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/function_negative.musicxml",
+      "sha256": "d24bd756817bd1af8e8729d7d1741393cf42c4b41e371e9dc0d051785f702df3",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/function_six_four.musicxml",
+      "sha256": "02b52ec3a3f3c42bb698e4fc63044ba7eb8714c1cc75ae77b5a5995f1a70d958",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/generate.py",
+      "sha256": "2821d6c6ae7f5a09941165107466914218c78f7d9cd5f3190079448774fb5b49",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/octaves_async.musicxml",
+      "sha256": "13e93abd33822dcf2c023d922653d92f4a5b1bbd07715068747ea646cd7e86c6",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/octaves_blocked.musicxml",
+      "sha256": "7fac73a59d3118baf9bcd003bc557341e63792fa622f0dc51103f7a04d3c20a0",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/octaves_compound.musicxml",
+      "sha256": "e7b095b7626374cc5673a0a25ec425d0d593252e41bb1b2ad5b76bbcdc55f0b3",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/octaves_contrary.musicxml",
+      "sha256": "836530871b0a78f8713f21b4f483cc3da7ad6dc9dfe8ae3f6ffdb29adb57f5d6",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/octaves_enharmonic.musicxml",
+      "sha256": "a67c308c9ff910b603536af19e07632a88d2c488c2ab127b2fe500e67d21301e",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/octaves_positive.mid",
+      "sha256": "460affae9627b9a984cf2b1e0bc943a205f8e2f6861b947cd5c95097ec8425fd",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/octaves_positive.musicxml",
+      "sha256": "dcf529eebef31b7054ad107d586ad892f20e9bbc06666599e8eccf59f1dc2654",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/octaves_static.musicxml",
+      "sha256": "771674ef387d96bc442875cc136660307d05796bde09fe65b91a85337442efd7",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/octaves_unison.mid",
+      "sha256": "81b82c0996eba09b068bf68c4c687cd6dd9062c8f3a6ce2558a19690ea02bf18",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/octaves_unison.musicxml",
+      "sha256": "26dbcb71ba14a9d737f9f85e5f9a2c52c637d49b909a172059e7611a0e7276eb",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/octaves_unrelated_voice.musicxml",
+      "sha256": "5f1cc47b8d817abac47302150ed37a3e9c961ea13b52f57be843b199bfde3345",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/range_bounds.musicxml",
+      "sha256": "a57dbd9f14d57bf55f6cf415e6699b6dc9c6f4f733aa97fe73ab764da4f3b985",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/range_chord_tie.musicxml",
+      "sha256": "41bc404aa88012d2bd99db290ee2ba1e38009fc842fabd9266d3d5e016699551",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/range_positive.musicxml",
+      "sha256": "6973db35707318c3e3615aa426355c68a624d1ab9acbfc6117babf6475551e9f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/range_unknown_inspection.musicxml",
+      "sha256": "38c77f3f7ca57d0d202c3c6c0146fee1ab6a832ce14363f01603ef8216245b90",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/roman_chromatic.musicxml",
+      "sha256": "dcf64f7cee5b9f7d7576445c5f3095d058dcfd492e357c720448463914a63127",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/roman_inversions.musicxml",
+      "sha256": "4b582b7be92e8bb693376eeb7132d7640292a9f65ee5b37f7156019832ced26a",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/roman_major.musicxml",
+      "sha256": "9eb98d9d27af57f0cb2a164c3748df5b9c8ba47a4bf47a2f656290cda351e3c3",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/roman_minor.musicxml",
+      "sha256": "2eca988ed0fad25b4ad9296bd58b87797308229bc3f5fbed3a4256241249aa14",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/roman_missing_key.musicxml",
+      "sha256": "9dd6b9e4a59703e9f0e21ad9fb04630a0f378445323b47539f01ffde8c35a2af",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/seventh_chordal_lane.musicxml",
+      "sha256": "91d7567ae73a209df92546efe478d5d09202162170dc79bb7c6b13671f5ddf43",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/seventh_doubled.musicxml",
+      "sha256": "d632389c21761e0e52ffa86d0b749e07277f1972f0eb3c8db5d1bab5809e400c",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/seventh_exception.musicxml",
+      "sha256": "c782d4a481cb5ae555a1402b1a4fb96dbf13cfca18cbdab420cb45746a422fac",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/seventh_held_delayed.musicxml",
+      "sha256": "81c7515393fc7a86c47da301e4d57a24abd86863d135eb8a64b7da72af8a4af8",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/seventh_held_recognized.musicxml",
+      "sha256": "563de2a135fe6ee02e21cb8eb0882d58300c7bd4d5579a74c13d6b64ec2a51e9",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/seventh_invalid_tie.musicxml",
+      "sha256": "c0c9277a45c37f3a41a02001a236cd05ccae854db66d5ea812c9fb6dd4b422c8",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/seventh_minor.musicxml",
+      "sha256": "201a8a1c3c4217d590c2c87bca88d35eabfee53528689c876c075706104257ca",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/seventh_minor_missing_key.musicxml",
+      "sha256": "dc8e1a86a72c04dfa4e8de3e829cecabfb55a824ff8d13829f1d6e7ef4420cb1",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/seventh_negative_down.mid",
+      "sha256": "edb05d69fd4c44a2c0e1c8b24b49ca5c31de6d1b3da83c0ae0ee4bdcd486b18f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/seventh_negative_down.musicxml",
+      "sha256": "49e98e377903571f58aa1be77a22417eb63e4d6881c618607ae34b0fc63ddc91",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/seventh_negative_whole_step.musicxml",
+      "sha256": "b7cfa3ac9ba6e7f4e36ed384bef2350511fff298c993b0293ca7513761eae9e6",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/seventh_neighbor.musicxml",
+      "sha256": "0ffb38e09024b4185f457b57b90a9738161b4c8144e4d52a2e314f4891e1d64a",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/seventh_no_successor.musicxml",
+      "sha256": "27f4c8830fb889737ae462d10e5b4e5341a8bd5a867748861ff95dc7e730eee7",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/seventh_ornament.musicxml",
+      "sha256": "50a2c5e7c74230bce2e3ee006fe36596915f441767d46ec1c4f4fd273e093bee",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/seventh_override_conflict.musicxml",
+      "sha256": "6cf822c2a92ec34bdd6dab5bf19f85d024112cdd2c93709afcdeaa0d5be58b42",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/seventh_positive_up.musicxml",
+      "sha256": "041f4fffae39e363d484f7712544cf3c4dda0f57436dc3863fb130c4ec066226",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/seventh_repeated_pitch.musicxml",
+      "sha256": "50cc5b06b96d830cf96109984a61a29e3dd37bad1de13e3f081e5e43779eb277",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/seventh_rest_gap.musicxml",
+      "sha256": "836b26ee76e8c038ee901f549133311918ec993ea494db2a5e3502d80f82523c",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/seventh_tie_inversion.musicxml",
+      "sha256": "ff94bbf36ea8064bf7536af0bbccd20afe376b7184ef60c15986e9b218937b9e",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/seventh_unknown_next.musicxml",
+      "sha256": "e9d70b3506b81130e2359c9af8eab84332ac8382b4bcd43aa868651b46e4573a",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m3/seventh_wrong_voice.musicxml",
+      "sha256": "041f4fffae39e363d484f7712544cf3c4dda0f57436dc3863fb130c4ec066226",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m4/README.md",
+      "sha256": "9b8e826d338c7aece24566944117738c5372e94be157fd7dfc1abb634e03b817",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m4/below_sixty.musicxml",
+      "sha256": "3666447ce3ad043adeb4aeb66288617fad0152b61b0c9b1108aca7c165452bb2",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m4/expectations.json",
+      "sha256": "841226a7fe511adc8ec47469287b843eb84058cfeee8f4d242ce91b871cb4a09",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m4/four_chordal.musicxml",
+      "sha256": "f8ef1e039010c2ee9db6929999796458c1475e41787dcfa7cd818a0c056f7796",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m4/four_episodes.musicxml",
+      "sha256": "4b0857837ef28c693a68335793c74757201bb7c3bb6f6ce200f8aec27c54d05a",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m4/generate.py",
+      "sha256": "5ddd8789a7e716fbe9319656cc8e478edbadcdd4551a5695ed016be6e1c65965",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/m4/sixty_percent.musicxml",
+      "sha256": "b6acd50db9420d8b1cea131c16f75d492a669aa8cd527b078791b146e2444fb0",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/microtone.musicxml",
+      "sha256": "cc206874cf3b4ed427078dae95c72b05c8e0e560cb20b6f3829384d860d50420",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/multi_part.musicxml",
+      "sha256": "2f6d74bdc14269a9dfc0ddbaca4d89fed915be39bea052e1b269cc9df73902bc",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/multi_track.mid",
+      "sha256": "ac3fc1bb8a2d2fc2e18a163e73abf4093bb58c45f314d5910f79e47c84bdf67b",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/piano_multivoice.musicxml",
+      "sha256": "fce7abfd36f2de77adfa785410dcb306c4da59b120491b00c5cee1897f62c0f5",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/timing_grace.musicxml",
+      "sha256": "6c3942efedf9c9509257424207df5b979913bdc5a63b9f9a1aa2c52d85b6f7db",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/transposing.musicxml",
+      "sha256": "dc3a0737b6f2ecbbfe4ac77c5504c40260535f70fec5d31a7352b2df6d5c429c",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/ugly_ambiguous.mid",
+      "sha256": "34276c252817f38642f3687f0873743ac9330d53e37f22d5867a8573988cbdec",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/unknown_meter.musicxml",
+      "sha256": "7d4dfe7ae65fcb0908d982b5f61ee3caca9589c6942ba835b656d11fd926cb05",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/unknown_pitch.musicxml",
+      "sha256": "c1f62ca5f3dfe51942ff146fdbc5c4c68109d8e03d31a20a9a1fc136958a83e4",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/unpitched.mid",
+      "sha256": "b483ef94615cc4ddeb1ac63c7db6ff80f959d78ba2224048a2009abb5a036773",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m2/README.md",
+      "sha256": "13521d6fd86747b771910a108d06e5d30bd07d6b962a2777df3aafbea45a6479",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m2/chord.musicxml",
+      "sha256": "024a281557a0568570225e2b8eef14a79776f8f1aee0d7edd567290e74ddcb0f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m2/dense.expected.json",
+      "sha256": "1edafeaffa58d895fbc7a5f98c61a450cd130c2f71fd84b53a321cd68499d3c5",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m2/dense.musicxml",
+      "sha256": "507232c19bb398f7de51c0a973241ede277ced130fd43010ff3db8610162ca7a",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m2/duet.musicxml",
+      "sha256": "13daee20e32a83efa3061107451d9f2296f755068a8b1d4ce0e2b9eba2408224",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m2/duplicate.musicxml",
+      "sha256": "80c67e890f1842a8cc77fd053abdb133b2b396beaee57bc3dfc68e3cb1c5480f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m2/empty_hidden.expected.json",
+      "sha256": "615503ac6afa3284eb7f894fd1d31025684a4be9ee2cc27b278195a278bde963",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m2/empty_hidden.musicxml",
+      "sha256": "005ccdcaedffc63379d00a1274ff54231c8cdc004cf88a5a5881c258a18b1fbf",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m2/ending.expected.json",
+      "sha256": "2d07960a44fe16387391725b98a3caf9578019d1246a9ec0579979eee8c66935",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m2/ending.musicxml",
+      "sha256": "320e0f371e0abaf193decc33b0e5f20002577dab446a4f06d55a2c1e1e15968c",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m2/grandstaff.musicxml",
+      "sha256": "5ef158aa6c4540ad66ee5817bdc7a5efc26e270020e7ddd0709cf835d5ca14ae",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m2/inherited.musicxml",
+      "sha256": "63bad23276e40ee68707f31af6bc09c11bce6fea5bb8f08767bd1c4de595786b",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m2/multipage.expected.json",
+      "sha256": "17d03816e9e0f06e193260b280573df33f14188fe11c57685251bbaf1f2fdf44",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m2/multipage.musicxml",
+      "sha256": "75ff0f92246bf68a4c79cd7ad5cb34fa0ad9742a0fa7d4ccf2bb51e7eadd705f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m2/multirest.expected.json",
+      "sha256": "a9f887978a99fb66193b96c81fcc2777a9e6f7d20d3ebf9287f9f8511102f5ff",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m2/multirest.musicxml",
+      "sha256": "a86048c07302e1121817f15c46f992f9901f17336841a9eca9985f0869e82668",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m2/pickup.musicxml",
+      "sha256": "34b88ea3804252dbe585d446d1d5959dd36b0e407196913cbb136a1be1d14df2",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m2/repeat.musicxml",
+      "sha256": "7fcac79e15f429db0c153004c1fb9904cba290b79bbeae819176117a242ae4a6",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m2/rests.musicxml",
+      "sha256": "ac72427bcc8ecb3e85d7f62509490426adb956b71d3d1d81afe3024993a43e05",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m2/rhythm.expected.json",
+      "sha256": "52c088d86f9d153da75e0dfd10c5d05b147675398373cc01aadf02dd0347eeda",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m2/rhythm.musicxml",
+      "sha256": "e62ee605bfe5fd903974d59b64b9f14730836d44352712216cc0c63bcc0f2d9f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m2/ties.musicxml",
+      "sha256": "cee5e2a4b614a6901a45603519da2c05a342ae8da9102999d99ceb6fff5798e2",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m2/transpose.musicxml",
+      "sha256": "99353b394b8cd940cc73c47cf1338605a2e76bcfd88fa919c6efe3d43c933ea1",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m2/voices.musicxml",
+      "sha256": "691f06dbc208e4c7d644f7be0a6630df0b119fce4991e34dea571268d830d90c",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m3/ambiguity.musicxml",
+      "sha256": "3d934d4c51d1ada400cbfef692824bf40aa698079ca3c109ce51af9fe162fd59",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m3/enharmonic.musicxml",
+      "sha256": "dc146721eeac08b6d30da259f0a2afe4100ed33b3e573f1026ca91af98eec6de",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m3/expectations.json",
+      "sha256": "a3b559e7ea25f458be1823ac66a6593ce7415d4ec75fd1abc66cf7f67e147610",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m3/long.musicxml",
+      "sha256": "fb45dba0c402c0576d06cf6c827dd96986ecba7127e9a886c70a037e90d1b2f0",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m3/manifest.json",
+      "sha256": "1917f86f7abd9a9f70d4b82b38588f3fd553aed953b390771400faacbb4048b9",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m3/orchestra.musicxml",
+      "sha256": "0d4f1c85d72bf7acdb1dd97bf887827dea52798f2000e4aaffbee28a7bc40663",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m3/sequence.musicxml",
+      "sha256": "e2a32197c2bbf90d79fa0f36c011153d7bac59cb1ca72024aa7d273e0bcaac82",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m3/solo.musicxml",
+      "sha256": "2b3d079652d6e50280f5854eb88dd47ecfdb59d844ab9de606e404f6a9c799c0",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m3/trio.musicxml",
+      "sha256": "c8b15a4be6d14f94993a75e39bd5bbfc447cf03229e242fd2f92e508272d54e4",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m3/variant-manifest.json",
+      "sha256": "a7816be4344339496e6744252c92cf2a42951dea05251179f3c2f2a2d9485a04",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m3/variants/solo_horn.musicxml",
+      "sha256": "648fd14a3880eb62991a5cb739d4f7bffdf92c34f4516383a933fa684761256a",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m4/baroque_ambiguous.musicxml",
+      "sha256": "e2a32197c2bbf90d79fa0f36c011153d7bac59cb1ca72024aa7d273e0bcaac82",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m4/baroque_negative.musicxml",
+      "sha256": "826730dd03d00c196450a3a509666d62d97cdb8882376d6a077691a212af529c",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m4/baroque_positive.musicxml",
+      "sha256": "443b88ff839e33a8a2b4a0820a75f76409c64c4b566cdf7e2aee9bb6f598850c",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m4/classical_ambiguous.musicxml",
+      "sha256": "bd85c49a524dc73d056bb6151fe49495213963d30c46879088b219f56b2f5117",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m4/classical_negative.musicxml",
+      "sha256": "3084823ec9807ef763f132c4f86602c959a9836d58abfffba8cd2b99d40e6b83",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m4/classical_positive.musicxml",
+      "sha256": "ac3812a85e5bdd51ae7221ca82f33251c0e1ead95f1dfd60517fdcb6e846aa98",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m4/ending.musicxml",
+      "sha256": "798ed28b4cd534ade41eac4cdb22f7354b09c900a14631d29d656e35a0ce10da",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m4/expression.musicxml",
+      "sha256": "8f8626b2017afa9eaca3da8951d26a665c2f4fb212a87f2ea3d281f7a5081cc8",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m4/generate.py",
+      "sha256": "8a1aa5362eb388275dbc3eff5fc41e25d124f007e1b7c70414ea2133a6175ad3",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m4/manifest.json",
+      "sha256": "e3f9b45957804f4e8bb49dfe2a5cbed28077bf336e329db20dc7f60d3817c223",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m4/mixed_bc.musicxml",
+      "sha256": "bf81fb5849a2c82ac7916d266874bc774af36cbc25678cb7809b8bc44a0f9a45",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m4/mixed_br.musicxml",
+      "sha256": "3d3514aa1056dbdbfd4164e2ae93cd45d34b73c0440c04abf0495f6fc9a0b0c1",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m4/mixed_cr.musicxml",
+      "sha256": "497023f9dbe745c7b773a036d65bbd6b4b3ff66314a86bfe242cca9b1c7a3288",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m4/return.musicxml",
+      "sha256": "3b5ab80c4547766595b4b700b1af735fb571d8957d5b9fc772d251f11f80961b",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m4/romantic_ambiguous.musicxml",
+      "sha256": "3d934d4c51d1ada400cbfef692824bf40aa698079ca3c109ce51af9fe162fd59",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m4/romantic_negative.musicxml",
+      "sha256": "7992388fda46e1ee336b785af581f73bcd03c0c8979967eb218de18cd03af551",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m4/romantic_positive.musicxml",
+      "sha256": "2b003eda10ef8e7b6ed4e67b473cd51a44452cf15ba5351dad05735611b76c49",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m4/specification.md",
+      "sha256": "36699e263043ac2b0266293ee1733e76c9bb5af055ae35510a805d8e4c93872e",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m5/preservation.musicxml",
+      "sha256": "b3816c9a44eea3170ec0dace4efc3e1c49e42dd728644aad12e2e0fc3cbcf927",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m6/export-review.musicxml",
+      "sha256": "65996a22ca20b2b15712a7294ff04addfa39c4579cd32f87143d72a5c040c56d",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m6/expression_story.musicxml",
+      "sha256": "c911bf5a6f69f4550747bf2dee73c200c24b4250c295d64929eeaf3efa88cfe8",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/fixtures/v02_m6/rhythm-review.musicxml",
+      "sha256": "58304dfc25f16b6ef0e4908251f8cb757f3804f10f333978ac417ac6ee9765e5",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/m4_helpers.py",
+      "sha256": "ae7588b8f66dc6794f3753c1bd7eaff1f385b69f83221d8e4dd3d436e5d040e9",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/m4_regression.py",
+      "sha256": "af4a1637ee87f984bbbd2dadcc8348f8a42f5ae78693d2e84935283a4dfd4148",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/passage_trial_observer.py",
+      "sha256": "998086d5d9b8b9b66d405696f5c651548212830bc4ad192111c87ea3a92b7baf",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_classical_refinement.py",
+      "sha256": "d7e9fe812ecbe2f5c4d50f1dc8e45aae53edc3866f5dff718e92dbdf211de709",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_import_recovery.py",
+      "sha256": "e97407d003f3b10dc93a1e1ca412e4363baacb1f0fae64ce22fb34f8612235af",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_import_workflow.py",
+      "sha256": "6eceb391396b743f2851741ce0286d8a5cebf797534911a8723a68081590fee2",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_m1.py",
+      "sha256": "d67820f76cf59f820c4fda7b1d28dcbc4aebb54ce99366fb81d69e176bb9ce5a",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_m1_audit.py",
+      "sha256": "0bedb160eb068237199736dd0e0378ec8f09f3b436b020b4d1d37865d157efb9",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_m2_key.py",
+      "sha256": "1ed2840bf867e5621aac76ab338ce5f1589647829c276290174f96468e3b1344",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_m2_models.py",
+      "sha256": "4fd58916ac1dc1aad7bc6cd23e64afe3cd4b7b286bdca35a1a1ceb1c87e502e7",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_m2_service.py",
+      "sha256": "ac48dbbe6656230eb7eb958d493cb3d19ff573913c2fff02102241c05562ecc1",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_m3_boundaries.py",
+      "sha256": "ebe55170a5f233396545dd0377040d4ccabdf93b7e75ed748d45056b383ec9a4",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_m3_context.py",
+      "sha256": "f94b4b002b960d872a27d1457d98cfa8f9480693a4d46c09456355ce8e856e05",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_m3_harmony.py",
+      "sha256": "0828de106738783cd70377de01904cd412b1bd0371a7074ed7037991e9102c78",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_m3_integration.py",
+      "sha256": "094689b69d4c92ebcf16af73b43f84ff5d4d23bf2988e88dee40824c5f49ea94",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_m3_ledger.py",
+      "sha256": "6eeeee9ae6b72373ede39d06b2bd149563dce421807cdee7800b003407b23701",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_m3_pitch.py",
+      "sha256": "e094d74a57e010c0a3378953d585100a2c1d94d234f9a0a799af4f6e93ad9aad",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_m4.py",
+      "sha256": "a3b4472a99262ceca0d9688cf0e189219e0464e68da755c37095446a8da55968",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_m5_contracts.py",
+      "sha256": "eb7896f59cf61d37ace3997445fd1e967117a71da8fdfe67ab24e21f0533adc4",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_m5_stdio.py",
+      "sha256": "9043df542d57b14bb6f4c6310dca9b2adb3810abeee12e293190a3c10437c3dd",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_renderer_packaging_equivalence.py",
+      "sha256": "f358043419b288e0a390b3fb4c846e648b1b9304f89cc84143a63e7fcd182bc2",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_runtime_paths.py",
+      "sha256": "329a61b2ef4a6b3609883ac1e4c7f363a3e5187ab20d942129648d9eefb5fcb0",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_score_import.py",
+      "sha256": "16b0bd76f72143383c31292eb0946301863b92c918f0c6009eda611f6c7aead3",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_two_part_harmony.py",
+      "sha256": "6c0a45db49f9df44c117a7c13a32a6de1cca3a7da168154ec2226bd8a0a15429",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_ab_comparison.py",
+      "sha256": "af67903965cbb957057d863eb5b0943f00dd72cd74d12bd9103b7c28b86ecd2c",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_advanced_contracts.py",
+      "sha256": "0534ae1923456f680031557dd0742fd8576b458df50fbc2a7463d157fa78a6c1",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_advanced_ensemble.py",
+      "sha256": "59c9c423719d5c40802c1dbac0a740ef861c0a85ea0d440710ee891aeb60e99d",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_advanced_limits.py",
+      "sha256": "044ca46cb37a89d4bb37395c7802997b9a6ce505cd91345fabfc96f6f0bfb677",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_advanced_melody.py",
+      "sha256": "f686a77f86483e9bb0b1e83a31ebfa20e45df19aea9d05959b603cb3589022be",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_advanced_notes.py",
+      "sha256": "04f349004775df1e6efe60fb7a231fbf53a82078d061b84f363610934dd47f11",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_advanced_passages.py",
+      "sha256": "32190502a5ed54d8b515b2faf32bfec12fa1b61cd419c29bd70cff4cd2b8e9e3",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_advanced_stdio.py",
+      "sha256": "5506e3357366569c872193e6e6f80674ed20adb8a077ab9ab497621f9f502db5",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_advanced_validation.py",
+      "sha256": "bc87a058138c331f80591d9720489edb01a50fcbdbe725c1f81234b29546d922",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_claim_projection.py",
+      "sha256": "d42a244ce8c68c49004e77a23316f1679fface41144bb3acc1844218e8053c6a",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_editing_grace_receipt.py",
+      "sha256": "0ffb31ef6ddca754eb8b742cf8b550376b8f1dfa8ef9edae7ccbfadd934a4b02",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_editing_runtime.py",
+      "sha256": "e6bbe16de7e99018fbfec816103494998b6d376a1c68218c0e79877d4708a5e5",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_editing_source.py",
+      "sha256": "1797305e8f0b8b746b822f6d9e1e44cec6dea88cba58073779b8492bbc37efc1",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_evaluation_comparison_order.py",
+      "sha256": "b653bf3cc2104eec701d7c1c393ebf4a5a510fb6f6d6230b98ddc5ea5d424989",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_evaluation_contracts.py",
+      "sha256": "22e19832690efa4d86f693a5f0cb80e80d461bb37038e169ddd5b60dfb6ba623",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_evaluation_evidence.py",
+      "sha256": "20fcb05086dbffef774b747c2899cfd643c76307da988384ac0f911fac39591d",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_evaluation_feedback.py",
+      "sha256": "85edac3e5a07c38d466e05cdf574d54804041f6faebcceee9b1d4a0537d7d786",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_evaluation_rubric.py",
+      "sha256": "78aaf3ad0c6c1ad1e0dda4e90c22143ecd02b5c2a738997642fb4a9ded075449",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_evaluation_stdio.py",
+      "sha256": "0ab9287871a1f9c4ced5d7f803c1cd629928c310c0121d1c0e3c7d2812377614",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_evaluation_style.py",
+      "sha256": "0fb1c9107e44f073fb5022d96c572e23eaf5acc698a91fbf3d16b39503500ab0",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_exact_pitch.py",
+      "sha256": "ca26676e0a7550a53b4224769b47f6c72f6de6607137cc7babb2da91e5545240",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_harmonic_relationships.py",
+      "sha256": "282a75d8b22f776193f319acf77b56654092a7758804360678e42f8c71105d6d",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_local_harmony.py",
+      "sha256": "749949a692bd702190af87ca82465eab245db0085ac34465ab70b40c0a86ccce",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_m6_brief.py",
+      "sha256": "bb09faf745690b8dbd754a8cf3442b6699bf1c27ba8125d5c961e7627d642a37",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_m6_candidate.py",
+      "sha256": "a1119dfc81cd0a6b412a0b24069d28f77d681e107cb82393d095b87c001a54aa",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_m6_creation.py",
+      "sha256": "cb516f505df16491d5d055e566d2a38e8d4fade5e930ab756aa0e1a5ff585c38",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_m6_export.py",
+      "sha256": "6f9ff32a00be18628fb74d5271539f64890ff0298d4d7a279a0244a78509f586",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_m6_expression.py",
+      "sha256": "5f8d744b955ef6ed5e41ef32749e4fa5212777ded1bf3fa1f55e60b278f1a156",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_m6_rhythm.py",
+      "sha256": "93e22c732860f63c82e5ddb9423d0b9fd638ede2527e9821a312502ee234ec26",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_passage_reuse.py",
+      "sha256": "7183b37764fd49e538c2ad3acfaf8f58337c441608c2832ddb2e57d45f914c1f",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_passage_reuse_stdio.py",
+      "sha256": "1cbc236c3b37f61146fae57844b79f5504abed8c49fa8a4b4dfee1c198a46d61",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_presentation.py",
+      "sha256": "a369b5c4a07dd50ec3021f06c473f8085eaeffd105613108d0907217296259c6",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_relationship_evaluation.py",
+      "sha256": "85ed44d5f771115177d4b6c606be6210be15deab29431b6645c323ff0bfbcfa8",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_renderer_ties.py",
+      "sha256": "afe62d94ff065bede193cdb2c19e0bfd69ffda7c3432ea8897bfe48d108d8a57",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_review.py",
+      "sha256": "c6e8f79c59df75693a66d6de7d212662a3e492c0b85f564d12ec2199d5be9055",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_review_contracts.py",
+      "sha256": "bcf7dff0f07c8fd4b064803ecf26a79646da88dba09bd5491ed4eda170e33229",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_review_ownership.py",
+      "sha256": "2fd828b78849edefb7d0fe1bcb04c3002c6fd4e1d46003aada67e92bdeca3687",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_review_skill.py",
+      "sha256": "639ab8e020e86e84b67306f8395fe0aa40f5e3f5983b4973ba09e49551930cf8",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_review_stdio.py",
+      "sha256": "63c8dd2304942fb3d6de6eba45c61a27385452174eb8dbb96be4c6b63648b6d9",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_source_passage.py",
+      "sha256": "92d29e0819d92f1ccae201192a003695d97393c8dd5232857cef9ebd38490346",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_source_viewer.py",
+      "sha256": "8b7e3da79771c8b227796b2dbfd0a785af05c8d8498a10814748f853b7d60fd4",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_viewer.py",
+      "sha256": "dfd70d1f2ea00e156d0cb837541a905f5b323367658646d7f65ea571df3714ca",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_viewer_bridge.cjs",
+      "sha256": "8a326ca7bfd6f32ebaa4ba73fbac0096e474c8c765cd22dbf95ff0ac1b8916c3",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_viewer_details.py",
+      "sha256": "95aa15e2a97fdf72d4e14dc3794cba9d1bc18a2bb0fa03da9d934498fcbad522",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_viewer_on_demand.py",
+      "sha256": "ef1f04313c615f728deed8c4f45be376ec7eeb962e9e88fb7579326b97d661b3",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_viewer_pages.py",
+      "sha256": "3dfcd119cbcbc4a457b6d525e69308bfac3224bab57b992047d44d95bdc38613",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/test_v02_viewer_stdio.py",
+      "sha256": "1206173669be2b29b219217c225234fb98c42fee1b753fa02d5388b9a3f5c850",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/v02_advanced_helpers.py",
+      "sha256": "bf510d03ea1fc6bf2a04480843bea66694eb1bf9218eaf8adcfd726035c289c0",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "tests/v02_evaluation_helpers.py",
+      "sha256": "490d6476883ee9b92d9975cffd9a3e946e7380226a89ea25e74cfbbb86a39e09",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "uv.lock",
+      "sha256": "aa29e82d5400356bd70747febe755cb30c517f3b3b3c5763f3f89af1b5d76229",
+      "review": [],
+      "decision": "include: source/notice/authored-fixture review completed for source-only scope"
+    },
+    {
+      "path": "docs/INSTALL.md",
+      "sha256": "4c1e27f6b9302fbba437dd7e36c6d0325949569a812f6d1dfc3184cf18e7a70f",
+      "review": [],
+      "decision": "include: public source-only documentation"
+    },
+    {
+      "path": "docs/licensing/source-candidate-review.md",
+      "sha256": "c7a12f9658eb5b99ffb7e79e1f32029dfcd253b4884d691cfb5c51e7c3fc061c",
+      "review": [],
+      "decision": "include: public source-only documentation"
+    },
+    {
+      "path": "docs/licensing/public-source-manifest.json",
+      "sha256": null,
+      "review": [],
+      "decision": "include: self-entry has no recursive hash; external archive checksum covers this file"
+    }
+  ],
+  "skill_links": [
+    {
+      "path": ".agents/skills/composer-edit",
+      "target": "../../skills/composer-edit",
+      "status": "relative discovery link; target resolves"
+    },
+    {
+      "path": ".agents/skills/composer-import",
+      "target": "../../skills/composer-import",
+      "status": "relative discovery link; target resolves"
+    },
+    {
+      "path": ".agents/skills/composer-review",
+      "target": "../../skills/composer-review",
+      "status": "relative discovery link; target resolves"
+    }
+  ],
+  "excluded": [
+    ".venv/",
+    ".m2-dependencies/",
+    "dist/",
+    "output/",
+    "renderer.local.json",
+    ".workbuddy/",
+    "docs/archive/",
+    "generated notation SVG and copied-source/evidence workspaces"
+  ],
+  "preserved_local_review": [
+    "AGENTS.md",
+    "WORK.md",
+    "historical plans/contracts/handoffs not selected by this minimal proposal"
+  ],
+  "unresolved": [
+    "User review of exact source candidate and documented verification limits",
+    "Separate explicit approval for Git/GitHub destination, visibility and publication actions"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "provenance": "Small original engineering controls authored for the approved V0.2-M3 plan, 2026-10-17. Not repertoire or Kenneth compositions. Expectations established before producer execution.",
+  "solo": {"written_first_bar": ["C5", "D5", "E5", "G5"], "trumpet_sounding_first_bar": ["Bb4", "C5", "D5", "F5"], "horn_sounding_first_bar": ["F4", "G4", "A4", "C5"], "first_onsets": [0,1,2,3], "first_durations": [1,1,1,1], "first_intervals_semitones": [2,2,3], "rest_span": [8,12]},
+  "ambiguity": {"pitches": ["C4","E4","G4","A4"], "alternatives": [{"root":"A","quality":"minor7","inversion":1},{"root":"C","quality":"major_added6","bass_member":0}], "key_inferred": false},
+  "sequence": {"notes":["C4","D4","E4","D4","E4","F#4","E4","F#4","G#4"],"durations":[1,1,1,1,1,1,1,1,1],"successive_window_transposition_semitones":2,"successive_window_transposition_diatonic":1},
+  "long": {"motif_measure_indices":[1,5,9],"motif_pitches":["C4","D4","E4"],"motif_durations":[1,1,2],"rest_measure":4,"contrast_measure":10,"contrast_durations":[2,1,1],"comparison":[[1,4],[9,12]]},
+  "trio": {"declared_lower_melody":["G3","A3","B3"],"upper_support":"E5","sustained_low":"C3","role_provenance":"user_declared_only_when_explicitly_requested"},
+  "orchestra": {"measures":12,"parts":8,"first_written":["C5","D5","G4","D5","E5","G3","C3","C3"],"first_sounding":["C5","C5","C4","C5","E5","G3","C3","C2"],"sounding_unison_C5_parts":[1,2,4],"first_chord":{"root":"C","quality":"major"}},
+  "enharmonic": {"notes":["C#4","Db4"],"semitones":0,"diatonic":1,"respelling":true}
+}

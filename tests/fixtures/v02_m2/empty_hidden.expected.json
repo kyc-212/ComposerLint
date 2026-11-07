@@ -1,0 +1,5 @@
+{
+  "authorship": "MIT ComposerLint authored derivative of inherited.musicxml, 2026-10-16, expectations fixed before rendering.",
+  "source_sha256": "005ccdcaedffc63379d00a1274ff54231c8cdc004cf88a5a5881c258a18b1fbf",
+  "expectation": "Four distinct measures; measure 1 empty, measure 2 hidden C4, measures 3\u20134 visible C4. Three source notes; no invented source rest."
+}

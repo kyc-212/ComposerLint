@@ -1,0 +1,20 @@
+{
+  "authorship": "Original engineering controls; see specification.md, frozen before evaluation execution.",
+  "sources": {
+    "baroque_ambiguous.musicxml": "e2a32197c2bbf90d79fa0f36c011153d7bac59cb1ca72024aa7d273e0bcaac82",
+    "baroque_negative.musicxml": "826730dd03d00c196450a3a509666d62d97cdb8882376d6a077691a212af529c",
+    "baroque_positive.musicxml": "443b88ff839e33a8a2b4a0820a75f76409c64c4b566cdf7e2aee9bb6f598850c",
+    "classical_ambiguous.musicxml": "bd85c49a524dc73d056bb6151fe49495213963d30c46879088b219f56b2f5117",
+    "classical_negative.musicxml": "3084823ec9807ef763f132c4f86602c959a9836d58abfffba8cd2b99d40e6b83",
+    "classical_positive.musicxml": "ac3812a85e5bdd51ae7221ca82f33251c0e1ead95f1dfd60517fdcb6e846aa98",
+    "ending.musicxml": "798ed28b4cd534ade41eac4cdb22f7354b09c900a14631d29d656e35a0ce10da",
+    "expression.musicxml": "8f8626b2017afa9eaca3da8951d26a665c2f4fb212a87f2ea3d281f7a5081cc8",
+    "mixed_bc.musicxml": "bf81fb5849a2c82ac7916d266874bc774af36cbc25678cb7809b8bc44a0f9a45",
+    "mixed_br.musicxml": "3d3514aa1056dbdbfd4164e2ae93cd45d34b73c0440c04abf0495f6fc9a0b0c1",
+    "mixed_cr.musicxml": "497023f9dbe745c7b773a036d65bbd6b4b3ff66314a86bfe242cca9b1c7a3288",
+    "return.musicxml": "3b5ab80c4547766595b4b700b1af735fb571d8957d5b9fc772d251f11f80961b",
+    "romantic_ambiguous.musicxml": "3d934d4c51d1ada400cbfef692824bf40aa698079ca3c109ce51af9fe162fd59",
+    "romantic_negative.musicxml": "7992388fda46e1ee336b785af581f73bcd03c0c8979967eb218de18cd03af551",
+    "romantic_positive.musicxml": "2b003eda10ef8e7b6ed4e67b473cd51a44452cf15ba5351dad05735611b76c49"
+  }
+}

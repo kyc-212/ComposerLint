@@ -1,0 +1,12 @@
+{
+  "provenance": "Minimal source-metadata-only variant for the approved actual F-horn Codex trial; expected pitches are already independently specified in expectations.json.",
+  "variants": [
+    {
+      "path": "variants/solo_horn.musicxml",
+      "source": "solo.musicxml",
+      "sha256": "648fd14a3880eb62991a5cb739d4f7bffdf92c34f4516383a933fa684761256a",
+      "source_sha256": "2b3d079652d6e50280f5854eb88dd47ecfdb59d844ab9de606e404f6a9c799c0",
+      "change": "Part display name and exact transpose declaration only (-4 diatonic/-7 semitones)."
+    }
+  ]
+}
