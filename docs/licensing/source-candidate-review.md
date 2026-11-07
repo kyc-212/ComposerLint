@@ -1,4 +1,4 @@
-# V0.2.0 source-only RC3 candidate review
+# V0.2.0 source-only RC4 candidate review
 
 Scope: the reviewed manifest plus the installation guide, this report and the
 manifest itself. Candidate preparation does not authorize publication. Exact paths
@@ -144,13 +144,34 @@ exclude private development material while keeping every manifest path eligible;
 the public `.gitignore` is unchanged. These safeguards do not replace exact
 allowlist checks or grant publication authority.
 
-RC3 archive: `ComposerLint-0.2.0-source-rc3.tar.gz`; its SHA-256 is in the adjacent
+RC3 archive: `ComposerLint-0.2.0-source-rc3.tar.gz`, SHA-256
+`74d30a97f456e5a4540c6c21994360a2c22e7a9db9567767bacbb494f2ddf52b`.
+Its original manifest, report and source directory remain preserved privately.
+
+## RC4 README platform clarification — 2026-11-07
+
+RC4 changes only the README platform paragraph, this candidate review record and
+the publication manifest relative to RC3. At the user's request the README states
+that most of ComposerLint is written in Python, while Windows and Linux have not
+been tested and correct installation or operation cannot be confirmed. It retains
+the demonstrated macOS Apple Silicon/CPython 3.12 scope, the unverified Intel Mac
+status and the native renderer/platform-specific prerequisites. It makes no claim
+of universal macOS support or new platform verification.
+
+All application code, musical logic, renderer behavior, tests, dependencies,
+licenses, installation instructions, Skill contents and privacy corrections are
+unchanged. Focused documentation, manifest, archive, privacy and link checks are
+used; no musical-analysis, editing, installation or platform tests are rerun.
+The allowlist remains 546 regular files and three relative Skill discovery links.
+
+RC4 archive: `ComposerLint-0.2.0-source-rc4.tar.gz`; its SHA-256 is in the adjacent
 external `SHA256SUMS`. This report does not embed its own archive checksum.
 
 ## Remaining approval boundary
 
-The initial local Git repository still points to the original private commit.
-RC3 preparation does not execute Git history rewriting or create a replacement
-commit. The exact proposed ref changes and private-history retention procedure
-must receive separate explicit approval first. GitHub repository creation, a remote,
-push, tag, visibility changes and release publication remain separately unauthorized.
+The approved clean RC3 root commit is
+`3419dfa69ce8babb753cdc20c3ff9360f306ddd2`; the original history remains private.
+Publication is paused for review of this README revision and refreshed candidate.
+RC4 preparation does not create a commit or push any files, publish private refs,
+create tags or change GitHub visibility. Existing platform and acceptance limits
+remain unchanged.

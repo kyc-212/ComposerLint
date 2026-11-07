@@ -37,11 +37,14 @@ Structural verification does not prove artistic improvement or a requested mood.
 
 ## Quick start
 
-The demonstrated runtime is **CPython 3.12 on macOS Apple Silicon**. Intel Mac and
-Windows are intended targets, and Linux is under investigation; none has completed
-real installation/workflow verification. The code still has platform-specific
-filesystem/process/confirmation requirements. Source availability is not a claim
-of cross-platform support.
+The demonstrated runtime is **CPython 3.12 on macOS Apple Silicon**, including the
+renderer-based notation viewer and editing workflow. Most of ComposerLint is
+written in Python, but it also relies on a native renderer and platform-specific
+filesystem, process and confirmation features.
+
+**ComposerLint has not been tested on Windows or Linux**, so we cannot confirm
+whether it installs or works correctly on those systems. Intel Mac also remains
+unverified. Python source availability does not guarantee cross-platform support.
 
 Use the complete source archive or repository file set, including `skills/`,
 `.agents/skills/`, tests and license materials. Do not install an old V0.1 delivery.

@@ -2,16 +2,16 @@
   "status": "VERIFIED_SOURCE_CANDIDATE_AWAITING_USER_REVIEW_AND_PUBLICATION_APPROVAL",
   "scope": "Explicit V0.2.0 source-only file set; no renderer binaries/resources/vendor trees or private workspaces",
   "candidate": {
-    "id": "V0.2.0-source-only-RC3",
-    "base_git_commit": "0387bc8639b3a3059aac44fed782c3ea801b19ed",
+    "id": "V0.2.0-source-only-RC4",
+    "base_git_commit": "3419dfa69ce8babb753cdc20c3ff9360f306ddd2",
     "previous_candidate": {
-      "id": "V0.2.0-source-only-RC2",
-      "archive": "ComposerLint-0.2.0-source-rc2.tar.gz",
-      "archive_sha256": "bd69b03c86ec589e98389c05088ea0d4f886ade143bfbe78713a9ed6b6dd2144",
-      "manifest_sha256": "7dfcc2c73f5fa7aa5976fc1ad6679f2f147c69875dda97c3f9363bf99b7fffde"
+      "id": "V0.2.0-source-only-RC3",
+      "archive": "ComposerLint-0.2.0-source-rc3.tar.gz",
+      "archive_sha256": "74d30a97f456e5a4540c6c21994360a2c22e7a9db9567767bacbb494f2ddf52b",
+      "manifest_sha256": "76a43287be514bf02fb7661f40d0e44181c0549366cdc83775352cf842f5d62a"
     },
-    "change_scope": "Privacy-normalize fourteen historical custody-folder path components; manifest and candidate review metadata only; retain RC2 documentation correction",
-    "public_history": "Requires a new parentless initial commit; original local history remains private; history procedure approval pending"
+    "change_scope": "Requested README clarification of Python implementation, demonstrated macOS setup and untested Windows/Linux platforms; manifest and candidate review metadata only",
+    "public_history": "Clean parentless RC3 initial commit retained; RC4 documentation revision is uncommitted and publication is paused for review"
   },
   "files": [
     {
@@ -772,7 +772,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "64fe90136dd47d31fb2f70d8940ca530e25e7b7e90ab0461deeed30b00ed3bf7",
+      "sha256": "8bbf5941de48279df3671ff69e88aaeb19f95401d26e56e8866d55f7a152fd22",
       "review": [],
       "decision": "include: source/notice/authored-fixture review completed for source-only scope"
     },
@@ -3280,7 +3280,7 @@
     },
     {
       "path": "docs/licensing/source-candidate-review.md",
-      "sha256": "c7a12f9658eb5b99ffb7e79e1f32029dfcd253b4884d691cfb5c51e7c3fc061c",
+      "sha256": "84ac07dc1e5c171cc72b8bd8fb153f3f8f983e3cfe79ac42a5ba290b7e0539e2",
       "review": [],
       "decision": "include: public source-only documentation"
     },
