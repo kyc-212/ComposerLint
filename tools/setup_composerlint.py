@@ -7,6 +7,7 @@ under an exclusively owned prefix; the printed MCP environment selects it.
 import argparse
 import contextlib
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -37,6 +38,14 @@ OFFICIAL_URL = ('https://files.pythonhosted.org/packages/6b/0b/'
                 '42e560df4051b8c05407162ba117eb14b44f011e84818acc4c2065161d87/' + OFFICIAL_WHEEL)
 PATCH = ROOT / 'patches/verovio-6.3.0-deferred-tie-stops.patch'
 BUILD_REQUIREMENTS = ROOT / 'requirements-renderer-build.txt'
+EVENT = None
+
+
+def status(stage, message):
+    if EVENT:
+        EVENT('progress', stage=stage, message=message)
+    else:
+        print(message, flush=True)
 
 
 class SetupError(Exception):
@@ -126,7 +135,7 @@ def preflight(full):
     if hasattr(os, 'geteuid') and os.geteuid() == 0:
         errors.append('Run setup as your normal user, without sudo.')
     if sys.version_info[:2] != (3, 12) or platform.python_implementation() != 'CPython':
-        errors.append('Use CPython 3.12 (COMPOSERLINT_SETUP_PYTHON selects its executable).')
+        raise SetupError('Use CPython 3.12 (COMPOSERLINT_SETUP_PYTHON selects its executable).')
     if sys.platform != 'darwin' or platform.machine() != 'arm64':
         errors.append('Only native macOS Apple Silicon is supported; Intel/Rosetta, Linux and Windows are unverified.')
     uv = shutil.which('uv')
@@ -269,7 +278,7 @@ class Installer:
         return destination / 'bin/python'
 
     def core(self):
-        print('Installing/checking locked ComposerLint dependencies…', flush=True)
+        status('dependencies', 'Installing/checking locked ComposerLint dependencies…')
         python = self.environment('runtime')
         env = dict(self.env, UV_PROJECT_ENVIRONMENT=str(self.prefix / 'runtime'))
         # Inexact intentionally retains separately pinned official Verovio.
@@ -279,6 +288,7 @@ class Installer:
         return python
 
     def renderer(self, python):
+        status('official_renderer', 'Verifying/installing official Verovio 6.3.0…')
         official = self.prefix / 'official'
         private_dir(official)
         download_artifact(official, OFFICIAL_WHEEL, OFFICIAL_URL, OFFICIAL_HASH, self.offline)
@@ -292,13 +302,14 @@ class Installer:
             verify_manifest(manifest)
             if inventory(self.prefix / 'renderer') != previous['runtime_files']:
                 raise SetupError('Installed renderer file set changed; use a fresh --prefix for recovery.')
-            print('Reusing verified patched renderer; no compilation needed.', flush=True)
+            status('renderer_reuse', 'Reusing verified patched renderer; no compilation needed.')
             return manifest
         archive = source_archive(self.prefix, self.offline)
+        status('build_tools', 'Provisioning hash-pinned renderer build tools…')
         build_python = self.environment('build-tools')
         self.uv_run('pip', 'sync', '--python', build_python, '--require-hashes', '--only-binary', ':all:',
                     '--index-url', 'https://pypi.org/simple', BUILD_REQUIREMENTS)
-        print('Compiling the exact patched renderer (this can take several minutes)…', flush=True)
+        status('compiling', 'Compiling the exact patched renderer (this can take several minutes)…')
         # Fresh build staging on each interrupted attempt; never patch twice.
         with tempfile.TemporaryDirectory(prefix='source-', dir=self.prefix) as staging:
             source = extract_source(archive, Path(staging))
@@ -333,7 +344,7 @@ class Installer:
         return pending
 
     def smoke(self, python, manifest):
-        print('Checking analysis, MCP discovery and authored renderer behavior…', flush=True)
+        status('verification', 'Checking analysis, MCP discovery and authored renderer behavior…')
         env = dict(self.env)
         if manifest:
             env['COMPOSERLINT_RENDERER_CONFIG'] = str(manifest)
@@ -380,7 +391,7 @@ def connection_instructions(python, manifest):
     print('No global client settings or existing renderer configuration were changed.')
 
 
-def consent(mode, offline, prefix):
+def describe_plan(mode, offline, prefix):
     print('\nPlan:', 'FULL viewer/editing setup' if mode == 'full' else 'TEXT ANALYSIS ONLY')
     print('Destination (private environments, artifacts, manifest, logs):', prefix)
     print('Install unchanged uv.lock dependencies, including locked pytest/Hatchling for verification/building.')
@@ -399,7 +410,69 @@ def consent(mode, offline, prefix):
         print('Upstream package resources remain local; no binaries/fonts are redistributed by ComposerLint.')
     print('No Python/uv/Apple-tool installation, administrator access, client-setting edits, or export operations.')
     print('Network:', 'FORBIDDEN; missing cached materials fail.' if offline else 'approved missing artifacts may be downloaded.')
+
+
+def consent(mode, offline, prefix):
+    describe_plan(mode, offline, prefix)
     return input('Approve these installations/configuration changes? [y/N] ').strip().lower() in {'y', 'yes'}
+
+
+def protocol_main(mode, offline, base):
+    """JSON-lines v1. No writes/downloads before a matching approval on stdin.
+
+    Installer consent only. This endpoint has no MusicXML approval/export powers.
+    """
+    global EVENT
+    output = sys.stdout
+    def emit(kind, **fields):
+        output.write(json.dumps(dict(protocol=1, type=kind, **fields)) + '\n')
+        output.flush()
+    previous_event = EVENT
+    EVENT = emit
+    def interrupted(signum, frame):
+        raise KeyboardInterrupt()
+    prior_signal = signal.signal(signal.SIGTERM, interrupted)
+    try:
+        with contextlib.redirect_stdout(sys.stderr):
+            uv = preflight(mode == 'full')
+            identity = recipe(mode == 'full')
+            if not base.is_absolute() or '..' in base.parts or not base.parent.is_dir():
+                raise SetupError('Installation base must have an existing absolute parent.')
+            base = safe_path(base)
+            prefix = base / identity[:16]
+            with contextlib.redirect_stdout(io.StringIO()) as text:
+                describe_plan(mode, offline, prefix)
+            plan = dict(plan_id=identity, mode=mode, prefix=str(prefix), description=text.getvalue())
+            emit('plan', **plan)
+            line = sys.stdin.readline(8193)
+            if len(line) > 8192:
+                raise SetupError('Oversized consent message.')
+            answer = json.loads(line) if line.strip() else {}
+            if answer.get('action') == 'cancel' or not answer:
+                emit('cancelled', message='Cancelled before installation; no changes made.')
+                return 0
+            if answer != dict(action='approve', plan_id=identity):
+                raise SetupError('Consent does not match the reviewed installation plan.')
+            if recipe(mode == 'full') != identity:
+                raise SetupError('Installation recipe changed after review; review a fresh plan.')
+            os.umask(0o077)
+            private_dir(base)
+            with owned_prefix(prefix, identity):
+                Installer(prefix, uv, offline, identity).install(mode == 'full')
+            emit('complete', python=str(prefix / 'runtime/bin/python'),
+                 manifest=str(prefix / 'renderer.json') if mode == 'full' else None,
+                 source=str(ROOT), arguments=['-B', '-m', 'composerlint.server'],
+                 log=str(prefix / 'setup.log'))
+        return 0
+    except KeyboardInterrupt:
+        emit('cancelled', message='Setup cancelled. No successful installation is claimed; retry to revalidate retained work.')
+        return 130
+    except (SetupError, OSError, ValueError, KeyError) as exc:
+        emit('error', message=str(exc), fallback='docs/INSTALL.md')
+        return 1
+    finally:
+        EVENT = previous_event
+        signal.signal(signal.SIGTERM, prior_signal)
 
 
 @contextlib.contextmanager
@@ -429,7 +502,13 @@ def main(argv=None):
     parser.add_argument('--check', action='store_true', help='read-only readiness/integrity inspection; no network')
     parser.add_argument('--offline', action='store_true', help='strictly prohibit network acquisition')
     parser.add_argument('--prefix', type=Path, help='new private absolute setup directory (existing parent required)')
+    parser.add_argument('--json', action='store_true', help='JSON-lines v1 frontend; waits for plan-bound consent on stdin')
+    parser.add_argument('--installation-base', type=Path, help='frontend-owned parent for stable recipe environments')
     args = parser.parse_args(argv)
+    if args.json:
+        if not args.mode or not args.installation_base or args.prefix or args.check:
+            parser.error('--json requires --mode and --installation-base, without --prefix/--check')
+        return protocol_main(args.mode, args.offline, args.installation_base)
     mode = args.mode
     if mode is None and not args.check:
         choice = input('ComposerLint: [1] Full installation [2] Text analysis only [3] Cancel: ').strip()

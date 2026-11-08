@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "allowed_hosts": ["github.com", "release-assets.githubusercontent.com", "objects.githubusercontent.com"],
+  "uv": {
+    "version": "0.12.3",
+    "url": "https://github.com/astral-sh/uv/releases/download/0.12.3/uv-aarch64-apple-darwin.tar.gz",
+    "sha256": "546f7f8a6c70ff13a3a9d2bc958db3427298cebf3e0cb756f9177133b7068843",
+    "archive_root": "uv-aarch64-apple-darwin",
+    "executable": "uv-aarch64-apple-darwin/uv",
+    "evidence": ["https://api.github.com/repos/astral-sh/uv/releases/tags/0.12.3", "https://github.com/astral-sh/uv/releases/download/0.12.3/sha256.sum"]
+  },
+  "python": {
+    "version": "3.12.13",
+    "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260807/cpython-3.12.13%2B20260807-aarch64-apple-darwin-install_only_stripped.tar.gz",
+    "sha256": "25baa97c65b3f0aa90e21131b4f9e80aef8899e8144006db8a9d2c1ab9e807e3",
+    "archive_root": "python",
+    "executable": "python/bin/python3.12",
+    "evidence": ["https://raw.githubusercontent.com/astral-sh/uv/0.12.3/crates/uv-python/download-metadata.json", "https://api.github.com/repos/astral-sh/python-build-standalone/releases/tags/20260807"]
+  }
+}

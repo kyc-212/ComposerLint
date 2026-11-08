@@ -1,9 +1,67 @@
-# Source installation and local renderer setup
+# Installation and local renderer setup
 
-V0.2.0 source-only distribution. Tested platform evidence is macOS Apple Silicon with
+V0.2.0 renderer source-only distribution; the optional GUI includes ComposerLint’s own compiled launcher. Tested platform evidence is macOS Apple Silicon with
 CPython 3.12. Other platforms remain unverified. Do not infer Windows compatibility
 from the existence of upstream wheels: filesystem, process and approval adapters
 still need work. Intel dependencies remain under investigation without a downgrade.
+
+## Graphical installation (macOS Apple Silicon)
+
+Recommended for ordinary users when the ZIP is available on the official
+[GitHub Releases page](https://github.com/kyc-212/ComposerLint/releases):
+
+1. Download `ComposerLint-Setup-macOS-arm64.zip` and its `.zip.sha256` file from the
+   same release. The SHA-256 identifies the exact download; it does not prove safety
+   or substitute for an Apple-verified developer identity. Optional Terminal check:
+   `shasum -a 256 -c ComposerLint-Setup-macOS-arm64.zip.sha256` in the download folder.
+2. Double-click the ZIP to extract **ComposerLint Setup.app**. Open that app.
+3. This app is **not Developer ID signed or notarized**. If macOS blocks it because
+   Apple cannot verify it, close the warning. Only if you trust this exact release,
+   open **System Settings → Privacy & Security**, find the message naming
+   **ComposerLint Setup**, and choose **Open Anyway**. Review the confirmation and
+   choose **Open**; macOS may require your authentication. Apple makes this option
+   available for a limited time after the blocked launch. If it is absent, retry
+   opening the app once. See [Apple's current instructions](https://support.apple.com/en-us/102445).
+   Do not override a warning that says the app is malicious or damaged; stop and
+   report it. Never disable Gatekeeper or remove quarantine. ZIP extraction does
+   not avoid security checks. Organization policies may disallow this exception.
+4. Choose full setup (viewer/editing) or text analysis only. Review the pinned
+   Python/uv download and stable source preparation plan. Approve or cancel.
+   The app installs private tools, without replacing system Python or using Homebrew.
+5. Full setup requires Apple Command Line Tools. If missing, **Install Apple Tools…**
+   requests Apple's official process. Complete its licence/security dialogs yourself,
+   then choose **Recheck**. First-time tool installation may require Apple's own
+   administrator approval. Text-only setup does not compile the renderer.
+6. Review the second plan covering locked packages, verified Verovio source, exact
+   patch, local compilation and private configuration. Approve to proceed. Watch
+   actual progress/logs; Cancel interrupts setup, and Retry rechecks retained work.
+7. At completion, use the displayed absolute interpreter, arguments and renderer
+   environment setting to connect Codex. Open the displayed stable source folder
+   for project Skill discovery; reconnect MCP and start a fresh Codex session.
+   No global client settings are edited automatically.
+
+Files live under `~/Library/Application Support/ComposerLint/setup/`: private pinned
+bootstrap tools, immutable verified source/Skills, and separate recipe environments.
+Keep this stable tree in place. After completion, you may move or remove the downloaded
+ZIP and setup app; installed operation does not depend on their location. Existing
+configurations, scores, workspaces and exports stay untouched. No human MusicXML
+export approval is automated. Full setup retains official Verovio 6.3.0 in the main
+environment and builds the patched renderer separately, activating only after the
+existing smoke and renderer controls pass.
+
+Updates are manual: download a new reviewed release's ZIP and run it. Unchanged
+verified materials can be reused; a changed recipe creates a separate environment
+and asks for consent again. No silent update or removal of previous installations.
+If setup fails, read the visible error/log location, resolve the stated prerequisite,
+network or integrity issue, then retry. Hash failures must be investigated, never
+ignored. The Terminal/manual fallback below remains available. Do not move virtual
+environments or delete shared private configuration as an uninstall shortcut.
+
+The launcher requires macOS 14+ on native Apple Silicon. Only exact environments
+listed in the packaging verification evidence are demonstrated; Intel, Windows,
+Linux and other macOS versions remain unverified. The ZIP contains no renderer
+binaries, fonts, Python/uv binaries or dependency environments. Internet acquisition
+and local compilation still occur after consent. See [packaging/release notes](../macos/README.md).
 
 ## Core environment
 
@@ -263,3 +321,4 @@ viewer/native macOS dialog. Reject/timeout/unavailable confirmation saves no suc
 export. M5-only pitch previews remain temporary. The AI must not operate approval
 or copy temporary XML as a substitute. Existing independent staged-byte verification,
 exclusive file creation and receipt validation remain mandatory.
+

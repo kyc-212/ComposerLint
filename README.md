@@ -46,25 +46,44 @@ filesystem, process and confirmation features.
 whether it installs or works correctly on those systems. Intel Mac also remains
 unverified. Python source availability does not guarantee cross-platform support.
 
-Use the complete source archive or repository file set, including `skills/`,
-`.agents/skills/`, tests and license materials. Do not install an old V0.1 delivery.
-On native macOS Apple Silicon, first provide **Python 3.12, uv and Apple Command
-Line Tools**. The installer checks them and explains missing prerequisites;
-it does not install them or require `sudo`. From the source directory run:
+### Graphical installation — recommended for macOS Apple Silicon
+
+From [GitHub Releases](https://github.com/kyc-212/ComposerLint/releases), download
+**`ComposerLint-Setup-macOS-arm64.zip`** when a release offers that asset. Double-click
+it to extract **ComposerLint Setup.app**, then open the app. Choose full installation
+or text analysis only, review both download/install plans, and approve when ready.
+The app provides private, hash-pinned Python 3.12 and uv tools; full setup also needs
+Apple Command Line Tools and compiles the verified patched renderer locally. If
+Apple tools are missing, follow Apple's installation and licence prompts yourself.
+Internet access and time for compilation are required for a first installation.
+
+**The app is not Developer ID signed or notarized by Apple.** ZIP extraction does
+not bypass Gatekeeper. If macOS blocks it, review the source/release and checksum
+before deciding whether to use Apple's per-app **System Settings → Privacy &
+Security → Open Anyway** procedure. [Detailed steps and limitations](docs/INSTALL.md#graphical-installation-macos-apple-silicon).
+Do not disable Gatekeeper or remove quarantine attributes. A managed Mac may prevent
+opening an unverified app; respect that policy.
+
+Installed source, Skills and environments stay under
+`~/Library/Application Support/ComposerLint/setup/`, independent of the downloaded
+app. Completion provides the exact MCP command, renderer setting and Skill folder.
+No global client settings, private scores or existing exports are changed. No renderer
+binaries/fonts are bundled. Only the currently demonstrated Apple Silicon environment
+is supported; the launcher's macOS 14 minimum is not verification of every later OS.
+
+### Terminal installation — developers and AI agents
+
+Use the complete source archive or repository file set. Provide existing **Python
+3.12, uv and Apple Command Line Tools**, then run from the source directory:
 
 ```sh
 ./install.sh
 ```
 
-Choose full installation, text analysis only, or cancellation. Review the displayed
-downloads, local compilation and configuration plan before approving. Full setup
-builds the exact patched renderer locally and verifies its required behavior.
-It reuses locked dependencies and verified artifacts on retries. No renderer
-binaries/fonts are bundled; global client settings and existing exports stay untouched.
-
-`./install.sh --check` inspects an existing full installation without changes.
-`./install.sh --offline` forbids network downloads. See [installation](docs/INSTALL.md)
-for prerequisites, modes, retries, manual setup and troubleshooting.
+Choose full installation, text analysis only, or cancellation and review the plan.
+`./install.sh --check` is read-only; `./install.sh --offline` forbids downloads.
+Both interfaces use the same locked dependencies, exact renderer patch, independent
+verification and safe reuse. See [installation](docs/INSTALL.md) for manual setup.
 
 Connect the local stdio server with the installed interpreter:
 
@@ -152,3 +171,9 @@ previously reviewed V0.2.0 source set; it is not an updated inventory of the ins
 changes in this checkout. [Release readiness](docs/V0.2-M5-release-checklist.md) retains
 its gate history. Installer changes require separate review before any commit,
 push, tag or new release.
+
+## Building the graphical installer
+
+See [native setup packaging and release instructions](macos/README.md) for the ZIP
+build recipe, checksums, security disclosure and retained optional DMG/signing tooling.
+Local preparation does not imply a graphical asset has been published.

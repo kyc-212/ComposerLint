@@ -59,3 +59,10 @@ Corresponding Source/build-material delivery mechanism, original per-component/f
 notices and any applicable LGPL replacement/recombination and installation-information
 requirements. A patch or upstream homepage alone is not complete binary clearance.
 See the [release checklist](docs/V0.2-M5-release-checklist.md).
+
+The optional native setup frontend's private bootstrap downloads pinned uv and
+CPython archives from official Astral release locations after consent. It retains
+upstream package contents/notices locally and does not include those executables
+in the distributed app/ZIP (or optional DMG). Its own compiled launcher is ComposerLint code. Renderer
+binary/font redistribution remains uncleared; see `macos/bootstrap-pins.json` and
+[GUI distribution scope](docs/licensing/renderer-redistribution.md#native-setup-application-scope--2026-11-08).

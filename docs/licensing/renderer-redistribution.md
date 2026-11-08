@@ -150,3 +150,20 @@ Clearly advertise that the full verified viewer/editing path requires a separate
 provisioned patched renderer. Official 6.3.0 failed required deferred-tie checks;
 do not promise an equivalent prebuilt experience or weaken verification. Source-only developer setup is an explicit distribution limitation. Intel dependency
 work remains documented and unverified; no conda installation or new platform work.
+
+## Native setup application scope — 2026-11-08
+
+The approved native frontend adds ComposerLint-owned compiled SwiftUI launcher code
+plus the reviewed source payload. It does not bundle renderer binaries, Python/uv
+binaries, fonts, upstream renderer trees or installed dependency environments.
+Prerequisite bootstrap acquisition adds exactly pinned official Astral uv and
+python-build-standalone release URLs/checksums, reviewed in `macos/bootstrap-pins.json`.
+These user-consented downloads stay private, with their original notices intact.
+The existing source-patch/local renderer-build distribution boundary is preserved;
+this is not third-party binary/font redistribution clearance. The native launcher
+itself means a future GUI artifact is not described as an entirely source-only file.
+The approved ZIP distribution is deliberately not Developer ID signed or notarized;
+this limitation and Apple's optional per-app Open Anyway process must be disclosed.
+ZIP extraction does not bypass Gatekeeper. Exact payload verification and separate
+publication approval remain required. Developer ID/notarization are deferred, not
+claimed as completed. The renderer distribution boundary is unchanged.
