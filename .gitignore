@@ -30,3 +30,6 @@ renderer.local.json
 
 # Private release verification environments and logs
 .release-audit/
+
+# Installer-owned environments, downloaded sources, native artifacts and private manifests
+.composerlint-setup/

@@ -1,9 +1,11 @@
 # Renderer licensing and first source release
 
-2026-11-07. Selected source-candidate scope, pending publication approval: ComposerLint source,
+2026-11-07 historical source-candidate review: ComposerLint source,
 Skills, authored fixtures, the exact Verovio patch, notices and build instructions.
 No prebuilt renderer, vendored renderer tree/archive, font software or copied
-dependency environments. Nothing has been published. Final user review remains required.
+dependency environments. Kenneth subsequently confirmed V0.2.0 was uploaded to GitHub.
+The installer additions described below remain local changes awaiting review;
+no new publication is authorized by their implementation.
 
 ## Distribution boundary
 
@@ -25,6 +27,25 @@ identity is restricted to that notice and must not populate documentation or
 package author fields. A source-only repository does
 not redistribute packages merely because installation instructions name them.
 Any actual bundling, vendoring or automated acquisition/distribution changes the scope.
+
+### Approved local installer acquisition — 2026-11-08
+
+Kenneth approved a consent-first source installer for native macOS Apple Silicon.
+The repository distributes its launcher, standard-library setup utility, hash pins,
+authored checks and documentation. After explicit consent, the user's machine obtains
+official dependencies and Verovio source directly from reviewed PyPI/pythonhosted
+locations, applies the unchanged LGPL patch and compiles a local wheel. Automated
+acquisition is now included in this narrowly defined installation scope.
+
+This does not add renderer archives, trees, wheels, fonts/resources or dependency
+environments to the distributed source. Local downloads/builds/manifests are private,
+ignored by Git and excluded from the sdist allowlist. Preserve complete upstream
+resources/notices and the local modification notice; the installer retains the exact
+upstream archive and repository patch/notice materials. No prebuilt patched renderer
+service, public cache or downloadable binary release is authorized. Uploading local
+artifacts would require the separate artifact-specific redistribution review below.
+Existing binary/font clearance remains pending. Installation hashes and behavioral
+checks establish identity/required behavior, not additional licensing rights.
 
 The relevant source conditions are GPLv3 sections 4–5 as incorporated/supplemented
 by LGPLv3; the upstream [GPL text](https://github.com/rism-digital/verovio/blob/version-6.3.0/COPYING)

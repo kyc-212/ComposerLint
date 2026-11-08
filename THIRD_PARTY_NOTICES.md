@@ -6,6 +6,12 @@ notice documents. It contains no renderer binary, font software, vendor renderer
 source archive/tree, dependency environment or restricted repertoire collection.
 No binary-redistribution compliance pass is claimed.
 
+The optional consent-first source installer retrieves pinned dependencies and
+official Verovio source directly from upstream, then builds the exact patched
+renderer locally. Those downloaded/built resources remain private and excluded
+from the distributed source. Automated local acquisition does not clear renderer
+or font redistribution; see [installer scope](docs/licensing/renderer-redistribution.md#approved-local-installer-acquisition--2026-11-08).
+
 ## Verovio patch
 
 Upstream: [Verovio 6.3.0](https://github.com/rism-digital/verovio/tree/version-6.3.0).

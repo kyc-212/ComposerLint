@@ -12,7 +12,10 @@ and full [LGPLv3](../LICENSES/third-party/verovio/COPYING.LESSER) and
 [GPLv3](../LICENSES/third-party/verovio/COPYING) texts. No renderer binary or font
 software is supplied, and no upstream endorsement is implied.
 
-Follow [source build and manifest instructions](../docs/INSTALL.md). Obtain the
+The consent-first `./install.sh` automates this exact local build and its existing
+behavioral controls on native macOS Apple Silicon. It supplies no patched binary,
+uses a separate renderer environment and prints the private manifest setting.
+Manual [source build and manifest instructions](../docs/INSTALL.md) remain available. Obtain the
 [official 6.3.0 source](https://pypi.org/project/verovio/6.3.0/#files) separately and
 verify archive SHA-256:
 `33dc3b6816896a649198acd7cce291f54636fbfffa893dd78d84c3073b40d87c`.

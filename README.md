@@ -48,25 +48,33 @@ unverified. Python source availability does not guarantee cross-platform support
 
 Use the complete source archive or repository file set, including `skills/`,
 `.agents/skills/`, tests and license materials. Do not install an old V0.1 delivery.
-From an extracted source directory, using an existing Python 3.12 and `uv`:
+On native macOS Apple Silicon, first provide **Python 3.12, uv and Apple Command
+Line Tools**. The installer checks them and explains missing prerequisites;
+it does not install them or require `sudo`. From the source directory run:
 
 ```sh
-uv sync --locked --no-editable --python /absolute/path/to/python3.12 --no-python-downloads
-.venv/bin/python -B examples/analyze.py tests/fixtures/basic.musicxml
+./install.sh
 ```
 
-The sync command installs dependencies and may access the package index. Review
-and approve installations as required in your environment. Core text analysis does
-not require the optional renderer or MuseScore. See [installation](docs/INSTALL.md)
-for reproducible setup, renderer prerequisites, MCP connection and troubleshooting.
+Choose full installation, text analysis only, or cancellation. Review the displayed
+downloads, local compilation and configuration plan before approving. Full setup
+builds the exact patched renderer locally and verifies its required behavior.
+It reuses locked dependencies and verified artifacts on retries. No renderer
+binaries/fonts are bundled; global client settings and existing exports stay untouched.
+
+`./install.sh --check` inspects an existing full installation without changes.
+`./install.sh --offline` forbids network downloads. See [installation](docs/INSTALL.md)
+for prerequisites, modes, retries, manual setup and troubleshooting.
 
 Connect the local stdio server with the installed interpreter:
 
 ```sh
-/absolute/path/to/ComposerLint/.venv/bin/python -B -m composerlint.server
+/absolute/path/printed/by/installer/runtime/bin/python -B -m composerlint.server
 ```
 
-Codex is the demonstrated client. Other MCP clients need local stdio and filesystem
+For full setup, also copy the printed `COMPOSERLINT_RENDERER_CONFIG` environment
+setting into that server's configuration. Codex is the demonstrated client.
+Other MCP clients need local stdio and filesystem
 access; their configuration conventions and interactive viewer behavior have not
 been independently verified. Keep stdout reserved for MCP traffic.
 
@@ -94,16 +102,16 @@ The full verified viewer/editing workflow requires the patched native renderer
 cross-voice tie controls and is not an equivalent substitute. This project retains
 warning refusal, source correspondence and independent candidate checks.
 
-Obtain the official Verovio 6.3.0 source yourself, verify the published input hash,
-apply the included patch and build a separate local renderer environment using
-[the build instructions](patches/README.md). No prebuilt patched renderer is supplied
-or downloaded automatically. The current adapter also requires official 6.3.0 in
+The approved full installer obtains the official hash-pinned Verovio 6.3.0 source,
+applies the included patch and builds a separate local renderer environment.
+[Manual build instructions](patches/README.md) remain available. No prebuilt patched
+renderer is supplied or downloaded. The current adapter also requires official 6.3.0 in
 the main environment as its base-version gate; the patched build runs separately.
 Installing only the custom build into the main environment does not satisfy that gate.
 
 Select the verified renderer with an explicit server-owner manifest; never let a
-score or tool request choose executable code. Building/provisioning the renderer is
-an advanced setup step. [Installation](docs/INSTALL.md) describes the manifest and
+score or tool request choose executable code. The installer handles the build and
+private manifest. [Installation](docs/INSTALL.md) describes the manifest and
 its integrity checks. The text-only review route remains available without it.
 
 ## Files, privacy and human approval
@@ -140,6 +148,7 @@ Hashes establish identity, not licensing compliance. Renderer binaries/font
 resources remain excluded and uncleared for redistribution.
 
 The [publication manifest](docs/licensing/public-source-manifest.json) records the
-exact proposed file set. [Release readiness](docs/V0.2-M5-release-checklist.md) tracks
-remaining gates. This candidate has not been published; release preparation does
-not authorize GitHub creation, pushing, tagging or publication.
+previously reviewed V0.2.0 source set; it is not an updated inventory of the installer
+changes in this checkout. [Release readiness](docs/V0.2-M5-release-checklist.md) retains
+its gate history. Installer changes require separate review before any commit,
+push, tag or new release.

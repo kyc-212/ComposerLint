@@ -1,11 +1,95 @@
 # Source installation and local renderer setup
 
-V0.2.0 source-only candidate. Tested platform evidence is macOS Apple Silicon with
+V0.2.0 source-only distribution. Tested platform evidence is macOS Apple Silicon with
 CPython 3.12. Other platforms remain unverified. Do not infer Windows compatibility
 from the existence of upstream wheels: filesystem, process and approval adapters
 still need work. Intel dependencies remain under investigation without a downgrade.
 
 ## Core environment
+
+### Guided setup (macOS Apple Silicon)
+
+Use a native ARM64 terminal and existing CPython 3.12, uv and Apple Command Line
+Tools. Setup checks them before changing anything. The demonstrated prerequisite
+versions are Python 3.12.13 and uv 0.12.3. Other macOS versions/toolchain combinations
+still need actual verification; the renderer's deployment target 13 is not a promise
+that the entire dependency set supports every macOS 13+ release.
+
+If prerequisites are missing, install them yourself using the official
+[Python](https://www.python.org/downloads/macos/) and
+[uv](https://docs.astral.sh/uv/getting-started/installation/) instructions.
+Apple developer tools can be requested with `xcode-select --install`; review its
+system prompt yourself. No Homebrew, Python, uv or Apple-tool installer runs silently.
+Select an existing interpreter explicitly if needed:
+
+```sh
+COMPOSERLINT_SETUP_PYTHON=/absolute/path/to/python3.12 ./install.sh
+```
+
+Normally just run `./install.sh`. Choose full setup, text analysis only, or cancel.
+Setup displays its destinations, packages, pinned sources, compilation and manifest
+changes, then asks for explicit approval. There is no automatic yes option.
+EOF/cancellation grants no permission. Do not use `sudo`.
+
+```sh
+./install.sh --mode full
+./install.sh --mode text
+./install.sh --check                  # read-only full-install readiness/integrity check
+./install.sh --mode text --check      # read-only text-install check
+./install.sh --mode full --offline    # consent still required; no network acquisition
+```
+
+Environments, downloaded source, built wheel, private manifest and `setup.log` live
+under `.composerlint-setup/<recipe-id>/` in the source tree, excluded from Git and
+source packaging. The recipe binds source/test/Skill/setup files, dependency pins,
+Python identity and host platform. A changed recipe selects a separate installation;
+the previous one stays intact. Keep the source tree and installation at their
+original absolute paths. Do not move virtual environments or delete referenced artifacts.
+
+Use `--prefix /absolute/private/path` for an isolated installation; its parent must
+exist, with no symlinked ancestors. An existing unrelated destination is refused.
+For a custom prefix, choose a location outside Git checkouts to keep artifacts private.
+Setup never touches an existing `.venv`, application configuration, scores, temporary
+workspaces or exports. The printed absolute MCP command and explicit
+`COMPOSERLINT_RENDERER_CONFIG` select this installation without changing defaults.
+Keep any intentional configuration/data/export overrides in your MCP settings.
+
+Full setup installs ComposerLint from unchanged `uv.lock`, official Verovio from
+`requirements-viewer.txt`, and the eight pinned build packages (with all requirements)
+from `requirements-renderer-build.txt`. It downloads the reviewed official source,
+verifies its hash and the exact patch, builds locally, then installs the complete
+patched package into a separate environment. Locked pytest/Hatchling are included
+for validation and the ComposerLint build; no external Skill validator is installed.
+The core build backend is provisioned from the lock before building without isolation.
+Third-party packages require compatible wheels; there is no implicit source-build
+fallback for missing prerequisite binaries.
+
+Setup runs one smoke sequence: authored analysis with unchanged input, real stdio
+MCP version/tool discovery, and the existing 10 official/patched renderer comparison
+cases (ties, warning/refusal behavior and multipage source correspondence). It does
+not run a broad analysis campaign or approve/export a candidate. Activation occurs
+only after these checks pass. The manifest pins installed renderer resources and
+code, the interpreter binary, retained wheel/source and exact patch.
+
+Rerun the same command after a failure. Verified downloads and completed renderer
+builds are reused; incomplete builds start from fresh extraction. Changed hashes
+refuse, rather than silently generating replacement pins. An interrupted activation
+or damaged managed environment may require a fresh `--prefix`; existing evidence
+is preserved. A retry checks dependencies without removing the separately installed
+official Verovio. `--check` reads integrity/identity records and package versions;
+it does not rerun behavioral tests, install packages or access the network.
+
+Strict offline setup requires the managed `uv-cache/` to contain all locked core
+and build wheels and metadata. It also requires the exact source archive at
+`<prefix>/verovio-6.3.0.tar.gz` and official ARM64 wheel at
+`<prefix>/official/verovio-6.3.0-cp310-abi3-macosx_13_0_arm64.whl`.
+Missing material fails with no online fallback.
+Offline is not a promise that a fresh clone contains dependencies. On failure inspect
+`<prefix>/setup.log`, resolve the reported prerequisite/cache/integrity issue, then
+retry or follow the manual route below. Previously selected working installations
+remain available. Do not copy a prebuilt patched renderer from an unreviewed source.
+
+### Manual fallback
 
 Start from the complete source file set and existing Python 3.12/uv executables.
 Use your own absolute paths; keep the installation and cache separate from scores.
@@ -35,12 +119,15 @@ Configure your client to launch this interpreter and argument list as a local
 stdio MCP server, with a server-visible source path:
 
 ```text
-Command: /absolute/path/to/ComposerLint/.venv/bin/python
+Command: /absolute/path/printed/by/installer/runtime/bin/python
 Arguments: -B -m composerlint.server
+Environment (full setup): COMPOSERLINT_RENDERER_CONFIG=/absolute/path/printed/by/installer/renderer.json
 ```
 
 Keep diagnostic output on stderr. The `composerlint-mcp` console entry point is
-also available. Codex is the demonstrated client; generic stdio clients are not
+also available. For manual setup substitute your `.venv/bin/python` and manifest.
+No global Codex/client settings are changed by the installer.
+Codex is the demonstrated client; generic stdio clients are not
 automatically verified viewer/Skill clients. Inspect the negotiated server version
 and actual tools after connecting. V0.2.0 currently exposes 18 tools, including
 import, review, analysis/evaluation, viewer/selection and temporary editing tools.
@@ -53,6 +140,11 @@ links, recreate each project-local relative link to `../../skills/<skill-name>`
 using the installed OS tools, or use the client's supported manual Skill-loading
 mechanism. Do not assume Windows symlink behavior has been verified. No global
 Skill installation is required for the demonstrated project-local route.
+
+For a missing link only, from the source root use (substitute each of the three
+Skill names): `ln -s ../../skills/composer-review .agents/skills/composer-review`.
+Create `.agents/skills` first if the sdist omitted that directory. Do not overwrite
+an existing link/folder. Restart a Skill-capable session and verify actual discovery.
 
 ## Build the patched renderer separately
 
