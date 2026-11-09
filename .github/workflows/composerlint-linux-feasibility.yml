@@ -1,0 +1,27 @@
+name: ComposerLint Linux feasibility pilot
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: composerlint-linux-feasibility-pilot
+  cancel-in-progress: false
+
+jobs:
+  linux:
+    # Default-branch registration only: this job is always disabled.
+    # The runnable pilot stays on codex/linux-ci-pilot; retain its owner/run gates.
+    if: >-
+      false &&
+      github.repository == 'kyc-212/ComposerLint' &&
+      github.event.repository.visibility == 'public' &&
+      github.actor == github.repository_owner &&
+      github.run_number == '1' && github.run_attempt == '1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Refuse execution of the registration stub
+        run: exit 1
