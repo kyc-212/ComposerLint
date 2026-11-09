@@ -19,6 +19,7 @@ from music21.exceptions21 import Music21Exception
 from pydantic import ValidationError
 
 from composerlint.errors import ComposerLintError
+from composerlint.platform_support import local_path_text
 from composerlint.models import (
     AnalysisOptions, ApiPolicy, ChordGroup, Location, Measure, Meter,
     NormalizationMetadata, NormalizedScore, Part, PitchedEvent, QuantizationMetadata,
@@ -554,8 +555,10 @@ def load_score(path: str | Path, options: AnalysisOptions | dict | None = None) 
     if not isinstance(path, (str, Path)):
         raise ComposerLintError("invalid_options", "path must be a local string or Path")
     raw_path = str(path)
-    if re.match(r"^[A-Za-z][A-Za-z0-9+.-]*:", raw_path) or raw_path.startswith("//"):
-        raise ComposerLintError("unsupported_format", "nonlocal sources are not supported")
+    try:
+        local_path_text(raw_path)
+    except ValueError as exc:
+        raise ComposerLintError("unsupported_format", str(exc)) from exc
     local = Path(path).expanduser()
     from composerlint.score_import import verify_import
     verify_import(local)

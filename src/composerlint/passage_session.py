@@ -12,7 +12,6 @@ import json
 import os
 from pathlib import Path
 import secrets
-import selectors
 import subprocess
 import sys
 import threading
@@ -21,6 +20,7 @@ import time
 from composerlint.advanced_models import AdvancedFailure, PassageArguments
 from composerlint.engine.advanced import LIMITS
 from composerlint.review import canonical, digest
+from composerlint import platform_support as host
 
 TTL_SECONDS = 300
 MAX_CACHE_BYTES = LIMITS['payload_bytes']
@@ -218,10 +218,8 @@ class Worker:
         with self.lock:
             p=self.process;self.process=None;self.code=None
             if p is None:return
-            if p.poll() is None:
-                p.terminate()
-                try:p.wait(timeout=.5)
-                except subprocess.TimeoutExpired:p.kill();p.wait(timeout=.5)
+            host.terminate_owned(p)
+            p.wait(timeout=2)
             for stream in (p.stdin,p.stdout,p.stderr):stream.close()
 
     def request(self, request, *, timeout=None):
@@ -238,46 +236,28 @@ class Worker:
             if self.process is not None and self.code!=code:self.close()
             if self.process is None or self.process.poll() is not None:
                 self.close()
-                self.process=subprocess.Popen([sys.executable,'-I','-B',str(Path(__file__).with_name('advanced_worker.py')),'--passage-session'],
+                self.process=host.popen_owned([sys.executable,'-I','-B',str(Path(__file__).with_name('advanced_worker.py')),'--passage-session'],
                     stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,bufsize=0)
                 self.code=code
-                for s in (self.process.stdin,self.process.stdout,self.process.stderr):os.set_blocking(s.fileno(),False)
-            p=self.process;offset=0;output=bytearray();errors=bytearray()
-            with selectors.DefaultSelector() as selector:
-                selector.register(p.stdin,selectors.EVENT_WRITE)
-                selector.register(p.stdout,selectors.EVENT_READ)
-                selector.register(p.stderr,selectors.EVENT_READ)
-                while True:
-                    remaining=end-time.monotonic()
-                    if remaining<=0:raise subprocess.TimeoutExpired('owned passage worker',duration)
-                    for event,_ in selector.select(remaining):
-                        stream=event.fileobj
-                        if stream is p.stdin:
-                            n=os.write(stream.fileno(),payload[offset:]);offset+=n
-                            if offset==len(payload):selector.unregister(stream)
-                            continue
-                        chunk=os.read(stream.fileno(),65536)
-                        if not chunk:
-                            raise RuntimeError('Owned passage worker exited: '+errors.decode(errors='replace')[-4000:])
-                        if stream is p.stderr:
-                            errors.extend(chunk);errors[:]=errors[-4000:];continue
-                        output.extend(chunk)
-                        if len(output)>64*1024*1024:
-                            self.close()
-                            raise AdvancedFailure('analysis_limit_exceeded','Passage worker exceeded existing transport budget.')
-                        if output.endswith(b'\n'):
-                            response=json.loads(output)
-                            if time.monotonic()>=end:raise subprocess.TimeoutExpired('owned passage worker',duration)
-                            if code_identity()!=code:
-                                self.close()
-                                raise AdvancedFailure('stale_snapshot','Implementation changed during the owned request.')
-                            if not response['ok']:
-                                error=response['error']
-                                if error.get('legacy'):
-                                    from composerlint.errors import ComposerLintError
-                                    raise ComposerLintError(error['code'],error['reason'])
-                                raise AdvancedFailure(error['code'],error['reason'],error.get('record_ref'))
-                            return response['result']
+            p=self.process
+            try: output=host.exchange_line(p,payload,end)
+            except host.PipeLimitError as exc:
+                self.close()
+                raise AdvancedFailure('analysis_limit_exceeded','Passage worker exceeded existing transport budget.') from exc
+            response=json.loads(output)
+            if time.monotonic()>=end:raise subprocess.TimeoutExpired('owned passage worker',duration)
+            if code_identity()!=code:
+                self.close()
+                raise AdvancedFailure('stale_snapshot','Implementation changed during the owned request.')
+            if not response['ok']:
+                error=response['error']
+                if error.get('legacy'):
+                    from composerlint.errors import ComposerLintError
+                    raise ComposerLintError(error['code'],error['reason'])
+                raise AdvancedFailure(error['code'],error['reason'],error.get('record_ref'))
+            return response['result']
+        except host.UnsupportedPlatformOperation as exc:
+            raise AdvancedFailure('unsupported_analysis_case',str(exc)) from exc
         except subprocess.TimeoutExpired as exc:
             self.close()
             raise AdvancedFailure('analysis_timeout','Passage request exceeded its existing deadline; owned worker terminated and reaped.') from exc

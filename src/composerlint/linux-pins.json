@@ -1,0 +1,141 @@
+{
+  "schema": 1,
+  "target": "ubuntu-24.04-x86_64",
+  "reviewed": "2026-11-09",
+  "pilot_ordinal": 1,
+  "allowed_hosts": [
+    "github.com",
+    "release-assets.githubusercontent.com",
+    "objects.githubusercontent.com",
+    "files.pythonhosted.org"
+  ],
+  "checkout": {
+    "version": "v7.0.1",
+    "commit": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+    "evidence": "https://api.github.com/repos/actions/checkout/git/ref/tags/v7.0.1"
+  },
+  "uv": {
+    "version": "0.12.3",
+    "url": "https://github.com/astral-sh/uv/releases/download/0.12.3/uv-x86_64-unknown-linux-gnu.tar.gz",
+    "sha256": "600cf9a742aca00d292673b16b5acffaa7b8c269a364ad0c2e79498dcb1fe101",
+    "size": 21721441,
+    "archive_root": "uv-x86_64-unknown-linux-gnu",
+    "executable": "uv-x86_64-unknown-linux-gnu/uv",
+    "evidence": [
+      "https://api.github.com/repos/astral-sh/uv/releases/tags/0.12.3",
+      "https://github.com/astral-sh/uv/releases/download/0.12.3/sha256.sum"
+    ]
+  },
+  "python": {
+    "version": "3.12.13",
+    "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260807/cpython-3.12.13%2B20260807-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",
+    "sha256": "506191be3ee7bd190a8834dcdc1b3bc70aab50608deccc711935aa007239cabd",
+    "size": 34163738,
+    "archive_root": "python",
+    "executable": "python/bin/python3.12",
+    "evidence": [
+      "https://api.github.com/repos/astral-sh/python-build-standalone/releases/tags/20260807",
+      "https://raw.githubusercontent.com/astral-sh/uv/0.12.3/crates/uv-python/download-metadata.json"
+    ]
+  },
+  "official_renderer": {
+    "version": "6.3.0",
+    "filename": "verovio-6.3.0-cp310-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+    "url": "https://files.pythonhosted.org/packages/a7/23/25d6a382968815baf686099d519064c3444aaad7297b6e6c507c5608f225/verovio-6.3.0-cp310-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+    "sha256": "0896a708a5b130cc5bab3a168d70435ad8b3e54692088e7e5e281fef11c0b05d",
+    "evidence": "https://pypi.org/pypi/verovio/6.3.0/json"
+  },
+  "renderer_source": {
+    "version": "6.3.0",
+    "url": "https://files.pythonhosted.org/packages/d8/07/63fe55a328593336a66750de517a8ab6ebe7c0ad1b7e168d98d79d8503fc/verovio-6.3.0.tar.gz",
+    "sha256": "33dc3b6816896a649198acd7cce291f54636fbfffa893dd78d84c3073b40d87c"
+  },
+  "patch_sha256": "10965e05ca1ffca8e9dd8dbf940a8f9313a95b4b414979afac2ff12b91edcd60",
+  "build_tools": [
+    {
+      "name": "build",
+      "version": "1.6.1",
+      "filename": "build-1.6.1-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/ad/9b/9fb3585dabcd73a1b2a6267f63f62649347c9e6d072c9fde365b105abb2c/build-1.6.1-py3-none-any.whl",
+      "sha256": "ecd351a4be9d35a9eaaba244a7687143c9c7d4aea6ac964e7e7ddab20cbcf4e7",
+      "evidence": "https://pypi.org/pypi/build/1.6.1/json",
+      "size": 31179
+    },
+    {
+      "name": "cmake",
+      "version": "4.4.4",
+      "filename": "cmake-4.4.4-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "url": "https://files.pythonhosted.org/packages/7e/d5/664ea06d01864f25d6067f09fa218404e4d588edd5e495135ac91429fecb/cmake-4.4.4-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "sha256": "f773a0544c66370408f451acd487c2c643b0dfebb48c5d64f3638bc1bb820238",
+      "evidence": "https://pypi.org/pypi/cmake/4.4.4/json",
+      "size": 30245729
+    },
+    {
+      "name": "ninja",
+      "version": "1.13.2",
+      "filename": "ninja-1.13.2-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "url": "https://files.pythonhosted.org/packages/6e/53/ebfed7b689c338dd8ebeec9c0730c8d56821292f14e2536e5f3ef1a05744/ninja-1.13.2-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "sha256": "65a24341b5ac09fcadcc37082660be40a94174e51a937fabf6e2cae26225fa2c",
+      "evidence": "https://pypi.org/pypi/ninja/1.13.2/json",
+      "size": 183365
+    },
+    {
+      "name": "packaging",
+      "version": "26.3",
+      "filename": "packaging-26.3-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl",
+      "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+      "evidence": "https://pypi.org/pypi/packaging/26.3/json",
+      "size": 129956
+    },
+    {
+      "name": "pathspec",
+      "version": "1.1.1",
+      "filename": "pathspec-1.1.1-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/f1/d9/7fb5aa316bc299258e68c73ba3bddbc499654a07f151cba08f6153988714/pathspec-1.1.1-py3-none-any.whl",
+      "sha256": "a00ce642f577bf7f473932318056212bc4f8bfdf53128c78bbd5af0b9b20b189",
+      "evidence": "https://pypi.org/pypi/pathspec/1.1.1/json",
+      "size": 57328
+    },
+    {
+      "name": "pyproject-hooks",
+      "version": "1.3.3",
+      "filename": "pyproject_hooks-1.3.3-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/85/11/044d1ae1b4ec0d7af88ee5bc91e081be1022533032b906a7bdabdbb60977/pyproject_hooks-1.3.3-py3-none-any.whl",
+      "sha256": "5fc53fdac9f7bd63fbcdc868fb5f90b4784d78a53a3d3388cd738b807441a20b",
+      "evidence": "https://pypi.org/pypi/pyproject-hooks/1.3.3/json",
+      "size": 10724
+    },
+    {
+      "name": "scikit-build-core",
+      "version": "1.1.1",
+      "filename": "scikit_build_core-1.1.1-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/01/1b/83913d6d5c6a7f8ad5bf5d67b2d57ab09475f1bb9dd0c7a3f44067d59b90/scikit_build_core-1.1.1-py3-none-any.whl",
+      "sha256": "6f6d6cf600e2e9639fd258ecd11cfc19bd189354b968916a519c6793e7e26237",
+      "evidence": "https://pypi.org/pypi/scikit-build-core/1.1.1/json",
+      "size": 293450
+    },
+    {
+      "name": "swig",
+      "version": "4.5.1",
+      "filename": "swig-4.5.1-py3-none-manylinux_2_12_x86_64.manylinux2010_x86_64.whl",
+      "url": "https://files.pythonhosted.org/packages/e3/0b/cea4ec8414faf951ec2702416f4dea63f9b5a092472e19cff83a0d1b137f/swig-4.5.1-py3-none-manylinux_2_12_x86_64.manylinux2010_x86_64.whl",
+      "sha256": "e0cdc78a984dac35aa78091234e5d62909741ec63df6d03b0764075248cb7845",
+      "evidence": "https://pypi.org/pypi/swig/4.5.1/json",
+      "size": 1938765
+    }
+  ],
+  "compiler": {
+    "cc": "/usr/bin/gcc-13",
+    "cxx": "/usr/bin/g++-13",
+    "version": "13.3.0",
+    "evidence": "https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md"
+  },
+  "files_sha256": {
+    "uv.lock": "aa29e82d5400356bd70747febe755cb30c517f3b3b3c5763f3f89af1b5d76229",
+    "requirements-renderer-build.txt": "aa81ee5c8813f84d179a461ea8e7eeba725545dfe9b4331465abfeae8f131d94",
+    "requirements-viewer.txt": "7fcd85b305cb14d35ac5aeca71ce24a56e0f044d89b400c12a5fdf1142abc09f",
+    "patches/verovio-6.3.0-deferred-tie-stops.patch": "10965e05ca1ffca8e9dd8dbf940a8f9313a95b4b414979afac2ff12b91edcd60",
+    "src/composerlint/requirements-viewer-linux.txt": "c9e69274f21ecb267dfee032ad0c403644655353ee70fc2ee166ad18a9e1539e"
+  }
+}

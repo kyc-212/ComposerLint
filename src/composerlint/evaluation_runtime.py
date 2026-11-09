@@ -4,6 +4,7 @@ from pathlib import Path
 from composerlint.review import canonical
 from composerlint.evaluation_models import EvaluationQuery,EvaluationSnapshot,EvaluationPage,EvaluationFailure
 from composerlint.evaluation_policy import LIMITS
+from composerlint import platform_support as host
 
 
 def request_worker(request,*,timeout=None):
@@ -14,7 +15,8 @@ def request_worker(request,*,timeout=None):
         if base is not None:request={**request,'base_report':base}
     payload=canonical(request);remaining=deadline-(time.monotonic()-started)
     if remaining<=0:raise EvaluationFailure('analysis_timeout','Whole evaluation deadline exceeded before worker launch.')
-    try:cp=subprocess.run([sys.executable,'-I','-B',str(Path(__file__).with_name('evaluation_worker.py'))],input=payload,capture_output=True,text=True,timeout=remaining)
+    try:cp=host.run_owned([sys.executable,'-I','-B',str(Path(__file__).with_name('evaluation_worker.py'))],input=payload,capture_output=True,text=True,timeout=remaining)
+    except host.UnsupportedPlatformOperation as exc:raise EvaluationFailure('unsupported_analysis_case',str(exc)) from exc
     except subprocess.TimeoutExpired as exc:raise EvaluationFailure('analysis_timeout',f'Evaluation exceeded {deadline} seconds; isolated worker terminated and reaped. Narrow the scope.') from exc
     if cp.returncode:raise RuntimeError('Evaluation worker implementation failure: '+cp.stderr[-4000:])
     if len(cp.stdout.encode())>64*1024*1024:raise EvaluationFailure('analysis_limit_exceeded','Worker exceeded 64 MiB response limit.')

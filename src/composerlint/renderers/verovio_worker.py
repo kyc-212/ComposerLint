@@ -1,21 +1,16 @@
 """Bounded subprocess entry point. Input/output are JSON on pipes, never score files."""
 import json
+from pathlib import Path
 import sys
-import os
-import signal
-import threading
 import time
 from importlib.metadata import version
 
 
 def main():
-    parent = os.getppid()
-    def watch_parent():
-        while True:
-            time.sleep(.5)
-            if os.getppid() != parent:
-                os.kill(os.getpid(), signal.SIGKILL)
-    threading.Thread(target=watch_parent, daemon=True).start()
+    # Load the same stdlib-only adapter without importing application dependencies.
+    import runpy
+    support=runpy.run_path(str(Path(__file__).parents[1] / 'platform_support.py'))
+    support['watch_parent'](group=False)
     import verovio
     started = time.monotonic()
     request = json.loads(sys.stdin.buffer.read(12 * 1024 * 1024))

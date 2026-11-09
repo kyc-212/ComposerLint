@@ -9,12 +9,11 @@ import hashlib
 import json
 import os
 import secrets
-import stat
-import subprocess
 import time
 from composerlint.review import canonical, digest
 from composerlint.viewer_source import fail
 from composerlint.runtime_paths import export_dir, export_creatable_dirs
+from composerlint import platform_support as host
 
 EXPORT_ROOT = export_dir()
 
@@ -30,49 +29,28 @@ def binding(w):
 
 
 def confirm(message):
-    # Message travels as argv, never as executable AppleScript source.
-    script = '''on run argv
-set answer to display dialog (item 1 of argv) with title "ComposerLint: approve exact candidate" buttons {"Reject", "Approve & Export"} default button "Reject" cancel button "Reject" giving up after 300
-if gave up of answer then return "expired"
-return button returned of answer
-end run'''
-    try:
-        r = subprocess.run(['/usr/bin/osascript', '-e', script, message],
-            capture_output=True, text=True, timeout=310)
-        return r.returncode == 0 and r.stdout.strip() == 'Approve & Export'
-    except (OSError, subprocess.TimeoutExpired):
-        return False
+    return host.confirm_export(message)
 
 
 def export_directory():
     """Walk from / using held directory descriptors; reject every symlink."""
-    fd = os.open('/', os.O_RDONLY | os.O_DIRECTORY)
-    current = Path('/')
     try:
-        for part in EXPORT_ROOT.parts[1:]:
-            current = current / part
-            try:
-                child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
-            except FileNotFoundError:
-                if current not in export_creatable_dirs() and current != EXPORT_ROOT: raise
-                os.mkdir(part, 0o700, dir_fd=fd)
-                child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
-            os.close(fd); fd = child
-        return fd
+        return host.export_directory(EXPORT_ROOT, export_creatable_dirs())
+    except host.UnsupportedPlatformOperation as exc:
+        fail('unsafe_export_path', str(exc))
     except OSError:
-        os.close(fd)
         fail('unsafe_export_path', 'Export directory must have regular, non-symlink parents.')
 
 
 def read_at(fd, name):
-    with os.fdopen(os.open(name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=fd), 'rb') as f:
-        if not stat.S_ISREG(os.fstat(f.fileno()).st_mode): fail('unsafe_export_path','Export is not a regular file.')
-        return f.read(10*1024*1024+1)
+    try:
+        return host.read_at(fd, name)
+    except OSError as exc:
+        fail('unsafe_export_path', str(exc))
 
 
 def write_at(fd, name, raw):
-    with os.fdopen(os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=fd), 'wb') as f:
-        f.write(raw); f.flush(); os.fsync(f.fileno())
+    host.write_at(fd, name, raw)
 
 
 def eligible(engine, ident, expected):
@@ -90,6 +68,10 @@ def eligible(engine, ident, expected):
 
 def approve_export(engine, ident, expected):
     from composerlint.editing_runtime import worker
+    try: host.require_security('Safe MusicXML export')
+    except host.UnsupportedPlatformOperation as exc: fail('export_unavailable', str(exc))
+    if host.approval_method() is None:
+        fail('export_unavailable', 'Native human approval is unavailable on this platform; nothing exported.')
     with engine.lock:
         w = eligible(engine, ident, expected)
         old = w.get('export_receipt')
@@ -119,7 +101,7 @@ def approve_export(engine, ident, expected):
         with engine.lock:
             w = eligible(engine, ident, expected)
             if w.get('export_pending') != ticket: fail('stale_approval','Confirmation no longer current.')
-            approval = dict(binding=expected, method='native_osascript_dialog', approved_at=time.time(), one_use_id=ticket)
+            approval = dict(binding=expected, method=host.approval_method(), approved_at=time.time(), one_use_id=ticket)
             fd = export_directory()
             stage = '.' + ticket + '.pending.musicxml'
             raw = Path(w['candidate_path']).read_bytes()
@@ -151,8 +133,8 @@ def approve_export(engine, ident, expected):
                 notice='Exact edits and preservation verified. Expressive success and requested mode remain interpretation; MuseScore playback not tested.')
             write_at(fd, '.'+ticket+'.receipt.pending', canonical(receipt).encode())
             # link is atomic and refuses any existing name, including symlinks.
-            os.link(stage, name, src_dir_fd=fd, dst_dir_fd=fd, follow_symlinks=False)
-            os.link('.'+ticket+'.receipt.pending', name+'.receipt.json', src_dir_fd=fd, dst_dir_fd=fd, follow_symlinks=False)
+            host.publish_exclusive(fd, stage, name)
+            host.publish_exclusive(fd, '.'+ticket+'.receipt.pending', name+'.receipt.json')
             if read_at(fd,name) != raw: fail('export_verification_failed','Published bytes differ.')
             engine.current(w)
             os.fsync(fd)

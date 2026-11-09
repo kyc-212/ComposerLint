@@ -18,6 +18,7 @@ def candidate(tmp_path,monkeypatch):
     w,args,_,_=bound_workspace(p,monkeypatch)
     result,error=dispatch('prepare_score_edit',args);assert not error,result
     monkeypatch.setattr(ex,'confirm',lambda message:True)
+    monkeypatch.setattr(ex.host,'approval_method',lambda:'test_native_decision_mock')
     yield w,ex.binding(w),raw
     editing.close();runtime.close()
 

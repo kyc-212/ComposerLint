@@ -8,6 +8,7 @@ from composerlint.advanced_models import AdvancedFailure,AdvancedQuery,AdvancedS
 from composerlint.engine.advanced import AdvancedAnalysis,LIMITS
 from composerlint.analysis_models import AnalysisReport
 from composerlint.review import canonical
+from composerlint import platform_support as host
 
 
 def request_worker(request,*,timeout=None):
@@ -23,7 +24,9 @@ def request_worker(request,*,timeout=None):
     payload=canonical(request);remaining=deadline-(time.monotonic()-started)
     if remaining<=0:raise AdvancedFailure('analysis_timeout','Advanced deadline exceeded before worker launch.')
     try:
-        cp=subprocess.run([sys.executable,'-I','-B',str(Path(__file__).with_name('advanced_worker.py'))],input=payload,capture_output=True,text=True,timeout=remaining)
+        cp=host.run_owned([sys.executable,'-I','-B',str(Path(__file__).with_name('advanced_worker.py'))],input=payload,capture_output=True,text=True,timeout=remaining)
+    except host.UnsupportedPlatformOperation as exc:
+        raise AdvancedFailure('unsupported_analysis_case',str(exc)) from exc
     except subprocess.TimeoutExpired as exc:
         raise AdvancedFailure('analysis_timeout',f'Advanced request exceeded {deadline} seconds; isolated worker terminated and reaped. Narrow the query/features.') from exc
     if cp.returncode:

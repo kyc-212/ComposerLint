@@ -114,6 +114,8 @@ def test_offline_uv_flags_and_environment_are_explicit(tmp_path, monkeypatch):
 
 
 def test_missing_prerequisites_are_explained_without_provisioning(monkeypatch):
+    # This is the preserved Mac prerequisite message, even in the Linux pilot.
+    monkeypatch.setattr(setup.host, 'require_setup', lambda: setup.host.setup_recipe(target='darwin', machine='arm64'))
     monkeypatch.setattr(setup.shutil, 'which', lambda name: None)
     def unavailable(*args, **kwargs):
         raise setup.SetupError('missing Apple tools')

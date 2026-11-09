@@ -7,7 +7,6 @@ import json
 import os
 import re
 import shutil
-import signal
 import stat
 import subprocess
 import sys
@@ -19,6 +18,7 @@ from pydantic import StrictInt, StrictStr
 from composerlint.models import Record
 from composerlint.errors import ComposerLintError
 from composerlint.runtime_paths import temporary_parent
+from composerlint import platform_support as host
 
 MAX_SOURCE = 10 * 1024 * 1024
 MAX_EXPANDED = 64 * 1024 * 1024
@@ -74,7 +74,7 @@ class MuseScoreFailure(ComposerLintError):
 
 def read_regular(path, limit=MAX_SOURCE):
     try:
-        with os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK), 'rb') as stream:
+        with host.open_regular(path) as stream:
             before = os.fstat(stream.fileno())
             if not stat.S_ISREG(before.st_mode) or before.st_size > limit:
                 fail('Import requires a regular file within the size limit (10 MiB per score).')
@@ -83,6 +83,8 @@ def read_regular(path, limit=MAX_SOURCE):
         if len(data) > limit or (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
             fail('Import source changed or exceeded its size limit.')
         return data
+    except host.UnsupportedPlatformOperation as exc:
+        fail(str(exc))
     except OSError as exc:
         fail('Import file is missing, unreadable or an unsafe link.')
 
@@ -185,16 +187,12 @@ def musescore_executable():
 def run_musescore(executable, arguments, directory):
     # Converter mode only: never force corruption/version warnings or reset settings.
     with tempfile.TemporaryFile() as log:
-        process = subprocess.Popen([executable, *arguments], cwd=directory,
-            stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True)
+        process = host.popen_owned([executable, *arguments], cwd=directory,
+            stdin=subprocess.DEVNULL, stdout=log, stderr=log)
         try:
             process.wait(timeout=45)
         except BaseException as exc:
-            if process.poll() is None:
-                try:
-                    if os.name == 'posix': os.killpg(process.pid, signal.SIGKILL)
-                    else: process.kill()
-                except ProcessLookupError: pass
+            host.terminate_owned(process)
             process.wait()
             if isinstance(exc, subprocess.TimeoutExpired): fail('MuseScore conversion timed out; process group terminated.')
             raise
@@ -265,8 +263,10 @@ def verify_import(path):
 
 
 def import_score(path):
-    if re.match(r'^[A-Za-z][A-Za-z0-9+.-]*:', path) or path.startswith('//'):
-        raise ComposerLintError('unsupported_format', 'Import requires a local file path.')
+    try:
+        host.local_path_text(path)
+    except ValueError as exc:
+        raise ComposerLintError('unsupported_format', str(exc)) from exc
     source = Path(path).expanduser().absolute()
     suffix = source.suffix.lower()
     if suffix not in ('.xml', '.musicxml', '.mxl', '.mscz'):

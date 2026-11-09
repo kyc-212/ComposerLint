@@ -1,0 +1,35 @@
+name: ComposerLint Linux feasibility pilot
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: composerlint-linux-feasibility-pilot
+  cancel-in-progress: false
+
+jobs:
+  linux:
+    # Exactly one owner-started pilot attempt. Diagnostic runs require a new,
+    # separately reviewed ordinal/condition change; the UI rerun button is closed.
+    if: >-
+      github.repository == 'kyc-212/ComposerLint' &&
+      github.event.repository.visibility == 'public' &&
+      github.actor == github.repository_owner &&
+      github.run_number == '1' && github.run_attempt == '1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out the reviewed source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          submodules: false
+          lfs: false
+      - name: Verify pins, install, build and run focused checks
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 -I -B tools/ci_linux.py

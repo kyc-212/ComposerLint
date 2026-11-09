@@ -6,7 +6,6 @@ import hashlib
 import json
 import os
 import secrets
-import signal
 import stat
 import subprocess
 import sys
@@ -17,6 +16,7 @@ from composerlint.review import canonical,digest
 from composerlint.viewer_source import fail,ViewerFailure
 from composerlint.editing_models import EditResult
 from composerlint.runtime_paths import temporary_parent
+from composerlint import platform_support as host
 
 
 def read_source(path,expected_identity=None):
@@ -27,13 +27,14 @@ def read_source(path,expected_identity=None):
     except ComposerLintError: fail('stale_source','Imported source changed; import the original again.')
     if p.suffix.lower() not in ('.xml','.musicxml') or p.is_symlink():fail('unsupported_edit','Use a regular uncompressed MusicXML file, not a symlink.')
     try:
-        with os.fdopen(os.open(p,os.O_RDONLY|os.O_NOFOLLOW),'rb') as f:
+        with host.open_regular(p) as f:
             first=os.fstat(f.fileno())
             if not stat.S_ISREG(first.st_mode) or first.st_size>10*1024*1024:fail('unsupported_edit','Use a regular MusicXML file of at most 10 MiB.')
             data=f.read(10*1024*1024+1);last=os.fstat(f.fileno())
         identity=(str(p.resolve()),first.st_dev,first.st_ino)
         if (first.st_size,first.st_mtime_ns)!=(last.st_size,last.st_mtime_ns) or len(data)>10*1024*1024 or expected_identity is not None and identity!=expected_identity:fail('stale_source','Source identity changed. Reopen the workspace.')
         return p,data,identity
+    except host.UnsupportedPlatformOperation as exc:fail('unsupported_edit',str(exc))
     except OSError:fail('stale_source','Original is unavailable or changed. Reopen the workspace.')
 
 
@@ -41,14 +42,14 @@ _active_workers=set()
 _worker_lock=threading.RLock()
 
 def worker(request,timeout=45):
-    p=subprocess.Popen([sys.executable,'-I','-B',str(Path(__file__).with_name('editing_worker.py'))],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,start_new_session=True)
+    try:
+        p=host.popen_owned([sys.executable,'-I','-B',str(Path(__file__).with_name('editing_worker.py'))],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+    except host.UnsupportedPlatformOperation as exc:fail('unsupported_edit',str(exc))
     with _worker_lock:_active_workers.add(p)
     try:
         stdout,stderr=p.communicate(canonical(request),timeout=timeout)
     except BaseException as exc:
-        if p.poll() is None:
-            try:os.killpg(p.pid,signal.SIGKILL)
-            except ProcessLookupError:pass
+        host.terminate_owned(p)
         p.communicate()
         if isinstance(exc,subprocess.TimeoutExpired):fail('edit_timeout','Editing exceeded its bounded deadline; worker group terminated and reaped.')
         raise
@@ -67,6 +68,8 @@ class EditingRuntime:
         self.idle_ttl=1800;self.absolute_ttl=7200;self.max_workspaces=4;self.openings=0;self.reserved={};self.max_snapshot_bytes=80*1024*1024
 
     def directory(self):
+        try:host.require_security('Private editing workspaces')
+        except host.UnsupportedPlatformOperation as exc:fail('unsupported_edit',str(exc))
         if self.root is None:
             self.sweep_dead_roots()
             self.root=tempfile.TemporaryDirectory(prefix='composerlint-m5-',dir=temporary_parent())
@@ -75,6 +78,7 @@ class EditingRuntime:
         return Path(self.root.name)
 
     def sweep_dead_roots(self):
+        host.require_security('Owned workspace cleanup')
         # Only exact marked dead-process roots with an exhaustive known file
         # vocabulary. Unknown files, symlinks or uncertain ownership are retained.
         import re
@@ -485,10 +489,8 @@ class EditingRuntime:
     def close(self):
         with _worker_lock:
             for p in list(_active_workers):
-                if p.poll() is None:
-                    try:os.killpg(p.pid,signal.SIGKILL)
-                    except ProcessLookupError:pass
-                    p.wait(timeout=2)
+                host.terminate_owned(p)
+                p.wait(timeout=2)
         with self.lock:
             for w in self.workspaces.values():
                 self.clear_candidate(w);w['original'].unlink(missing_ok=True)

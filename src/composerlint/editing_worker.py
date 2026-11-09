@@ -3,19 +3,15 @@ from pathlib import Path
 import json
 import os
 import hashlib
-import threading
-import signal
 import sys
 import time
 
 
 def main():
-    parent=os.getppid()
-    def watch_parent():
-        while True:
-            time.sleep(.5)
-            if os.getppid()!=parent:os.killpg(os.getpgrp(),signal.SIGKILL)
-    threading.Thread(target=watch_parent,daemon=True).start()
+    # Load the same stdlib-only adapter without importing application dependencies.
+    import runpy
+    support=runpy.run_path(str(Path(__file__).parent / 'platform_support.py'))
+    support['watch_parent'](group=True)
     sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
     from composerlint import service
     from composerlint.review import digest,canonical

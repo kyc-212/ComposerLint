@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Consent-first, source-only macOS ARM64 setup. Uses only the standard library.
+"""Consent-first shared setup: macOS ARM64 and the Ubuntu 24.04 x64 CI pilot.
 
 No application or client settings are edited. All mutable installer state lives
 under an exclusively owned prefix; the printed MCP environment selects it.
@@ -8,14 +8,15 @@ import argparse
 import contextlib
 import hashlib
 import io
+import importlib.util
 import json
 import os
 from pathlib import Path
 import platform
+import re
 import shlex
 import shutil
 import signal
-import stat
 import subprocess
 import sys
 import tarfile
@@ -23,19 +24,21 @@ import tempfile
 import urllib.parse
 import urllib.request
 
-if sys.platform != 'win32':
-    import fcntl
-
 ROOT = Path(__file__).resolve().parents[1]
+# Load only the shared stdlib boundaries: importing composerlint would require
+# the dependencies which this backend has not installed yet.
+_spec = importlib.util.spec_from_file_location('_composerlint_platform', ROOT / 'src/composerlint/platform_support.py')
+host = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(host)
 BUILD = '6.3.0+composerlint.tie1'
 SOURCE_HASH = '33dc3b6816896a649198acd7cce291f54636fbfffa893dd78d84c3073b40d87c'
 PATCH_HASH = '10965e05ca1ffca8e9dd8dbf940a8f9313a95b4b414979afac2ff12b91edcd60'
 SOURCE_URL = ('https://files.pythonhosted.org/packages/d8/07/'
               '63fe55a328593336a66750de517a8ab6ebe7c0ad1b7e168d98d79d8503fc/verovio-6.3.0.tar.gz')
-OFFICIAL_WHEEL = 'verovio-6.3.0-cp310-abi3-macosx_13_0_arm64.whl'
-OFFICIAL_HASH = 'c842f5d21d31c3d47e835e07565a9b8623b78feef527affe149ceadd9ecaa55a'
-OFFICIAL_URL = ('https://files.pythonhosted.org/packages/6b/0b/'
-                '42e560df4051b8c05407162ba117eb14b44f011e84818acc4c2065161d87/' + OFFICIAL_WHEEL)
+_mac_recipe = host.setup_recipe(target='darwin', machine='arm64')
+OFFICIAL_WHEEL = _mac_recipe.official_wheel
+OFFICIAL_HASH = _mac_recipe.official_sha256
+OFFICIAL_URL = _mac_recipe.official_url
 PATCH = ROOT / 'patches/verovio-6.3.0-deferred-tie-stops.patch'
 BUILD_REQUIREMENTS = ROOT / 'requirements-renderer-build.txt'
 EVENT = None
@@ -64,26 +67,24 @@ def checked(path, expected):
 
 def safe_path(path):
     """Reject symlinked writable destinations, including existing ancestors."""
-    path = Path(os.path.abspath(path))
-    for parent in (path, *path.parents):
-        if parent.is_symlink():
-            raise SetupError(f'Symlinked setup destination refused: {parent}')
-    return path
+    try:
+        return host.safe_path(path)
+    except OSError as exc:
+        raise SetupError(str(exc)) from exc
 
 
 def private_dir(path):
-    safe_path(path)
-    path.mkdir(mode=0o700, parents=True, exist_ok=True)
-    info = path.stat()
-    if info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) & 0o077:
-        raise SetupError(f'Setup directory must be owned by you and private (mode 700): {path}')
+    try:
+        host.private_dir(path)
+    except OSError as exc:
+        raise SetupError(str(exc)) from exc
 
 
 def write_json(path, value):
     safe_path(path)
     fd, temporary = tempfile.mkstemp(prefix='.setup-', dir=path.parent)
     try:
-        with os.fdopen(fd, 'w') as stream:
+        with os.fdopen(fd, 'w', encoding='utf-8') as stream:
             json.dump(value, stream, indent=2, sort_keys=True)
             stream.write('\n')
             stream.flush()
@@ -98,7 +99,7 @@ def clean_env():
     # Prevent implicit Python downloads, alternate indexes, compiler injection,
     # credentials in logs, or request/client settings from selecting a build.
     env = {k: v for k, v in os.environ.items() if not k.startswith(
-        ('UV_', 'PIP_', 'PYTHON', 'COMPOSERLINT_', 'CMAKE_', 'SKBUILD_', 'DYLD_'))
+        ('UV_', 'PIP_', 'PYTHON', 'COMPOSERLINT_', 'CMAKE_', 'SKBUILD_', 'DYLD_', 'LD_'))
         and k not in {'VIRTUAL_ENV', 'CONDA_PREFIX', 'CC', 'CXX', 'CFLAGS',
                      'CXXFLAGS', 'CPPFLAGS', 'LDFLAGS', 'ARCHFLAGS', 'SDKROOT',
                      'MACOSX_DEPLOYMENT_TARGET', 'VEROVIO_BUILD_VERSION'}}
@@ -112,14 +113,14 @@ def run(command, *, env=None, log=None, capture=False, timeout=1800):
         log.write('\n$ ' + shlex.join(command) + '\n')
         log.flush()
     try:
-        process = subprocess.Popen(command, cwd=ROOT, env=env or clean_env(),
-                                   stdin=subprocess.DEVNULL, text=True, start_new_session=True,
+        process = host.popen_owned(command, cwd=ROOT, env=env or clean_env(),
+                                   stdin=subprocess.DEVNULL, text=True,
                                    stdout=subprocess.PIPE if capture else log,
                                    stderr=subprocess.PIPE if capture else subprocess.STDOUT)
         try:
             stdout, stderr = process.communicate(timeout=timeout)
         except (subprocess.TimeoutExpired, KeyboardInterrupt):
-            os.killpg(process.pid, signal.SIGKILL)
+            host.terminate_owned(process)
             process.communicate()
             raise
     except (OSError, subprocess.TimeoutExpired) as exc:
@@ -136,21 +137,36 @@ def preflight(full):
         errors.append('Run setup as your normal user, without sudo.')
     if sys.version_info[:2] != (3, 12) or platform.python_implementation() != 'CPython':
         raise SetupError('Use CPython 3.12 (COMPOSERLINT_SETUP_PYTHON selects its executable).')
-    if sys.platform != 'darwin' or platform.machine() != 'arm64':
-        errors.append('Only native macOS Apple Silicon is supported; Intel/Rosetta, Linux and Windows are unverified.')
+    try:
+        selected = host.require_setup()
+    except host.UnsupportedPlatformOperation as exc:
+        raise SetupError(str(exc)) from exc
     uv = shutil.which('uv')
     if not uv:
         errors.append('Install uv yourself following https://docs.astral.sh/uv/getting-started/installation/.')
     else:
         print('uv:', run([uv, '--version'], capture=True, timeout=15).strip())
+    if selected.target == 'linux-x86_64':
+        verify_linux_inputs()
+        if platform.python_version() != host.linux_pins()['python']['version']:
+            errors.append('Linux pilot requires the exact reviewed Python patch version.')
+        if uv and run([uv, '--version'], capture=True, timeout=15).split()[:2] != ['uv', host.linux_pins()['uv']['version']]:
+            errors.append('Linux pilot requires the exact reviewed uv version.')
     if full:
-        for command in (['/usr/bin/xcode-select', '-p'], ['/usr/bin/xcrun', '--find', 'clang++']):
-            try:
-                print('Apple tools:', run(command, capture=True, timeout=15).strip())
-            except SetupError:
-                errors.append('Apple Command Line Tools/SDK missing. Install them manually using xcode-select --install.')
+        if selected.target == 'macos-arm64':
+            for command in (['/usr/bin/xcode-select', '-p'], ['/usr/bin/xcrun', '--find', 'clang++']):
+                try:
+                    print('Apple tools:', run(command, capture=True, timeout=15).strip())
+                except SetupError:
+                    errors.append('Apple Command Line Tools/SDK missing. Install them manually using xcode-select --install.')
+        else:
+            compiler = host.linux_pins()['compiler']
+            for executable in (compiler['cc'], compiler['cxx']):
+                if run([executable, '-dumpfullversion'], capture=True, timeout=15).strip() != compiler['version']:
+                    errors.append('Runner compiler differs from the reviewed Linux pilot identity; no automatic replacement.')
         if not shutil.which('patch'):
-            errors.append('The patch command is missing; provision Apple Command Line Tools manually.')
+            errors.append('The patch command is missing; provision Apple Command Line Tools manually.' if selected.target == 'macos-arm64'
+                          else 'The reviewed runner must already supply patch; no system installation was attempted.')
         checked(PATCH, PATCH_HASH)
     print('Platform:', platform.platform(), '| Python:', platform.python_version(), sys.executable)
     for name in ('uv.lock', 'pyproject.toml', 'requirements-viewer.txt',
@@ -167,6 +183,7 @@ def preflight(full):
 
 
 def recipe(full):
+    selected = host.require_setup()
     paths = [ROOT / name for name in ('pyproject.toml', 'uv.lock', 'requirements-viewer.txt',
              'requirements-renderer-build.txt', 'install.sh')]
     for directory in ('src', 'tools', 'skills', 'tests'):
@@ -178,8 +195,11 @@ def recipe(full):
                 'platform': platform.platform(),
                 'files': {str(p.relative_to(ROOT)): digest(p) for p in sorted(paths)}}
     if full:
-        identity['compiler'] = run(['/usr/bin/xcrun', 'clang++', '--version'], capture=True, timeout=15)
-        identity['sdk'] = run(['/usr/bin/xcrun', '--show-sdk-version'], capture=True, timeout=15)
+        if selected.target == 'macos-arm64':
+            identity['compiler'] = run(['/usr/bin/xcrun', 'clang++', '--version'], capture=True, timeout=15)
+            identity['sdk'] = run(['/usr/bin/xcrun', '--show-sdk-version'], capture=True, timeout=15)
+        else:
+            identity['compiler'] = run([host.linux_pins()['compiler']['cxx'], '--version'], capture=True, timeout=15)
     return hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
 
 
@@ -209,7 +229,7 @@ class OfficialRedirects(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
-def download_artifact(prefix, name, url, expected, offline):
+def download_artifact(prefix, name, url, expected, offline, *, max_bytes=16 * 1024 * 1024):
     target = prefix / name
     if target.exists() or target.is_symlink():
         checked(target, expected)
@@ -224,7 +244,7 @@ def download_artifact(prefix, name, url, expected, offline):
             total = 0
             while block := response.read(1024 * 1024):
                 total += len(block)
-                if total > 16 * 1024 * 1024:
+                if total > max_bytes:
                     raise SetupError('Source download exceeded its size limit.')
                 output.write(block)
         checked(partial, expected)
@@ -256,6 +276,19 @@ def verify_manifest(path):
     return value
 
 
+def verify_linux_inputs():
+    pins = host.linux_pins()
+    for name, expected in pins['files_sha256'].items():
+        checked(ROOT / name, expected)
+    if pins['patch_sha256'] != PATCH_HASH or pins['renderer_source']['sha256'] != SOURCE_HASH:
+        raise SetupError('Linux pilot source/patch identity differs from the reviewed renderer.')
+    requirements = re.split(r'\n(?=[A-Za-z][A-Za-z0-9_-]*==)', BUILD_REQUIREMENTS.read_text(encoding='utf-8'))
+    for artifact in pins['build_tools']:
+        block = next((text for text in requirements if text.startswith(artifact['name']+'=='+artifact['version']+' ')), '')
+        if artifact['sha256'] not in block:
+            raise SetupError('Linux build artifact is absent from existing pinned requirements.')
+
+
 class Installer:
     def __init__(self, prefix, uv, offline, identity):
         self.prefix, self.uv, self.offline, self.identity = prefix, uv, offline, identity
@@ -275,9 +308,10 @@ class Installer:
             self.uv_run('venv', '--python', sys.executable, destination)
         if destination.is_symlink() or not (destination / 'pyvenv.cfg').is_file():
             raise SetupError(f'Invalid managed environment: {destination}; use a fresh --prefix.')
-        return destination / 'bin/python'
+        return host.environment_python(destination)
 
     def core(self):
+        host.require_setup()
         status('dependencies', 'Installing/checking locked ComposerLint dependencies…')
         python = self.environment('runtime')
         env = dict(self.env, UV_PROJECT_ENVIRONMENT=str(self.prefix / 'runtime'))
@@ -288,12 +322,15 @@ class Installer:
         return python
 
     def renderer(self, python):
+        selected = host.require_setup()
         status('official_renderer', 'Verifying/installing official Verovio 6.3.0…')
         official = self.prefix / 'official'
         private_dir(official)
-        download_artifact(official, OFFICIAL_WHEEL, OFFICIAL_URL, OFFICIAL_HASH, self.offline)
+        download_artifact(official, selected.official_wheel, selected.official_url, selected.official_sha256, self.offline)
+        viewer_requirements = (ROOT / 'src/composerlint/requirements-viewer-linux.txt'
+                               if selected.target == 'linux-x86_64' else ROOT / 'requirements-viewer.txt')
         self.uv_run('pip', 'install', '--python', python, '--require-hashes', '--only-binary', ':all:',
-                    '--no-index', '--find-links', official, '-r', ROOT / 'requirements-viewer.txt')
+                    '--no-index', '--find-links', official, '-r', viewer_requirements)
         manifest = self.prefix / 'renderer.json'
         receipt = self.prefix / 'renderer-build.json'
         if receipt.exists():
@@ -307,8 +344,17 @@ class Installer:
         archive = source_archive(self.prefix, self.offline)
         status('build_tools', 'Provisioning hash-pinned renderer build tools…')
         build_python = self.environment('build-tools')
-        self.uv_run('pip', 'sync', '--python', build_python, '--require-hashes', '--only-binary', ':all:',
-                    '--index-url', 'https://pypi.org/simple', BUILD_REQUIREMENTS)
+        if selected.target == 'linux-x86_64':
+            tools = self.prefix / 'build-artifacts'
+            private_dir(tools)
+            for artifact in host.linux_pins()['build_tools']:
+                download_artifact(tools, artifact['filename'], artifact['url'], artifact['sha256'],
+                                  self.offline, max_bytes=128 * 1024 * 1024)
+            self.uv_run('pip', 'sync', '--python', build_python, '--require-hashes', '--only-binary', ':all:',
+                        '--no-index', '--find-links', tools, BUILD_REQUIREMENTS)
+        else:
+            self.uv_run('pip', 'sync', '--python', build_python, '--require-hashes', '--only-binary', ':all:',
+                        '--index-url', 'https://pypi.org/simple', BUILD_REQUIREMENTS)
         status('compiling', 'Compiling the exact patched renderer (this can take several minutes)…')
         # Fresh build staging on each interrupted attempt; never patch twice.
         with tempfile.TemporaryDirectory(prefix='source-', dir=self.prefix) as staging:
@@ -321,10 +367,7 @@ class Installer:
                 raise SetupError('Patch changed more than the reviewed source file.')
             artifacts = self.prefix / 'artifacts'
             private_dir(artifacts)
-            env = dict(self.env, PATH=str(build_python.parent) + ':/usr/bin:/bin:/usr/sbin:/sbin',
-                       VEROVIO_BUILD_VERSION=BUILD, MACOSX_DEPLOYMENT_TARGET='13',
-                       CMAKE_BUILD_PARALLEL_LEVEL='4', CMAKE_GENERATOR='Ninja',
-                       CC='/usr/bin/clang', CXX='/usr/bin/clang++')
+            env = dict(self.env, **host.renderer_build_environment(build_python, BUILD))
             run([build_python, '-I', '-B', '-m', 'build', '--no-isolation', '--wheel',
                  '-Cbuild-dir=' + str(Path(staging) / 'build'), '--outdir', artifacts, source],
                 env=env, log=self.log)
@@ -351,11 +394,14 @@ class Installer:
         run([python, '-I', '-B', ROOT / 'tools/installation_smoke.py'], env=env, log=self.log, timeout=180)
         if manifest:
             env['COMPOSERLINT_RENDERER_EQUIVALENCE'] = '1'
-            run([python, '-I', '-B', '-m', 'pytest', '-q', '-p', 'no:cacheprovider',
+            reports = (['--junitxml=' + str(self.prefix / 'renderer-controls.xml')]
+                       if host.require_setup().target == 'linux-x86_64' else [])
+            run([python, '-I', '-B', '-m', 'pytest', '-q', '-p', 'no:cacheprovider', *reports,
                  ROOT / 'tests/test_renderer_packaging_equivalence.py'], env=env, log=self.log, timeout=180)
 
     def install(self, full):
-        self.log = (self.prefix / 'setup.log').open('a')
+        host.require_setup()
+        self.log = (self.prefix / 'setup.log').open('a', encoding='utf-8')
         try:
             python = self.core()
             manifest = self.renderer(python) if full else None
@@ -392,6 +438,7 @@ def connection_instructions(python, manifest):
 
 
 def describe_plan(mode, offline, prefix):
+    selected = host.require_setup()
     print('\nPlan:', 'FULL viewer/editing setup' if mode == 'full' else 'TEXT ANALYSIS ONLY')
     print('Destination (private environments, artifacts, manifest, logs):', prefix)
     print('Install unchanged uv.lock dependencies, including locked pytest/Hatchling for verification/building.')
@@ -399,7 +446,7 @@ def describe_plan(mode, offline, prefix):
     print('Package source: https://pypi.org/simple and hash-pinned files.pythonhosted.org artifacts.')
     if mode == 'full':
         print('Install official Verovio 6.3.0 in main environment (requirements-viewer.txt hash).')
-        print('Official wheel:', OFFICIAL_URL)
+        print('Official wheel:', selected.official_url)
         print('Install pinned build tools in separate environment:')
         print('build 1.6.1, scikit-build-core 1.1.1, CMake 4.4.4, SWIG 4.5.1, Ninja 1.13.2,')
         print('packaging 26.3, pathspec 1.1.1, pyproject-hooks 1.3.3 (requirements-renderer-build.txt hashes).')
@@ -408,7 +455,9 @@ def describe_plan(mode, offline, prefix):
         print('Apply exact existing patch; compile C++ locally; install separate patched renderer.')
         print('Verify ties, warning refusal and source mapping before creating the local renderer manifest.')
         print('Upstream package resources remain local; no binaries/fonts are redistributed by ComposerLint.')
-    print('No Python/uv/Apple-tool installation, administrator access, client-setting edits, or export operations.')
+    print('No Python/uv/Apple-tool installation, administrator access, client-setting edits, or export operations.'
+          if selected.target == 'macos-arm64' else
+          'No system prerequisite installation, administrator access, client-setting edits, or export operations.')
     print('Network:', 'FORBIDDEN; missing cached materials fail.' if offline else 'approved missing artifacts may be downloaded.')
 
 
@@ -459,7 +508,7 @@ def protocol_main(mode, offline, base):
             private_dir(base)
             with owned_prefix(prefix, identity):
                 Installer(prefix, uv, offline, identity).install(mode == 'full')
-            emit('complete', python=str(prefix / 'runtime/bin/python'),
+            emit('complete', python=str(host.environment_python(prefix / 'runtime')),
                  manifest=str(prefix / 'renderer.json') if mode == 'full' else None,
                  source=str(ROOT), arguments=['-B', '-m', 'composerlint.server'],
                  log=str(prefix / 'setup.log'))
@@ -483,17 +532,13 @@ def owned_prefix(prefix, identity):
         if not owner.is_file() or owner.is_symlink() or json.loads(owner.read_text()) != {'recipe': identity}:
             raise SetupError('Existing destination is unrelated or belongs to a different recipe; choose a fresh --prefix.')
     private_dir(prefix)
-    fd = os.open(prefix / 'setup.lock', os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
     try:
-        try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError as exc:
-            raise SetupError('Another setup is using this destination; wait for it to finish.') from exc
-        if not owner.exists():
-            write_json(owner, {'recipe': identity})
-        yield
-    finally:
-        os.close(fd)
+        with host.exclusive_lock(prefix / 'setup.lock'):
+            if not owner.exists():
+                write_json(owner, {'recipe': identity})
+            yield
+    except BlockingIOError as exc:
+        raise SetupError('Another setup is using this destination; wait for it to finish.') from exc
 
 
 def main(argv=None):
@@ -530,7 +575,7 @@ def main(argv=None):
             complete = prefix / 'complete.json'
             if not complete.is_file() or complete.is_symlink() or json.loads(complete.read_text()) != dict(recipe=identity, full=mode == 'full'):
                 raise SetupError('No completed matching installation here. Run setup (or select its --mode/--prefix).')
-            python = prefix / 'runtime/bin/python'
+            python = host.environment_python(prefix / 'runtime')
             if mode == 'full':
                 previous = json.loads((prefix / 'renderer-build.json').read_text())
                 checked(prefix / 'renderer.json', previous['manifest_sha256'])

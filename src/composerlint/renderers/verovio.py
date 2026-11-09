@@ -7,6 +7,7 @@ import subprocess
 import sys
 from composerlint.viewer_source import fail
 from composerlint import runtime_paths
+from composerlint import platform_support as host
 
 
 def renderer_command():
@@ -40,9 +41,11 @@ def render(xml, start=None, end=None, width=1800, *, notation_page=None):
         fail('renderer_unavailable', 'Optional Verovio 6.3.0 is not installed; use text selection.')
     executable, expected_build = renderer_command()
     try:
-        cp = subprocess.run([executable, '-I', '-B', str(Path(__file__).with_name('verovio_worker.py'))],
+        cp = host.run_owned([executable, '-I', '-B', str(Path(__file__).with_name('verovio_worker.py'))],
             input=json.dumps(dict(xml=xml, start=start, end=end, width=width, notation_page=notation_page)),
-            capture_output=True, text=True, timeout=15, start_new_session=True)
+            capture_output=True, text=True, timeout=15)
+    except host.UnsupportedPlatformOperation as exc:
+        fail('renderer_unavailable', str(exc))
     except subprocess.TimeoutExpired:
         fail('render_timeout', 'Notation rendering exceeded 15 seconds; worker terminated.')
     if cp.returncode or len(cp.stdout.encode()) > 64 * 1024 * 1024:
