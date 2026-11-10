@@ -5,6 +5,8 @@ owner-dispatched feature build is authorized; unexpected artifacts always refuse
 """
 import argparse
 import hashlib
+import errno
+import http.client
 import importlib.util
 import json
 import os
@@ -15,7 +17,10 @@ import shlex
 import shutil
 import subprocess
 import sys
+import socket
+import tempfile
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -55,10 +60,10 @@ def prerequisites():
 def validate_run(env):
     expected = dict(GITHUB_ACTIONS='true', GITHUB_EVENT_NAME='workflow_dispatch',
         GITHUB_REPOSITORY='kyc-212/ComposerLint',GITHUB_ACTOR='kyc-212',
-        GITHUB_REF='refs/heads/codex/linux-ci-pilot',GITHUB_RUN_NUMBER='3',
+        GITHUB_REF='refs/heads/codex/linux-ci-pilot',GITHUB_RUN_NUMBER='4',
         GITHUB_RUN_ATTEMPT='1',RUNNER_OS='Linux',RUNNER_ARCH='X64')
     if any(env.get(key) != value for key,value in expected.items()) or not host.linux_pilot_host():
-        raise ValueError('Only the explicitly approved third native Ubuntu GUI build is enabled.')
+        raise ValueError('Only the explicitly approved fourth native Ubuntu GUI build is enabled.')
     commit = env.get('REVIEWED_COMMIT','')
     if not re.fullmatch(r'[0-9a-f]{40}',commit) or commit != env.get('GITHUB_SHA'):
         raise ValueError('Dispatch must select the exact reviewed feature commit.')
@@ -127,6 +132,79 @@ class UbuntuRedirects(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req,fp,code,msg,headers,newurl)
 
 
+class TruncatedDownload(Exception):
+    """A clean EOF arrived before the approved byte count."""
+
+
+def transient_download_error(error):
+    if isinstance(error, urllib.error.HTTPError):
+        return error.code in (408, 429, 500, 502, 503, 504)
+    if isinstance(error, urllib.error.URLError):
+        return transient_download_error(error.reason)
+    return (isinstance(error, (TruncatedDownload, http.client.RemoteDisconnected,
+                              http.client.IncompleteRead, TimeoutError))
+            or isinstance(error, OSError) and error.errno in
+            (errno.ECONNRESET, errno.ECONNABORTED, errno.ETIMEDOUT,
+             errno.EPIPE, errno.ENETUNREACH, errno.EHOSTUNREACH)
+            or isinstance(error, socket.gaierror) and error.errno == socket.EAI_AGAIN)
+
+
+def download_prerequisite(opener, item, archives):
+    """Four fresh transfers at most; publish only verified bytes and identity.
+
+    Socket operations time out at 30 seconds. A 120-second per-attempt deadline
+    is checked between reads (an in-flight read can add at most 30 seconds).
+    Never resume partial bytes, change URLs or retry integrity/identity failures.
+    """
+    target = archives/item['cache_filename']
+    url = 'https://archive.ubuntu.com/ubuntu/'+item['filename']
+    for attempt in range(1, 5):
+        try:
+            # TemporaryDirectory owns only its unique directory, including on
+            # interruption. APT never sees a partially written .deb cache entry.
+            with tempfile.TemporaryDirectory(prefix='prerequisite-', dir=archives/'partial') as temporary:
+                partial = Path(temporary)/'download.part'
+                deadline = time.monotonic()+120
+                with opener.open(url, timeout=30) as response, partial.open('xb') as stream:
+                    count = 0
+                    while True:
+                        if time.monotonic() >= deadline:
+                            raise TimeoutError('Prerequisite transfer deadline exceeded.')
+                        block = response.read(min(1024*1024, item['size']-count+1))
+                        if not block:
+                            break
+                        count += len(block)
+                        if count > item['size']:
+                            raise ValueError('Package size exceeded approved metadata.')
+                        stream.write(block)
+                # Hash the complete on-disk file on every completed transfer,
+                # including short EOFs; neither response headers nor APT suffice.
+                size = partial.stat().st_size
+                digest = setup.digest(partial)
+                if size != item['size']:
+                    raise TruncatedDownload('Package ended before approved size.')
+                if digest != item['sha256']:
+                    raise ValueError('Package SHA-256 differs from approved metadata.')
+                identity = run(['dpkg-deb','--show','--showformat=${Package} ${Version} ${Architecture}',partial]).strip()
+                if identity != f"{item['name']} {item['version']} {item['architecture']}":
+                    raise ValueError('Package internal identity differs.')
+                # Same-filesystem atomic publication, refusing an existing entry
+                # (including a symlink) rather than overwriting someone else's file.
+                os.link(partial, target)
+            return
+        except Exception as error:
+            retry = transient_download_error(error) and attempt < 4
+            if isinstance(error, urllib.error.HTTPError):
+                error.close()
+            delay = 2**(attempt-1) if retry else 0
+            print(json.dumps(dict(stage='prerequisite_download_failure',
+                package=item['name'], attempt=attempt, error=type(error).__name__,
+                retry=retry, backoff_seconds=delay)), flush=True)
+            if not retry:
+                raise
+            time.sleep(delay)
+
+
 def provision(base):
     catalog=prerequisites()
     if not catalog['approved']:raise ValueError('Acquisition disabled until prerequisite approval.')
@@ -152,23 +230,13 @@ def provision(base):
         bytes=sum(item['size'] for item in selected))), flush=True)
     opener=urllib.request.build_opener(UbuntuRedirects)
     for item in selected:
-        filename=item['cache_filename']
         # Cross-check against APT's Ubuntu-keyring-authenticated metadata too.
         metadata=run(['apt-cache',*options,'show',item['name']+'='+item['version']])
         if '\nSHA256: '+item['sha256'] not in '\n'+metadata:
             raise ValueError('Signed APT metadata disagrees with the reviewed prerequisite hash.')
-        target=directory/'archives'/filename
         print(json.dumps(dict(stage='prerequisite_download', package=item['name'],
             version=item['version'], filename=item['filename'], sha256=item['sha256'])), flush=True)
-        with opener.open('https://archive.ubuntu.com/ubuntu/'+item['filename'],timeout=30) as response,target.open('xb') as stream:
-            count=0
-            while block:=response.read(1024*1024):
-                count+=len(block)
-                if count>item['size']:raise ValueError('Package size exceeded approved metadata.')
-                stream.write(block)
-        if count!=item['size'] or setup.digest(target)!=item['sha256']:raise ValueError('Package integrity verification failed.')
-        identity=run(['dpkg-deb','--show','--showformat=${Package} ${Version} ${Architecture}',target]).strip()
-        if identity!=f"{item['name']} {item['version']} {item['architecture']}":raise ValueError('Package internal identity differs.')
+        download_prerequisite(opener, item, directory/'archives')
         print(json.dumps(dict(stage='prerequisite_verified',package=item['name'],sha256=item['sha256'])),flush=True)
     # No fetch fallback: only this private cache's already verified debs may install.
     run(['sudo','apt-get',*options,'--no-download','--yes','--no-remove','--no-install-recommends','install',*requested],timeout=180)

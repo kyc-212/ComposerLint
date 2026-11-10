@@ -6,14 +6,35 @@ The native executable and ZIP have **not yet been built or visually verified** f
 this candidate. Do not publish a source-only stand-in as the graphical download.
 
 
-**Corrected run #3 authorized (2026-11-10):** the initial native build stopped
-when archive.ubuntu.com closed a prerequisite-download connection. Run #2 used
-main and was safely skipped without executing the build. Kenneth explicitly
-approved one corrected feature-branch dispatch, run #3 / attempt 1. The branch
-dropdown must visibly show `codex/linux-ci-pilot` before submission; the commit
-input does not select a branch. All dependency hashes, download logging and
-security/artifact restrictions remain unchanged. No automatic retry or fallback.
-The registration copy on main remains explicitly disabled.
+**Run #3 failed; correction and exactly one Run #4 approved (2026-11-10).**
+The saved log for run `42768129213` shows `RemoteDisconnected` before the HTTP
+status line for `libgdk-pixbuf2.0-bin` 2.42.10+dfsg-3ubuntu3.3. 62 archives had
+verified; system installation was never reached. No checksum mismatch was reported.
+
+The prerequisite downloader now allows four fresh attempts per archive with
+1/2/4-second backoff for disconnects, resets, timeouts, temporary DNS failures,
+short EOFs, and HTTP 408/429/500/502/503/504. Each attempt uses a unique directory
+under the private APT cache's `partial/`; no resume or mirror substitution occurs.
+Socket operations retain the 30-second timeout, with a 120-second attempt deadline
+checked between reads. Complete on-disk size, exact approved SHA-256 and Debian
+identity must pass before atomic publication into the cache. Oversize, hash or
+identity mismatches, permanent HTTP/DNS/TLS failures and local file errors stop.
+Owned temporary files are removed on success, failure and normal interruption;
+existing cache entries and unrelated files are preserved. Installation still uses
+`--no-download` only after every selected archive verifies.
+
+Focused local verification: **240 passed in 37.23 seconds**, warnings as errors,
+covering graphical CI, original Linux CI, setup, platform and export boundaries.
+This includes 28 new downloader/install-barrier cases (52 graphical CI cases in
+all). Final invocation uses `PYTHONDONTWRITEBYTECODE=1`, `python -B` and permitted
+local viewer access; no package acquisition or native Linux execution occurred.
+
+Kenneth approved the focused correction, feature-branch push and exactly one
+corrected native graphical build: Run #4 / attempt 1. The workflow and driver
+permit only that ordinal and attempt; there is no unrestricted rerun permission.
+No automatic retry of the workflow, merge, release, tag or publication is approved. The registration copy on
+main remains disabled. A future dispatch must visibly select `codex/linux-ci-pilot`
+and supply the exact reviewed commit; the commit input does not select a branch.
 
 ## Intended volunteer journey
 
