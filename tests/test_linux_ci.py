@@ -82,6 +82,9 @@ def test_linux_build_recipe_has_no_apple_tools_and_keeps_two_compiler_workers(mo
     monkeypatch.setattr(host, 'linux_pilot_host', lambda:True)
     recipe = host.require_setup()
     assert recipe.official_sha256 == ci.checked_pins()['official_renderer']['sha256']
+    monkeypatch.setattr(host, 'linux_capabilities', lambda **kwargs:dict(full_available=True,
+        tools={'cxx':{'path':'/usr/bin/g++-13'}}))
+    monkeypatch.setattr(host, 'system_tool', lambda *names:'/usr/bin/gcc-13')
     env = host.renderer_build_environment('/private/build/bin/python', '6.3.0+composerlint.tie1')
     assert env['CC'] == '/usr/bin/gcc-13' and env['CXX'] == '/usr/bin/g++-13'
     assert env['CMAKE_BUILD_PARALLEL_LEVEL'] == '2' and 'MACOSX_DEPLOYMENT_TARGET' not in env

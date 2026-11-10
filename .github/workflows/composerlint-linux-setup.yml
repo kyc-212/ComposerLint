@@ -1,0 +1,57 @@
+name: ComposerLint graphical Linux setup build
+
+on:
+  workflow_dispatch:
+    inputs:
+      reviewed_commit:
+        description: Exact reviewed feature-branch commit (40 hexadecimal characters)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: composerlint-linux-graphical-setup
+  cancel-in-progress: false
+
+jobs:
+  build:
+    # One owner-approved feature-branch build. The registration copy on main
+    # is explicitly disabled. Never merge application changes into main.
+    # Reruns require separate approval and a reviewed ordinal/condition change.
+    if: >-
+      github.repository == 'kyc-212/ComposerLint' &&
+      github.event.repository.visibility == 'public' &&
+      github.actor == github.repository_owner &&
+      github.ref == 'refs/heads/codex/linux-ci-pilot' &&
+      github.run_number == '1' && github.run_attempt == '1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      REVIEWED_COMMIT: ${{ inputs.reviewed_commit }}
+    steps:
+      - name: Check out reviewed source without stored credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          submodules: false
+          lfs: false
+      - name: Verify prerequisites, compile and test the native graphical package
+        run: python3 -I -B tools/ci_linux_setup.py
+      - name: Retain only the verified volunteer package and public evidence
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ComposerLint-Linux-graphical-review
+          path: |
+            ${{ runner.temp }}/composerlint-linux-setup/deliverables/ComposerLint-Setup-Linux-x86_64.zip
+            ${{ runner.temp }}/composerlint-linux-setup/deliverables/ComposerLint-Setup-Linux-x86_64.zip.sha256
+            ${{ runner.temp }}/composerlint-linux-setup/deliverables/verification.json
+            ${{ runner.temp }}/composerlint-linux-setup/deliverables/text-gui.png
+            ${{ runner.temp }}/composerlint-linux-setup/deliverables/full-gui.png
+          if-no-files-found: error
+          include-hidden-files: false
+          overwrite: false
+          compression-level: 0
+          retention-days: 7

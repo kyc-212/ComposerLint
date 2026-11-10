@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Consent-first shared setup: macOS ARM64 and the Ubuntu 24.04 x64 CI pilot.
+"""Consent-first shared setup: macOS ARM64, Ubuntu x64 and experimental Arch x64.
 
 No application or client settings are edited. All mutable installer state lives
 under an exclusively owned prefix; the printed MCP environment selects it.
@@ -148,6 +148,11 @@ def preflight(full):
         print('uv:', run([uv, '--version'], capture=True, timeout=15).strip())
     if selected.target == 'linux-x86_64':
         verify_linux_inputs()
+        capabilities = host.linux_capabilities(renderer=full)
+        if not capabilities['supported']:
+            errors.append('Linux capability checks refused this target, GNU ABI/libraries, normal-user access or findmnt. No fallback was selected.')
+        if full and not capabilities['full_available']:
+            errors.append('Full Linux setup needs an existing C/C++ compiler with verified C++20 compilation and linking, renderer runtime libraries, and patch. Choose text mode or review prerequisites. ' + capabilities['tools']['cxx'].get('message', ''))
         if platform.python_version() != host.linux_pins()['python']['version']:
             errors.append('Linux pilot requires the exact reviewed Python patch version.')
         if uv and run([uv, '--version'], capture=True, timeout=15).split()[:2] != ['uv', host.linux_pins()['uv']['version']]:
@@ -159,11 +164,6 @@ def preflight(full):
                     print('Apple tools:', run(command, capture=True, timeout=15).strip())
                 except SetupError:
                     errors.append('Apple Command Line Tools/SDK missing. Install them manually using xcode-select --install.')
-        else:
-            compiler = host.linux_pins()['compiler']
-            for executable in (compiler['cc'], compiler['cxx']):
-                if run([executable, '-dumpfullversion'], capture=True, timeout=15).strip() != compiler['version']:
-                    errors.append('Runner compiler differs from the reviewed Linux pilot identity; no automatic replacement.')
         if not shutil.which('patch'):
             errors.append('The patch command is missing; provision Apple Command Line Tools manually.' if selected.target == 'macos-arm64'
                           else 'The reviewed runner must already supply patch; no system installation was attempted.')
@@ -199,7 +199,12 @@ def recipe(full):
             identity['compiler'] = run(['/usr/bin/xcrun', 'clang++', '--version'], capture=True, timeout=15)
             identity['sdk'] = run(['/usr/bin/xcrun', '--show-sdk-version'], capture=True, timeout=15)
         else:
-            identity['compiler'] = run([host.linux_pins()['compiler']['cxx'], '--version'], capture=True, timeout=15)
+            capabilities = host.linux_capabilities(renderer=True)
+            if not capabilities['full_available']:
+                raise SetupError('Linux renderer capability checks failed before plan creation.')
+            identity['compiler'] = capabilities['tools']['cxx']
+            cc = host.system_tool('cc', 'gcc', 'clang')
+            identity['c_compiler'] = {'path': cc, 'sha256': digest(Path(cc))}
     return hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
 
 
@@ -398,6 +403,14 @@ class Installer:
                        if host.require_setup().target == 'linux-x86_64' else [])
             run([python, '-I', '-B', '-m', 'pytest', '-q', '-p', 'no:cacheprovider', *reports,
                  ROOT / 'tests/test_renderer_packaging_equivalence.py'], env=env, log=self.log, timeout=180)
+            if reports:
+                import xml.etree.ElementTree as ET
+                tree = ET.parse(self.prefix / 'renderer-controls.xml').getroot()
+                suites = [tree] if tree.tag == 'testsuite' else tree.findall('testsuite')
+                counts = {key: sum(int(s.get(key, 0)) for s in suites)
+                          for key in ('tests', 'failures', 'errors', 'skipped')}
+                if counts != dict(tests=10, failures=0, errors=0, skipped=0):
+                    raise SetupError('All 10 renderer controls must pass without skips: ' + str(counts))
 
     def install(self, full):
         host.require_setup()
@@ -532,6 +545,7 @@ def owned_prefix(prefix, identity):
         if not owner.is_file() or owner.is_symlink() or json.loads(owner.read_text()) != {'recipe': identity}:
             raise SetupError('Existing destination is unrelated or belongs to a different recipe; choose a fresh --prefix.')
     private_dir(prefix)
+    host.require_installation_filesystem(prefix, exercise=True)
     try:
         with host.exclusive_lock(prefix / 'setup.lock'):
             if not owner.exists():
