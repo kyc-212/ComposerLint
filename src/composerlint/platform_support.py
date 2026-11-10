@@ -1,7 +1,7 @@
 """Small stdlib-only OS boundaries, also loaded directly by the setup backend.
 
-The Linux setup reuses bounded POSIX operations on Ubuntu 24.04 x86-64 and
-provisionally on Arch x86-64. Ubuntu CI evidence does not verify Arch desktops.
+Linux setup uses capability-checked GNU x86-64 POSIX operations.
+Ubuntu CI evidence does not verify other distributions or desktops.
 Native human approval remains macOS-only; Windows operations remain unavailable.
 No environment variable or request can enable an unverified security adapter.
 """
@@ -36,6 +36,7 @@ def platform_name():
 
 
 def linux_pilot_host():
+    """Exact CI provenance guard only; never an application admission gate."""
     if platform_name() != 'linux' or platform.machine() != 'x86_64' or os.name != 'posix':
         return False
     try:
@@ -45,14 +46,34 @@ def linux_pilot_host():
     return release.get('ID') == 'ubuntu' and release.get('VERSION_ID') == '24.04'
 
 
-def linux_arch_host():
-    """Experimental desktop target, separate from the verified Ubuntu CI host."""
-    if platform_name() != 'linux' or platform.machine() != 'x86_64' or os.name != 'posix':
-        return False
+def linux_target():
+    """Artifact architecture boundary, independent of distribution metadata."""
+    return platform_name() == 'linux' and platform.machine() == 'x86_64' and os.name == 'posix'
+
+
+def linux_security_capability():
+    """Required API availability; operation-specific checks still run at use.
+
+    This does not attest to destination filesystem semantics. Installation must
+    separately exercise those guarantees after consent, at the selected path.
+    """
+    functions = ('open', 'stat', 'mkdir', 'link', 'unlink', 'read', 'write',
+                 'fsync', 'fstat', 'getuid', 'geteuid', 'getpid', 'getppid',
+                 'getpgrp', 'kill', 'killpg', 'set_blocking', 'mkfifo')
+    flags = ('O_NOFOLLOW', 'O_NONBLOCK', 'O_DIRECTORY', 'O_EXCL')
+    available = linux_target() and all(callable(getattr(os, key, None)) for key in functions)
+    available = available and all(hasattr(os, key) for key in flags)
+    available = available and all(getattr(os, key) in getattr(os, 'supports_dir_fd', ())
+                                  for key in ('open', 'mkdir', 'link'))
+    available = available and os.link in getattr(os, 'supports_follow_symlinks', ())
     try:
-        return platform.freedesktop_os_release().get('ID') == 'arch'
-    except OSError:
-        return False
+        import fcntl
+        available = available and callable(fcntl.flock) and hasattr(fcntl, 'LOCK_NB')
+    except ImportError:
+        available = False
+    return dict(available=bool(available), status='Pass' if available else 'Fail',
+                message=('Required POSIX APIs available; per-operation checks remain mandatory.' if available else
+                         'Required POSIX APIs unavailable or unverified; affected operations disabled.'))
 
 
 def system_tool(*names):
@@ -158,7 +179,9 @@ def linux_abi_capability():
     baseline = bool(re.fullmatch(r'\d+\.\d+', version)) and tuple(map(int, version.split('.'))) >= (2, 17)
     loader = linux_elf_runtime()
     return dict(available=baseline and libraries['c'] and libraries['m'] and ctypes.sizeof(ctypes.c_void_p) == 8 and loader,
-                glibc=version, libraries=libraries, elf_loader=loader,
+                glibc=version, libraries=libraries,
+                library_status={name: 'Pass' if found else 'Fail' for name, found in libraries.items()},
+                elf_loader=loader,
                 message='GNU x86-64 / glibc >= 2.17 is a necessary baseline, not proof for the pinned binaries; their execution and imports are checked after verified extraction.')
 
 
@@ -201,30 +224,44 @@ def linux_capabilities(*, renderer=False, frontend=False, graphical=False):
         release = platform.freedesktop_os_release()
     except OSError:
         release = {}
-    target = platform_name() == 'linux' and (linux_pilot_host() or linux_arch_host())
-    abi = linux_abi_capability() if target else dict(available=False, glibc='', libraries={})
-    tools = {key: dict(available=bool(system_tool(name)), version='')
+    target = linux_target()
+    security = linux_security_capability()
+    def state(result, checked=True):
+        result['status'] = ('Pass' if result.get('verified', result['available']) else 'Fail') if checked else 'Not checked'
+        return result
+    abi = state(linux_abi_capability() if target else dict(available=False, glibc='', libraries={}), target)
+    abi['elf_loader_status'] = ('Pass' if abi['elf_loader'] else 'Fail') if target and 'elf_loader' in abi else 'Not checked'
+    abi['library_status'] = {name: 'Pass' if found else 'Fail' for name, found in abi['libraries'].items()}
+    tools = {key: state(dict(available=bool(system_tool(name)), version=''))
              for key, name in (('cc', 'cc'), ('patch', 'patch'), ('findmnt', 'findmnt'), ('system_uv', 'uv'))}
-    tools['cxx'] = compiler_capability('c++20') if renderer and target else dict(available=False, verified=False, version='')
-    if frontend and target:
-        tools['cc'] = compiler_capability('c11')
-    display = linux_display_capability() if graphical and target else dict(available=False, session='not checked')
-    supported = target and os.geteuid() != 0 and abi['available'] and tools['findmnt']['available']
-    if graphical:
-        supported = supported and display['available']
+    can_compile = target and security['available']
+    tools['cxx'] = state(compiler_capability('c++20') if renderer and can_compile else
+                         dict(available=False, verified=False, version=''), renderer and can_compile)
+    if frontend:
+        tools['cc'] = state(compiler_capability('c11') if can_compile else
+                            dict(available=False, verified=False, version=''), can_compile)
+    display = state(linux_display_capability() if graphical and can_compile else
+                    dict(available=False, session='not checked'), graphical and can_compile)
+    headless = target and security['available'] and os.geteuid() != 0 and abi['available'] and tools['findmnt']['available']
+    supported = headless and (not graphical or display['available'])
     errors = []
     if not target:
-        errors.append('Target is outside Ubuntu 24.04 x86-64 / experimental Arch x86-64.')
+        errors.append('Pinned Linux artifacts require a native POSIX x86-64 host.')
+    if not security['available']:
+        errors.append('Required POSIX safety APIs could not be verified; affected operations are disabled.')
     if os.geteuid() == 0:
         errors.append('Run as a normal user, without sudo.')
-    if not abi['available']:
+    if abi['status'] == 'Fail':
         errors.append('GNU x64 ABI, ELF loader or required runtime libraries could not be verified.')
     if not tools['findmnt']['available']:
         errors.append('findmnt (util-linux) is missing; filesystem admission cannot be verified.')
-    if graphical and not display['available']:
+    if graphical and display['status'] == 'Fail':
         errors.append(display.get('message', 'GTK display connection unavailable.'))
-    return dict(schema=1, supported=bool(supported), distro=release.get('ID', 'unknown'),
-                distro_version=release.get('VERSION_ID', 'rolling'), architecture=platform.machine(),
+    return dict(schema=1, supported=bool(supported), headless_available=bool(headless),
+                distro=release.get('ID', 'unknown'),
+                distro_version=release.get('VERSION_ID', 'unknown'), architecture=platform.machine(),
+                architecture_status='Pass' if target else 'Fail', security=security,
+                filesystem=dict(status='Not checked', message='Destination privacy, local ext4/Btrfs, locking and exclusive publication are checked after consent; no guarantee inferred from this preflight.'),
                 system_python=platform.python_version(), abi=abi, display=display, errors=errors,
                 session=display['session'], tools=tools,
                 full_available=bool(supported and tools['cxx']['verified'] and tools['cc']['available'] and tools['patch']['available'] and all(abi['libraries'].values())),
@@ -242,7 +279,7 @@ _LINUX_POSIX_OPERATIONS = frozenset({
 
 
 def require_security(operation):
-    if platform_name() != 'darwin' and not (operation in _LINUX_POSIX_OPERATIONS and (linux_pilot_host() or linux_arch_host())):
+    if platform_name() != 'darwin' and not (operation in _LINUX_POSIX_OPERATIONS and linux_security_capability()['available']):
         raise UnsupportedPlatformOperation(
             f'{operation} is unavailable on {platform_name()}: native security '
             'adapter verification is pending for this capability/target.')
@@ -570,7 +607,7 @@ def setup_recipe(*, target=None, machine=None):
         return SetupRecipe('windows-x64', False, 'Scripts/python.exe')
     if target == 'linux' and machine == 'x86_64':
         pins = linux_pins()['official_renderer']
-        return SetupRecipe('linux-x86_64', linux_pilot_host() or linux_arch_host(), 'bin/python',
+        return SetupRecipe('linux-x86_64', linux_target() and linux_security_capability()['available'], 'bin/python',
                            pins['filename'], pins['url'], pins['sha256'])
     return SetupRecipe('unverified-' + target + '-' + machine, False,
                        'Scripts/python.exe' if target == 'win32' else 'bin/python')
@@ -580,7 +617,7 @@ def require_setup():
     recipe = setup_recipe()
     if not recipe.installable:
         raise UnsupportedPlatformOperation(
-            f'Only native macOS Apple Silicon, Ubuntu 24.04 x86-64 and experimental Arch x86-64 are enabled; {recipe.target} '
+            f'Native macOS Apple Silicon or capability-verified GNU/Linux x86-64 is required; {recipe.target} '
             'is unverified. Native adapters, artifact pins and prerequisites require separate approval.')
     return recipe
 

@@ -60,10 +60,10 @@ def prerequisites():
 def validate_run(env):
     expected = dict(GITHUB_ACTIONS='true', GITHUB_EVENT_NAME='workflow_dispatch',
         GITHUB_REPOSITORY='kyc-212/ComposerLint',GITHUB_ACTOR='kyc-212',
-        GITHUB_REF='refs/heads/codex/linux-ci-pilot',GITHUB_RUN_NUMBER='8',
+        GITHUB_REF='refs/heads/codex/linux-ci-pilot',GITHUB_RUN_NUMBER='9',
         GITHUB_RUN_ATTEMPT='1',RUNNER_OS='Linux',RUNNER_ARCH='X64')
     if any(env.get(key) != value for key,value in expected.items()) or not host.linux_pilot_host():
-        raise ValueError('Only the explicitly approved eighth native Ubuntu GUI build is enabled.')
+        raise ValueError('Only the explicitly approved ninth native Ubuntu capability/GUI build is enabled.')
     commit = env.get('REVIEWED_COMMIT','')
     if not re.fullmatch(r'[0-9a-f]{40}',commit) or commit != env.get('GITHUB_SHA'):
         raise ValueError('Dispatch must select the exact reviewed feature commit.')
@@ -328,7 +328,10 @@ def worker(base):
     report['mcp']=dict(version='0.2.0',tools=18,full=True,text=True,after_download_removed=True)
     report['skills']=dict(resources=list(support.SKILLS),actual_client_discovery='unverified')
     environment=dict(env,COMPOSERLINT_RENDERER_CONFIG=str(full/'renderer.json'))
-    selectors=['tests/test_linux_setup.py','tests/test_linux_setup_ci.py','tests/test_platform_support.py','tests/test_linux_ci.py','tests/test_installer.py','tests/test_installer_protocol.py','tests/test_runtime_paths.py','tests/test_score_import.py','tests/test_v02_m6_export.py',
+    selectors=['tests/test_linux_setup.py','tests/test_linux_setup_ci.py','tests/test_platform_support.py','tests/test_linux_ci.py','tests/test_installer.py','tests/test_installer_protocol.py','tests/test_runtime_paths.py',
+        'tests/test_v02_editing_runtime.py::test_actual_sdk_edit_schemas_and_canonical_delivery',
+        'tests/test_v02_evaluation_contracts.py::test_ten_unchanged_contracts_and_new_readonly_schema',
+        'tests/test_score_import.py','tests/test_v02_m6_export.py',
         'tests/test_v02_passage_reuse.py::test_actual_owned_worker_reuses_pid_and_is_reaped_on_timeout',
         'tests/test_v02_advanced_limits.py::test_hard_deadline_real_process_reaped',
         'tests/test_v02_evaluation_contracts.py::test_deadline_process_terminated_reaped_and_source_intact',

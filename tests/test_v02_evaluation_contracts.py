@@ -19,7 +19,7 @@ def test_ten_unchanged_contracts_and_new_readonly_schema():
     baseline=json.loads((ROOT/'docs/V0.2-M4-evidence/baseline.json').read_text())['contracts']
     assert [t.name for t in TOOLS]==['analyze_score','detect_style','inspect_measure','check_harmony','check_voice_leading','get_style_evidence',
         'get_review_page','get_score_view','resolve_score_selection','get_musical_evaluation','get_edit_workspace','prepare_score_edit',
-        'get_edit_proposal','discard_edit_proposal','prepare_expressive_edit_brief','present_workspace_analysis','get_advanced_analysis']
+        'get_edit_proposal','discard_edit_proposal','prepare_expressive_edit_brief','present_workspace_analysis','import_score','get_advanced_analysis']
     assert len(baseline)==10
     from v02_advanced_helpers import assert_legacy_schema_preserved
     for name,expected in baseline.items():

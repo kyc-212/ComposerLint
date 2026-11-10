@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Consent-first shared setup: macOS ARM64, Ubuntu x64 and experimental Arch x64.
+"""Consent-first shared setup: macOS ARM64 and capability-checked GNU/Linux x64.
 
 No application or client settings are edited. All mutable installer state lives
 under an exclusively owned prefix; the printed MCP environment selects it.

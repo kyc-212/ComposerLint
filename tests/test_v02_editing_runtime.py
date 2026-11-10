@@ -131,7 +131,7 @@ def test_actual_sdk_edit_schemas_and_canonical_delivery(tmp_path):
             async with stdio_client(StdioServerParameters(command=sys.executable,args=['-B','-m','composerlint.server'],cwd=root,env={'PYTHONDONTWRITEBYTECODE':'1'}),errlog=err) as (read,write):
                 async with ClientSession(read,write,read_timeout_seconds=55) as client:
                     await client.initialize();tools={t.name:t for t in (await client.list_tools()).tools}
-                    assert len(tools)==17 and not tools['prepare_score_edit'].annotations.read_only_hint and not tools['discard_edit_proposal'].annotations.read_only_hint
+                    assert len(tools)==18 and not tools['prepare_score_edit'].annotations.read_only_hint and not tools['discard_edit_proposal'].annotations.read_only_hint
                     assert not tools['present_workspace_analysis'].annotations.read_only_hint
                     assert tools['get_edit_proposal'].annotations.read_only_hint
                     async def call(name,args):

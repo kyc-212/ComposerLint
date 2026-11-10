@@ -1,3 +1,26 @@
+## Capability-based Linux admission — unpublished test candidate
+
+Distribution names and versions no longer independently admit or reject Linux.
+The shared backend, GTK bridge and platform adapter use architecture, runtime,
+tool and safety capabilities. Unfamiliar distributions receive the same probes.
+Pass / Fail / Not checked distinguishes measured results from omitted checks.
+Destination filesystem guarantees still require the consented active checks.
+The C++20 compile/link probe, exact artifacts/hashes and ten renderer controls
+remain mandatory. Permanent Linux Approve & Export remains disabled.
+
+The supplied 2026-11-10 EndeavourOS report is tester-provided native evidence for
+terminal text/full installation, patched Verovio and 10 controls, 18 MCP tools,
+interactive viewing and temporary workspaces on an earlier locally patched commit.
+Its ID_LIKE workaround is not our implementation. It verifies neither this revised
+candidate nor the GTK installer or permanent export. Native Ubuntu verification of
+this candidate is pending; capable but untested configurations remain unverified.
+No universal Linux support or release/publication is claimed.
+
+The bridge's backend import no longer writes cache files into its sealed source.
+Manifest checks remain strict. Focused tests isolate consent from host prerequisites
+and correct stale 17-tool expectations. Historical records below retain their own
+candidate scope and are not verification of this correction.
+
 ## Final GTK polish — pending native verification
 
 The GTK solid-decoration fallback keeps its resize geometry with dark app colours.

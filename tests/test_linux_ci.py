@@ -67,7 +67,7 @@ def test_ubuntu_gate_rejects_other_distro_version_architecture(monkeypatch):
 def test_linux_posix_capabilities_do_not_grant_native_approval(monkeypatch):
     from composerlint import editing_export
     monkeypatch.setattr(host, 'platform_name', lambda:'linux')
-    monkeypatch.setattr(host, 'linux_pilot_host', lambda:True)
+    monkeypatch.setattr(host, 'linux_security_capability', lambda:dict(available=True))
     host.require_security('Protected score-file reading')
     host.require_security('Owned process-tree lifecycle')
     with pytest.raises(host.UnsupportedPlatformOperation): host.require_security('Native human approval')
@@ -79,7 +79,7 @@ def test_linux_posix_capabilities_do_not_grant_native_approval(monkeypatch):
 def test_linux_build_recipe_has_no_apple_tools_and_keeps_two_compiler_workers(monkeypatch):
     monkeypatch.setattr(host, 'platform_name', lambda:'linux')
     monkeypatch.setattr(host.platform, 'machine', lambda:'x86_64')
-    monkeypatch.setattr(host, 'linux_pilot_host', lambda:True)
+    monkeypatch.setattr(host, 'linux_security_capability', lambda:dict(available=True))
     recipe = host.require_setup()
     assert recipe.official_sha256 == ci.checked_pins()['official_renderer']['sha256']
     monkeypatch.setattr(host, 'linux_capabilities', lambda **kwargs:dict(full_available=True,

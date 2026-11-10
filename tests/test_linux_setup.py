@@ -228,7 +228,7 @@ def test_destination_capability_probe_uses_real_protected_operations(tmp_path,mo
     # The filesystem-name probe is simulated; protected operations run on Mac.
     root=support.private_dir(tmp_path/'data');support.private_dir(root/'setup')
     monkeypatch.setattr(host,'platform_name',lambda:'linux')
-    monkeypatch.setattr(host,'linux_pilot_host',lambda:True)
+    monkeypatch.setattr(host,'linux_security_capability',lambda:dict(available=True))
     monkeypatch.setattr(host,'system_tool',lambda *names:'/usr/bin/findmnt')
     monkeypatch.setattr(support.subprocess,'run',lambda *a,**k:subprocess.CompletedProcess(a,0,filesystem+'\n',''))
     assert support.check_private_filesystem(root,host)==filesystem
@@ -239,7 +239,7 @@ def test_destination_capability_probe_uses_real_protected_operations(tmp_path,mo
 def test_unsupported_filesystems_fail_before_probe_writes(tmp_path,monkeypatch,filesystem):
     root=support.private_dir(tmp_path/'data');support.private_dir(root/'setup')
     monkeypatch.setattr(host,'platform_name',lambda:'linux')
-    monkeypatch.setattr(host,'linux_pilot_host',lambda:True)
+    monkeypatch.setattr(host,'linux_security_capability',lambda:dict(available=True))
     monkeypatch.setattr(host,'system_tool',lambda *names:'/usr/bin/findmnt')
     monkeypatch.setattr(support.subprocess,'run',lambda *a,**k:subprocess.CompletedProcess(a,0,filesystem+'\n',''))
     with pytest.raises(host.UnsupportedPlatformOperation,match='local ext4 or Btrfs'):
@@ -251,7 +251,7 @@ def test_arch_recipe_is_separate_and_export_stays_closed(monkeypatch):
     monkeypatch.setattr(host,'platform_name',lambda:'linux')
     monkeypatch.setattr(host.platform,'machine',lambda:'x86_64')
     monkeypatch.setattr(host.platform,'freedesktop_os_release',lambda:dict(ID='arch'))
-    assert host.linux_arch_host() and not host.linux_pilot_host()
+    assert host.linux_target() and not host.linux_pilot_host()
     assert host.require_setup().installable
     assert host.approval_method() is None and not host.confirm_export('candidate')
     # The original CI reference is retained; desktop selection has no version map.
@@ -277,11 +277,11 @@ def test_shared_linux_installation_requires_all_ten_controls(tmp_path,monkeypatc
             installer.smoke(Path('/unused/python'),tmp_path/'renderer.json')
 
 
-def test_unsupported_distro_and_architecture_stay_closed(monkeypatch):
+def test_unknown_distro_is_admitted_but_unsupported_architecture_stays_closed(monkeypatch):
     monkeypatch.setattr(host,'platform_name',lambda:'linux')
     monkeypatch.setattr(host.platform,'machine',lambda:'x86_64')
     monkeypatch.setattr(host.platform,'freedesktop_os_release',lambda:dict(ID='manjaro',ID_LIKE='arch'))
-    with pytest.raises(host.UnsupportedPlatformOperation):host.require_setup()
+    assert host.require_setup().installable
     monkeypatch.setattr(host.platform,'machine',lambda:'aarch64')
     monkeypatch.setattr(host.platform,'freedesktop_os_release',lambda:dict(ID='arch'))
     with pytest.raises(host.UnsupportedPlatformOperation):host.require_setup()
@@ -290,7 +290,7 @@ def test_unsupported_distro_and_architecture_stay_closed(monkeypatch):
 @pytest.mark.parametrize('filesystem,accept',[('ext4',True),('btrfs',True),('nfs',False),('vfat',False),('overlay',False)])
 def test_terminal_backend_uses_same_linux_storage_policy(tmp_path,monkeypatch,filesystem,accept):
     monkeypatch.setattr(host,'platform_name',lambda:'linux')
-    monkeypatch.setattr(host,'linux_pilot_host',lambda:True)
+    monkeypatch.setattr(host,'linux_security_capability',lambda:dict(available=True))
     monkeypatch.setattr(host,'system_tool',lambda *names:'/usr/bin/findmnt')
     monkeypatch.setattr(host.subprocess,'run',lambda *a,**k:subprocess.CompletedProcess(a,0,filesystem+'\n',''))
     if accept:host.require_installation_filesystem(tmp_path)
@@ -443,7 +443,7 @@ def linux_report_host(monkeypatch):
         libraries={'c':True, 'm':True, 'stdc++':True, 'gcc_s':True}))
 
 
-@pytest.mark.parametrize('distro,version', [('ubuntu','24.04'), ('arch','rolling')])
+@pytest.mark.parametrize('distro,version', [('ubuntu','24.04'), ('ubuntu','26.04'), ('arch','rolling'), ('endeavouros','rolling'), ('unfamiliar','1')])
 def test_same_renderer_capabilities_on_both_target_distributions(linux_report_host, monkeypatch, distro, version):
     monkeypatch.setattr(host.platform, 'freedesktop_os_release', lambda:dict(ID=distro, VERSION_ID=version))
     calls = []
@@ -490,7 +490,7 @@ def test_shared_report_early_failure_diagnostics(linux_report_host, monkeypatch,
     elif problem == 'findmnt':monkeypatch.setattr(host, 'system_tool', lambda *names:None)
     elif problem == 'display':
         monkeypatch.setattr(host, 'linux_display_capability', lambda:dict(available=False, session='Wayland', message='Display connection refused.'))
-    else:monkeypatch.setattr(host.platform, 'freedesktop_os_release', lambda:dict(ID='other'))
+    else:monkeypatch.setattr(host.platform, 'machine', lambda:'aarch64')
     report = host.linux_capabilities(graphical=True)
     assert not report['supported'] and report['errors']
 
@@ -579,7 +579,7 @@ def test_elf_loader_is_discovered_from_running_interpreter(monkeypatch, machine,
 
 def test_storage_probe_cannot_swallow_a_weakened_unsafe_reader(tmp_path, monkeypatch):
     monkeypatch.setattr(host,'platform_name',lambda:'linux')
-    monkeypatch.setattr(host,'linux_pilot_host',lambda:True)
+    monkeypatch.setattr(host,'linux_security_capability',lambda:dict(available=True))
     monkeypatch.setattr(host,'system_tool',lambda *names:'/usr/bin/findmnt')
     monkeypatch.setattr(host.subprocess,'run',lambda *a,**k:subprocess.CompletedProcess(a,0,'ext4\n',''))
     monkeypatch.setattr(host,'open_regular',lambda *args:io.BytesIO(b'unsafe accepted'))
@@ -665,3 +665,111 @@ def test_linux_brand_artwork_is_packaged_and_integrity_bound(resources, tmp_path
     icon.write_bytes(b'invalid')
     with pytest.raises(ValueError,match='differ'):
         support.verify_bundle(app,manifest)
+
+
+@pytest.mark.parametrize('graphical', [False, True])
+def test_distribution_identity_cannot_change_capability_admission(linux_report_host, monkeypatch, graphical):
+    monkeypatch.setattr(host, 'compiler_capability', lambda *a:dict(available=True, verified=True, version='capable', path='/usr/bin/c++'))
+    monkeypatch.setattr(host, 'linux_display_capability', lambda:dict(available=True, session='Wayland'))
+    reports = []
+    for distro in ('ubuntu', 'arch', 'endeavouros', 'unfamiliar'):
+        monkeypatch.setattr(host.platform, 'freedesktop_os_release', lambda:dict(ID=distro, VERSION_ID='arbitrary'))
+        report = host.linux_capabilities(renderer=True, graphical=graphical)
+        assert host.require_setup().installable
+        host.require_security('Protected score-file reading')
+        assert report['full_available'] and not report['export_available']
+        reports.append({k:v for k,v in report.items() if k not in ('distro','distro_version')})
+    assert all(report == reports[0] for report in reports)
+
+
+def test_missing_os_release_is_only_missing_diagnostics(linux_report_host, monkeypatch):
+    def missing():raise OSError('no os-release')
+    monkeypatch.setattr(host.platform, 'freedesktop_os_release', missing)
+    report = host.linux_capabilities()
+    assert report['supported'] and report['distro'] == 'unknown'
+    assert host.require_setup().installable
+
+
+def test_report_states_do_not_invent_probe_results(linux_report_host, monkeypatch):
+    report = host.linux_capabilities()
+    assert report['abi']['status'] == 'Pass'
+    assert report['tools']['cxx']['status'] == report['display']['status'] == 'Not checked'
+    assert report['filesystem']['status'] == 'Not checked'
+    monkeypatch.setattr(host, 'compiler_capability', lambda *a:dict(available=True, verified=False, version='installed but cannot link'))
+    report = host.linux_capabilities(renderer=True)
+    assert report['tools']['cxx']['status'] == 'Fail' and not report['full_available']
+
+
+def test_missing_display_only_blocks_graphical_operation(linux_report_host, monkeypatch):
+    monkeypatch.setattr(host, 'linux_display_capability', lambda:dict(available=False, session='none'))
+    report = host.linux_capabilities(graphical=True)
+    assert not report['supported'] and report['headless_available']
+    assert report['display']['status'] == 'Fail'
+    assert host.linux_capabilities()['supported']
+
+
+@pytest.mark.parametrize('missing', ['O_NOFOLLOW', 'O_DIRECTORY', 'killpg', 'dir_fd', 'flock'])
+def test_unverified_security_refuses_before_operation(linux_report_host, monkeypatch, missing):
+    if missing == 'dir_fd':monkeypatch.setattr(host.os, 'supports_dir_fd', set())
+    elif missing == 'flock':
+        import fcntl
+        monkeypatch.setattr(fcntl, 'flock', None)
+    else:monkeypatch.delattr(host.os, missing)
+    report = host.linux_capabilities(renderer=True)
+    assert not report['supported'] and report['security']['status'] == 'Fail'
+    assert report['tools']['cxx']['status'] == 'Not checked'
+    assert report['filesystem']['status'] == 'Not checked'
+    with pytest.raises(host.UnsupportedPlatformOperation):host.require_setup()
+    with pytest.raises(host.UnsupportedPlatformOperation):host.open_regular('/never/open')
+
+
+@pytest.mark.parametrize('outcome', ['missing', 'timeout', 'unknown'])
+def test_unverified_filesystem_refuses(linux_report_host, monkeypatch, tmp_path, outcome):
+    def run(*a, **k):
+        if outcome == 'timeout':raise subprocess.TimeoutExpired(a, 10)
+        return subprocess.CompletedProcess(a, 1 if outcome == 'missing' else 0, 'unknown', '')
+    monkeypatch.setattr(host.subprocess, 'run', run)
+    with pytest.raises(host.UnsupportedPlatformOperation):
+        host.require_installation_filesystem(tmp_path, exercise=True)
+
+
+def test_bundle_verification_never_writes_bytecode_even_without_B(resources):
+    app, manifest, unused = resources
+    # Production launch uses -B. Direct verification must also leave the exact
+    # manifest intact, without relying on the importing caller's Python flags.
+    code = '''import runpy,sys
+from pathlib import Path
+support=runpy.run_path(sys.argv[1])
+sys.dont_write_bytecode=False
+app=Path(sys.argv[2])
+before=support['inventory'](app)
+support['verify_bundle'](app,sys.argv[3])
+support['verify_bundle'](app,sys.argv[3])
+assert sys.dont_write_bytecode is False
+assert support['inventory'](app)==before
+assert not list(app.rglob('*.pyc'))
+'''
+    result = subprocess.run([sys.executable, '-I', '-c', code,
+        str(app/'resources/setup_support.py'), str(app), manifest],
+        capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stderr
+
+
+def test_bundle_import_restores_bytecode_setting_on_failure(resources, monkeypatch):
+    app, manifest, unused = resources
+    class BrokenLoader:
+        def create_module(self, spec):
+            return None
+        def exec_module(self, module):
+            assert sys.dont_write_bytecode
+            raise ImportError('authored import failure')
+    original = support.importlib.util.spec_from_file_location
+    def spec(*a, **k):
+        result = original(*a, **k)
+        result.loader = BrokenLoader()
+        return result
+    monkeypatch.setattr(support.importlib.util, 'spec_from_file_location', spec)
+    before = sys.dont_write_bytecode
+    with pytest.raises(ImportError, match='authored import failure'):
+        support.verify_bundle(app, manifest)
+    assert sys.dont_write_bytecode == before

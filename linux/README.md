@@ -1,5 +1,50 @@
 # ComposerLint Setup — Linux graphical preview
 
+**2026-11-10 capability admission correction — local candidate, native checks pending.**
+Distribution names and versions are diagnostics, not installation admission rules.
+The shared report now runs ABI/library, tool and requested compiler/display probes
+on unfamiliar IDs too. It exposes Pass / Fail / Not checked; destination filesystem
+semantics remain Not checked until the existing consented active probe succeeds.
+Required POSIX APIs are checked before protected operations; operation-specific
+no-follow, ownership, locking, process-group and exclusive-publication guards remain.
+GTK/display requirements apply to the graphical installer, not headless MCP/text
+analysis. C++20 compile/link and all ten renderer equivalence controls remain required
+for full setup. Permanent Linux Approve & Export stays disabled.
+
+Tested configurations and compatibility are separate: prior native evidence covers
+Ubuntu 24.04.5 x86-64; it does not verify this changed candidate. Authored tests compare
+Ubuntu, Arch, EndeavourOS and an unfamiliar ID with identical capabilities. Other
+GNU/glibc x86-64 systems may pass admission but are unverified until native trials.
+The tester's 2026-11-10 handoff reports native EndeavourOS x86-64 / glibc 2.44
+terminal text/full installation, patched renderer build and 10/10 controls,
+18-tool MCP discovery, interactive viewing and a temporary workspace. That report
+covers commit 90e87b5 with an ID_LIKE admission workaround, not this candidate.
+It supports removing the identity gate; that workaround is not incorporated.
+Raw remote logs were not supplied here. The tester did not verify the GTK graphical
+installer or permanent export; neither is credited as passing. Arch/Niri/Wayland
+and this candidate's native acceptance remain pending. This is not
+universal Linux support. A local terminal source test archive may be prepared for review using installed
+build tools; it is not a native graphical installer. A fresh native Ubuntu CI build
+is required for a revised GTK ZIP. No new ZIP is published here.
+
+The source-manifest observation was independently reproduced: importing the sealed
+backend could create pyc files and invalidate later verification. The bridge now
+suppresses bytecode writes only while importing the backend, restoring the caller's
+setting even on failure. Strict inventory and hash checks still reject extra files,
+including cache files. Existing repository .venv is excluded by the source allowlist;
+this packaging path does not require moving it outside the repository. Linux CI's
+329-entry prerequisite catalog lists possible Ubuntu build inputs, not a requirement
+to install 329 packages on EndeavourOS (the earlier runner selected 100).
+
+Confirmed validation fixes: the consent-refusal test now isolates recipe identity
+from host tool probing; two stale MCP expectations now include all 18 tools and
+import_score. A historical M5 golden-contract assertion also fails locally; it is
+retained as an unresolved historical baseline mismatch, not refreshed from current
+output. The reported creation/rhythm export fixture issues are outside this
+compatibility correction and do not authorize permanent Linux export.
+
+Historical build/polish records below describe their own candidates.
+
 This is the native GTK4 setup application, with the existing shared Python setup
 backend. The primary Linux download is intended to be a graphical x86-64 ZIP.
 The native executable and ZIP have **not yet been built or visually verified** for
@@ -70,7 +115,7 @@ export, AI-client configuration or shell profile is overwritten.
   PyGObject and a Python GUI framework are not required.
 - Internet access to the disclosed Astral releases and hash-pinned Python package
   artifacts. Python 3.12.13 and uv 0.12.3 are installed privately after approval.
-- Full setup on either target: an existing system C compiler, a C++ compiler
+- Full setup on an admitted host: an existing system C compiler, a C++ compiler
   that compiles **and links** the shared C++20 probe, renderer runtime libraries,
   and `patch`. GCC and Clang are discovered by capability, without an Arch version
   requirement. The probe exercises concepts, span and filesystem; the actual

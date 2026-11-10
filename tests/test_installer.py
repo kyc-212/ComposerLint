@@ -26,6 +26,8 @@ def test_launcher_and_check_do_not_write(tmp_path):
 def test_refused_consent_cannot_create_prefix(tmp_path, monkeypatch, answer):
     prefix = tmp_path / 'absent'
     monkeypatch.setattr(setup, 'preflight', lambda full: '/unused/uv')
+    monkeypatch.setattr(setup, 'recipe', lambda full: 'consent-test-recipe')
+    monkeypatch.setattr(setup, 'run', lambda *a, **k: pytest.fail('Consent test invoked host prerequisites'))
     monkeypatch.setattr('builtins.input', lambda prompt: answer)
     assert setup.main(['--mode', 'full', '--prefix', str(prefix)]) == 0
     assert not prefix.exists()

@@ -108,7 +108,14 @@ def verify_bundle(bundle, expected):
             raise ValueError('Bundled Skill discovery resources are incomplete.')
     spec = importlib.util.spec_from_file_location('graphical_shared_setup', source / 'tools/setup_composerlint.py')
     setup = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(setup)
+    # Verification/import must not modify a sealed source tree. Do not ignore
+    # cache files in the manifest: prevent this import from creating them.
+    previous_bytecode = sys.dont_write_bytecode
+    try:
+        sys.dont_write_bytecode = True
+        spec.loader.exec_module(setup)
+    finally:
+        sys.dont_write_bytecode = previous_bytecode
     setup.verify_linux_inputs()
     return entries, setup
 
@@ -128,15 +135,16 @@ def probe(setup):
     info['message'] = (
         ('\n'.join(info['errors']) + '\n\n' if info['errors'] else '') +
         f"Target: {info['distro']} {info['distro_version']} / {info['architecture']} / {info['session']}\n"
-        f"GNU ABI: glibc {info['abi']['glibc'] or 'unavailable'}; ELF loader: {info['abi'].get('elf_loader', False)}; runtime libraries: {info['abi']['libraries']}.\n"
-        f"Display: {info['display'].get('message', 'not checked')}\n"
-        f"Renderer C++20 compile/link: {'passed' if compiler['verified'] else compiler.get('message', 'unavailable')}.\n"
-        f"Compiler: {compiler['version'] or 'not selected'}. patch: {tools['patch']['available']}; findmnt: {tools['findmnt']['available']}.\n"
+        f"Architecture: {info['architecture_status']}; safety APIs: {info['security']['status']}; destination filesystem: {info['filesystem']['status']}.\n"
+        f"GNU ABI ({info['abi']['status']}): glibc {info['abi']['glibc'] or 'unavailable'}; ELF loader: {info['abi']['elf_loader_status']}; runtime libraries: {info['abi']['library_status']}.\n"
+        f"Display ({info['display']['status']}): {info['display'].get('message', 'not checked')}\n"
+        f"Renderer C++20 compile/link: {compiler['status']}. {compiler.get('message', '')}.\n"
+        f"Compiler: {compiler['version'] or 'not selected'}. patch: {tools['patch']['status']}; findmnt: {tools['findmnt']['status']}.\n"
         f"System Python: {info['system_python']}. Private runtime: Python {pins['python']['version']}, uv {pins['uv']['version']}.\n\n"
         "Full: analysis, notation and verified temporary editing. Text only: analysis without rendering; no compiler needed.\n"
         "Compiler probes do not establish renderer compatibility: the exact patched build and all 10 controls must pass.\n"
         "Linux human-approved export remains disabled. Ubuntu is the primary automated target; Arch/Niri desktop acceptance is pending.\n"
-        "Only Ubuntu 24.04 x86-64 and experimental Arch x86-64 are admitted. GNU ABI/library checks are preliminary; pinned binaries and imports are verified after approved downloads.\n"
+        "Distribution identity is diagnostic only. Admission requires verified capabilities; compatible but untested configurations remain unverified. GNU ABI/library checks are preliminary; pinned binaries and imports are verified after approved downloads.\n"
         "No system packages, root access, shell-profile edits or AI-client settings are changed. Missing prerequisites must be reviewed and installed separately by the computer owner.")
     return info
 

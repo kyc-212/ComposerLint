@@ -59,7 +59,7 @@ def test_unverified_recipes_contain_no_artifact_authorization(target, machine, r
 @pytest.mark.parametrize('target', ['win32', 'linux', 'unknown'])
 def test_unverified_security_refuses_before_io_or_subprocess(tmp_path, monkeypatch, target):
     monkeypatch.setattr(host, 'platform_name', lambda: target)
-    monkeypatch.setattr(host, 'linux_pilot_host', lambda: False)
+    monkeypatch.setattr(host, 'linux_security_capability', lambda: dict(available=False))
     monkeypatch.setattr(host.subprocess, 'Popen', lambda *a, **k: pytest.fail('process launched'))
     monkeypatch.setattr(host.subprocess, 'run', lambda *a, **k: pytest.fail('native dialog launched'))
     path = tmp_path / 'absent'
@@ -78,7 +78,7 @@ def test_unverified_security_refuses_before_io_or_subprocess(tmp_path, monkeypat
 @pytest.mark.parametrize('target', ['win32', 'linux'])
 def test_unverified_installer_protocol_is_typed_and_readonly(tmp_path, monkeypatch, capsys, target):
     monkeypatch.setattr(setup.host, 'platform_name', lambda: target)
-    monkeypatch.setattr(setup.host, 'linux_pilot_host', lambda: False)
+    monkeypatch.setattr(setup.host, 'linux_security_capability', lambda: dict(available=False))
     monkeypatch.setattr(setup, 'run', lambda *a, **k: pytest.fail('prerequisite probe launched'))
     base = tmp_path / 'not-created'
     assert setup.protocol_main('full', True, base) == 1
@@ -262,7 +262,7 @@ def test_runtime_refusals_are_domain_errors_without_export_or_cleanup(tmp_path, 
     from composerlint.advanced_runtime import request_worker
     from composerlint.advanced_models import AdvancedFailure
     monkeypatch.setattr(host, 'platform_name', lambda: target)
-    monkeypatch.setattr(host, 'linux_pilot_host', lambda: False)
+    monkeypatch.setattr(host, 'linux_security_capability', lambda: dict(available=False))
     with pytest.raises(ViewerFailure, match='verification is pending'):
         editing_export.approve_export(None, 'unused', {})
     runtime = editing_runtime.EditingRuntime()
