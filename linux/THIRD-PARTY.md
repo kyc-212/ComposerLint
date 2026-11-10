@@ -1,6 +1,6 @@
 # Linux setup distribution boundaries
 
-ComposerLint's original GTK4 frontend, bootstrap bridge, CSS, SVG artwork and build
+ComposerLint's original GTK4 frontend, bootstrap bridge, CSS, original PNG artwork, compiled Cairo line icons and build
 tool are supplied under the repository's MIT licence. The frontend source is
 included for review/rebuilding. The ZIP must retain the repository LICENSE,
 THIRD_PARTY_NOTICES.md, LICENSES tree and renderer patch notices in its Source tree.

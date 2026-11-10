@@ -1,3 +1,17 @@
+## Final GTK polish — pending native verification
+
+The GTK solid-decoration fallback keeps its resize geometry with dark app colours.
+The sidebar no longer inherits the theme's generic sidebar divider. Installation
+activity is labelled and appears only during work; completion has no progress bar.
+Original compiled line icons clarify choices/actions/status without requiring a
+particular icon theme. Native titlebar controls, keyboard focus, expandable/copyable
+connection instructions and neutral AI-assistant wording remain. The privacy line
+is “Your scores stay yours. Your AI assistant settings stay under your control.”
+
+This remains an experimental Linux x86-64 review candidate for the documented
+Ubuntu checks and future real Arch/Niri/Wayland testing. No distribution support
+or Linux export permission is added by visual polish.
+
 ## Linux GTK visual refresh — review candidate
 
 The sidebar identifies ComposerLint / SETUP · LINUX x86-64. This does not imply

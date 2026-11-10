@@ -17,6 +17,51 @@ static void await_phase(App *app,const char *expected,gboolean idle,gint seconds
     }
     g_error("GUI deadline waiting for %s; last phase %s",expected,app->phase?app->phase:"none");
 }
+static void assert_snapshot_frame(App *app,GdkTexture *texture) {
+    /* Full native widget snapshot, never crop away window chrome. GTK's solid
+     * CSD fallback is application-drawn even without an X11 compositor. */
+    g_assert_true(gtk_window_get_decorated(app->window));
+    g_assert_true(gtk_window_get_resizable(app->window));
+    if(!gtk_widget_has_css_class(GTK_WIDGET(app->window),"solid-csd"))return;
+    GtkBorder border;gtk_style_context_get_border(gtk_widget_get_style_context(GTK_WIDGET(app->window)),&border);
+    g_assert_cmpint(border.left,>,0);g_assert_cmpint(border.right,>,0);
+    int width=gdk_texture_get_width(texture),height=gdk_texture_get_height(texture);
+    guchar *pixels=g_malloc((gsize)width*height*4);gdk_texture_download(texture,pixels,(gsize)width*4);
+    for(int inset=0;inset<4;inset++) {
+        int points[][2]={{width/2,inset},{inset,height/2},{width-1-inset,height/2},{width/2,height-1-inset}};
+        for(guint i=0;i<G_N_ELEMENTS(points);i++) {
+            guint32 pixel;memcpy(&pixel,pixels+4*((gsize)points[i][1]*width+points[i][0]),4);
+            if((pixel>>24)<200)continue;
+            g_assert_cmpuint(pixel&255,<,180);g_assert_cmpuint((pixel>>8)&255,<,180);g_assert_cmpuint((pixel>>16)&255,<,180);
+        }
+    }
+    g_free(pixels);
+}
+static int assert_native_window_controls(GtkWidget *widget,gboolean controls) {
+    controls=controls||GTK_IS_WINDOW_CONTROLS(widget);int count=0;
+    if(controls && GTK_IS_BUTTON(widget)) {
+        g_assert_false(gtk_widget_has_css_class(widget,"setup-action"));count++;
+    }
+    for(GtkWidget *child=gtk_widget_get_first_child(widget);child;child=gtk_widget_get_next_sibling(child))count+=assert_native_window_controls(child,controls);
+    return count;
+}
+static void assert_application_chrome(App *app) {
+    g_assert_cmpint(assert_native_window_controls(gtk_window_get_titlebar(app->window),FALSE),>,0);
+    GtkBorder border;gtk_style_context_get_border(gtk_widget_get_style_context(app->sidebar_body),&border);
+    g_assert_cmpint(border.left,==,0);g_assert_cmpint(border.right,==,0);
+    g_assert_false(gtk_widget_has_css_class(app->sidebar_body,"sidebar"));
+    g_assert_true(gtk_widget_has_css_class(app->sidebar_body,"setup-sidebar"));
+    /* Every compiled line icon must draw nontransparent pixels, independently
+     * of fonts and the installed icon theme. */
+    for(int id=SYMBOL_MUSIC;id<=SYMBOL_CLOCK;id++) {
+        GtkWidget *area=symbol(id,24);g_object_ref_sink(area);
+        cairo_surface_t *surface=cairo_image_surface_create(CAIRO_FORMAT_ARGB32,24,24);cairo_t *cr=cairo_create(surface);
+        symbol_draw(GTK_DRAWING_AREA(area),cr,24,24,NULL);cairo_surface_flush(surface);
+        guchar *data=cairo_image_surface_get_data(surface);int ink=0,stride=cairo_image_surface_get_stride(surface);
+        for(int y=0;y<24;y++)for(int x=0;x<24;x++){guint32 pixel;memcpy(&pixel,data+y*stride+x*4,4);if(pixel>>24)ink++;}
+        g_assert_cmpint(ink,>,8);cairo_destroy(cr);cairo_surface_destroy(surface);g_object_unref(area);
+    }
+}
 static void snapshot(App *app,const char *path) {
     /* Authored setup screens only; no score or user configuration is opened. */
     for(int i=0;i<20;i++){while(g_main_context_iteration(NULL,FALSE));g_usleep(10000);}
@@ -26,6 +71,7 @@ static void snapshot(App *app,const char *path) {
     gdk_paintable_snapshot(paintable,GDK_SNAPSHOT(view),gtk_widget_get_width(widget),gtk_widget_get_height(widget));
     GskRenderNode *node=gtk_snapshot_free_to_node(view);g_assert_nonnull(node);
     GdkTexture *texture=gsk_renderer_render_texture(gtk_native_get_renderer(GTK_NATIVE(app->window)),node,NULL);
+    assert_snapshot_frame(app,texture);
     g_assert_true(gdk_texture_save_to_png(texture,path));
     g_object_unref(texture);gsk_render_node_unref(node);g_object_unref(paintable);
 }
@@ -86,7 +132,14 @@ int main(int argc,char **argv) {
     g_assert_false(gtk_widget_get_hexpand(app.sidebar));
     g_assert_cmpint(gtk_widget_get_width(app.sidebar),<=,300);
     g_assert_cmpfloat(gtk_label_get_xalign(GTK_LABEL(app.step_numbers[0])),==,0.5);
-    screen(&app,argv[4],"initial");layout_checks(&app,argv[4],FALSE);
+    g_assert_false(gtk_widget_get_visible(app.activity));g_assert_false(gtk_widget_get_visible(app.progress));
+    assert_application_chrome(&app);
+    screen(&app,argv[4],"initial");
+    gboolean focus_visible=gtk_window_get_focus_visible(app.window);
+    gtk_widget_grab_focus(app.full);gtk_window_set_focus_visible(app.window,TRUE);settle();
+    g_assert_true(gtk_widget_has_focus(app.full));screen(&app,argv[4],"keyboard-focus");
+    gtk_window_set_focus_visible(app.window,focus_visible);
+    layout_checks(&app,argv[4],FALSE);
     primary(NULL,&app);await_phase(&app,"bootstrapReview",FALSE,180);
     screen(&app,argv[4],"tools-review");
     /* Pre-download cancellation, then explicit retry and both plan-bound consents. */
@@ -106,12 +159,13 @@ int main(int argc,char **argv) {
     primary(NULL,&app);await_phase(&app,"bootstrapReview",FALSE,180);
     primary(NULL,&app);await_phase(&app,"installReview",FALSE,900);
     g_assert_nonnull(app.prefix);
-    primary(NULL,&app);g_assert_cmpuint(app.step,==,3);screen(&app,argv[4],"progress");await_phase(&app,"complete",TRUE,full?1800:300);
+    primary(NULL,&app);g_assert_cmpuint(app.step,==,3);g_assert_true(gtk_widget_get_visible(app.activity));g_assert_true(gtk_widget_get_visible(app.progress));g_assert_true(gtk_progress_bar_get_show_text(GTK_PROGRESS_BAR(app.progress)));screen(&app,argv[4],"progress");await_phase(&app,"complete",TRUE,full?1800:300);
     g_assert_true(gtk_widget_get_sensitive(app.copy_connection));
     g_assert_nonnull(app.completion);
     g_assert_nonnull(strstr(app.completion,"18 tools"));
     g_assert_nonnull(strstr(app.completion,"export remains disabled"));
     g_assert_false(gtk_widget_get_visible(app.choices));
+    g_assert_false(gtk_widget_get_visible(app.activity));g_assert_false(gtk_widget_get_visible(app.progress));
     g_assert_true(gtk_widget_get_visible(app.connection));
     g_assert_false(gtk_expander_get_expanded(GTK_EXPANDER(app.advanced)));
     visible_in_window(&app,app.copy_connection);
@@ -149,6 +203,13 @@ int main(int argc,char **argv) {
     json_object_set_boolean_member(report,"gtk_protocol_complete",TRUE);
     json_object_set_boolean_member(report,"desktop_acceptance",FALSE);
     json_object_set_boolean_member(report,"responsive_footer",TRUE);
+    json_object_set_boolean_member(report,"progress_hidden_after_completion",TRUE);
+    json_object_set_boolean_member(report,"progress_labelled_while_running",TRUE);
+    json_object_set_boolean_member(report,"sidebar_theme_divider_removed",TRUE);
+    json_object_set_boolean_member(report,"compiled_icons_rendered",TRUE);
+    json_object_set_boolean_member(report,"window_decorations_preserved",TRUE);
+    json_object_set_boolean_member(report,"solid_csd_fallback",gtk_widget_has_css_class(GTK_WIDGET(app.window),"solid-csd"));
+    json_object_set_boolean_member(report,"native_snapshot_frame_checked",TRUE);
     json_object_set_boolean_member(report,"stable_sidebar_and_step_alignment",TRUE);
     json_object_set_boolean_member(report,"font_scaling",TRUE);
     json_object_set_boolean_member(report,"long_path_scrolling",TRUE);

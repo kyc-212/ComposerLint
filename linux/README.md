@@ -6,24 +6,38 @@ The native executable and ZIP have **not yet been built or visually verified** f
 this candidate. Do not publish a source-only stand-in as the graphical download.
 
 
-**GTK visual refresh prepared (2026-11-10).** The Linux interface follows the
-macOS setup hierarchy with the same original ComposerLint artwork, a teal/navy
-sidebar, five live step indicators and full/text selection cards. Narrow windows
-collapse the sidebar and stack the persistent footer actions; body and advanced
-content scroll independently. Completion uses neutral “Connect your AI assistant”
-wording with copyable, expandable exact backend instructions. No client settings
-are edited. Fonts follow the GTK font setting; keyboard focus and choice labels
-are explicit. The bundled PNG is extracted from the existing original macOS icon
-and SHA-256 verified before loading, without an SVG-loader dependency.
+**Final focused visual polish prepared (2026-11-10); native verification pending.**
+This pass addresses only the outer fallback frame, sidebar divider, completion
+progress bar, missing interface icons and related titlebar/footer presentation.
+The working Run #7 package remains the prior review candidate until a separately
+authorized Run #8 / attempt 1 verifies this change. No automatic dispatch/rerun.
 
-Native Ubuntu verification is gated to Run #7 / attempt 1 (pending authorization) on the feature branch.
-It captures initial, tools review, installation review, progress, cancellation and
-completion screens, plus small-window/font-scaling/long-path/advanced-scroll cases.
-Error-layout screenshots are explicitly authored presentation checks; they are
-not evidence of an actual failed installation. No real desktop or screen-reader
-acceptance is inferred from virtual-display checks. All prior downloader retries,
-source and artifact pins, consents, backend and export restrictions are retained.
-The main registration remains disabled. No merge/release/tag/publication.
+The native Run #7 snapshots contain GTK's application-drawn window decoration:
+the harness renders the complete GtkWindow without adding/cropping borders. GTK
+4.14's solid-CSD fallback supplies light inset decoration colours; this app now
+recolours that fallback, preserving its resize border/padding and native window
+controls. Native checks record the actual solid-CSD class and inspect full snapshot
+edge pixels. The generic `.sidebar` class inherited GTK's default divider; the
+application uses a dedicated class with no decorative border instead.
+
+The unexplained footer bar was the GtkProgressBar: completion matched its visibility
+predicate and set it to 100 percent. Progress is now a labelled activity card in
+the scrolling body only while the backend is running, finishing or cancelling.
+It is absent from welcome, consent reviews, errors and completion; real backend
+messages and activity remain available. No fabricated percentage is displayed.
+Original Cairo line icons for music, text, actions, status, privacy and connection
+details are compiled with the frontend under MIT, without icon-theme/font assets
+or dependencies. Titlebar controls retain GTK/desktop placement and sizing.
+
+Completion, copyable advanced MCP instructions and export limitations remain.
+Privacy wording is “Your scores stay yours. Your AI assistant settings stay under
+your control.” Existing package pins, capabilities, helper/backend, consents,
+cancellation, retries, renderer controls, MCP/Skills and export refusal are unchanged.
+Native before/after comparison uses Run #7 initial/progress/completion captures
+and the final candidate's full uncropped native screenshots, including keyboard,
+small-window, font-scaling and long-path cases. Error-layout screenshots are
+explicitly authored presentation fixtures, not real installer failure evidence.
+Main remains disabled; no merge/release/tag/publication or support expansion.
 
 ## Intended volunteer journey
 

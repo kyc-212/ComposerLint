@@ -1,6 +1,6 @@
 window { background: #1c2026; color: #f1f4f6; font-family: sans-serif; font-size: 1.0em; }
 headerbar { background: #1c2026; color: #b8c5d1; border-bottom: 1px solid #303842; box-shadow: none; }
-.sidebar { padding: 30px 24px; background: linear-gradient(145deg, #102238, #103d43); }
+.setup-sidebar { border: none; box-shadow: none; padding: 30px 24px; background: linear-gradient(145deg, #102238, #103d43); }
 .brand { font-size: 1.733em; font-weight: 800; color: #ffffff; }
 .eyebrow { color: #b4c5d3; font-size: 0.8em; font-weight: 700; letter-spacing: 1.2px; }
 .body { padding: 32px 36px; }
@@ -29,15 +29,28 @@ checkbutton.choice radio { margin-right: 16px; min-height: 22px; min-width: 22px
 checkbutton.choice radio:checked { background: #58d3b5; color: #092f32; border-color: #58d3b5; }
 .choice-title { font-size: 1.267em; font-weight: 700; }
 .footer { padding: 16px 24px 22px; background: #1c2026; border-top: 1px solid #3b4550; }
-button { background: #303b47; color: #f1f4f6; border: 1px solid #53616f; border-radius: 24px; padding: 12px 18px; font-weight: 600; box-shadow: none; }
-button:hover { background: #415363; }
-button:active { background: #1c2b38; }
-button:focus-visible, expander:focus-visible { outline: 3px solid #a8dcff; outline-offset: 3px; }
-button.suggested-action { background: #147c6c; border-color: #6cdec3; color: #ffffff; }
-button.suggested-action:hover { background: #1d9581; }
-button:disabled, checkbutton:disabled { opacity: 0.55; }
+button.setup-action { background: #303b47; color: #f1f4f6; border: 1px solid #53616f; border-radius: 24px; padding: 12px 18px; font-weight: 600; box-shadow: none; }
+button.setup-action:hover { background: #415363; }
+button.setup-action:active { background: #1c2b38; }
+button.setup-action:focus-visible, expander:focus-visible { outline: 3px solid #a8dcff; outline-offset: 3px; }
+button.setup-action.suggested-action { background: #147c6c; border-color: #6cdec3; color: #ffffff; }
+button.setup-action.suggested-action:hover { background: #1d9581; }
+button.setup-action:disabled, checkbutton:disabled { opacity: 0.55; }
 expander > title { padding: 10px 2px; font-weight: 600; }
 .technical { font-family: monospace; font-size: 0.867em; color: #d9e5ed; }
 textview text { background: #121c25; color: #dbe7ef; }
 progressbar trough { min-height: 5px; background: #36434c; border-radius: 4px; }
 progressbar progress { background: #58d3b5; border-radius: 4px; }
+
+/* Recolour GTK's solid CSD fallback only. Keep its 1px border and 4px
+ * resize padding; do not disable decorations, compositor shadows or focus. */
+window.composerlint-setup.solid-csd { border-color: #303b47; box-shadow: inset 0 0 0 4px #1c2026; }
+window.composerlint-setup.solid-csd:backdrop { border-color: #28313b; box-shadow: inset 0 0 0 4px #1c2026; }
+window.composerlint-setup headerbar windowcontrols button { background: transparent; color: #c8d3dc; border-color: transparent; box-shadow: none; }
+window.composerlint-setup headerbar windowcontrols button:hover { background: #33414e; }
+.activity-card { padding: 18px; background: #23363e; border: 1px solid #3e5f65; border-radius: 12px; }
+.activity-card progressbar text { color: #e2efec; }
+.activity-card progressbar trough { background: #33484e; border: none; box-shadow: none; min-height: 6px; }
+.activity-card progressbar progress { background: #58d3b5; background-image: none; border: none; box-shadow: none; min-height: 6px; }
+.status.success drawingarea { color: #70d9b8; }
+.status.warning drawingarea { color: #edc57c; }
