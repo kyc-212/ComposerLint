@@ -55,10 +55,10 @@ def prerequisites():
 def validate_run(env):
     expected = dict(GITHUB_ACTIONS='true', GITHUB_EVENT_NAME='workflow_dispatch',
         GITHUB_REPOSITORY='kyc-212/ComposerLint',GITHUB_ACTOR='kyc-212',
-        GITHUB_REF='refs/heads/codex/linux-ci-pilot',GITHUB_RUN_NUMBER='1',
+        GITHUB_REF='refs/heads/codex/linux-ci-pilot',GITHUB_RUN_NUMBER='2',
         GITHUB_RUN_ATTEMPT='1',RUNNER_OS='Linux',RUNNER_ARCH='X64')
     if any(env.get(key) != value for key,value in expected.items()) or not host.linux_pilot_host():
-        raise ValueError('Only the first owner-approved native Ubuntu GUI build is enabled.')
+        raise ValueError('Only the separately approved second native Ubuntu GUI build is enabled.')
     commit = env.get('REVIEWED_COMMIT','')
     if not re.fullmatch(r'[0-9a-f]{40}',commit) or commit != env.get('GITHUB_SHA'):
         raise ValueError('Dispatch must select the exact reviewed feature commit.')
@@ -148,6 +148,8 @@ def provision(base):
             raise ValueError('Package downgrade refused: '+match[1])
     uris=run(['apt-get',*options,'--print-uris','--download-only','--yes','--no-remove','--no-install-recommends','install',*requested])
     selected=parse_uris(uris,catalog)
+    print(json.dumps(dict(stage='prerequisites_resolved', archives=len(selected),
+        bytes=sum(item['size'] for item in selected))), flush=True)
     opener=urllib.request.build_opener(UbuntuRedirects)
     for item in selected:
         filename=item['cache_filename']
@@ -156,6 +158,8 @@ def provision(base):
         if '\nSHA256: '+item['sha256'] not in '\n'+metadata:
             raise ValueError('Signed APT metadata disagrees with the reviewed prerequisite hash.')
         target=directory/'archives'/filename
+        print(json.dumps(dict(stage='prerequisite_download', package=item['name'],
+            version=item['version'], filename=item['filename'], sha256=item['sha256'])), flush=True)
         with opener.open('https://archive.ubuntu.com/ubuntu/'+item['filename'],timeout=30) as response,target.open('xb') as stream:
             count=0
             while block:=response.read(1024*1024):
@@ -165,6 +169,7 @@ def provision(base):
         if count!=item['size'] or setup.digest(target)!=item['sha256']:raise ValueError('Package integrity verification failed.')
         identity=run(['dpkg-deb','--show','--showformat=${Package} ${Version} ${Architecture}',target]).strip()
         if identity!=f"{item['name']} {item['version']} {item['architecture']}":raise ValueError('Package internal identity differs.')
+        print(json.dumps(dict(stage='prerequisite_verified',package=item['name'],sha256=item['sha256'])),flush=True)
     # No fetch fallback: only this private cache's already verified debs may install.
     run(['sudo','apt-get',*options,'--no-download','--yes','--no-remove','--no-install-recommends','install',*requested],timeout=180)
     for name,expected in catalog['roots'].items():

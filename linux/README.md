@@ -5,6 +5,15 @@ backend. The primary Linux download is intended to be a graphical x86-64 ZIP.
 The native executable and ZIP have **not yet been built or visually verified** for
 this candidate. Do not publish a source-only stand-in as the graphical download.
 
+
+**Diagnostic run #2 authorized (2026-11-10):** the initial native build stopped
+when archive.ubuntu.com closed a prerequisite-download connection. No system
+packages were installed and no graphical ZIP was produced. Kenneth approved one
+new diagnostic execution. The feature workflow/driver now admit only run #2,
+attempt 1, with unchanged prerequisite hashes, download hosts and approval gates.
+Per-package download/verification identity is logged; there is no automatic
+network retry or fallback. The registration copy on main remains disabled.
+
 ## Intended volunteer journey
 
 1. Download `ComposerLint-Setup-Linux-x86_64.zip` and its `.zip.sha256` file

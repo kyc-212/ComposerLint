@@ -13,6 +13,15 @@ installation consent, real progress, local logs, safe cancellation/retry and
 stable MCP/Skill instructions. Installation uses the existing shared backend.
 The Verovio patch, dependency lock and ten renderer controls are preserved.
 
+
+**Initial native result / diagnostic authorization:** run
+[42754958771](https://github.com/kyc-212/ComposerLint/actions/runs/42754958771)
+failed at prerequisite HTTPS download (`RemoteDisconnected`) before package
+installation, GTK/renderer compilation, native controls or packaging. No artifact
+was uploaded. Kenneth approved exactly one new diagnostic run (#2, attempt 1),
+with unchanged pins and added per-package progress logging. No Linux support or
+graphical package success is claimed from the failed first run.
+
 ## Evidence and limitations
 
 **First build authorized 2026-11-10:** Kenneth approved the feature-branch push,

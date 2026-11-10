@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   build:
-    # One owner-approved feature-branch build. The registration copy on main
+    # One separately approved diagnostic run (#2). The registration copy on main
     # is explicitly disabled. Never merge application changes into main.
     # Reruns require separate approval and a reviewed ordinal/condition change.
     if: >-
@@ -25,7 +25,7 @@ jobs:
       github.event.repository.visibility == 'public' &&
       github.actor == github.repository_owner &&
       github.ref == 'refs/heads/codex/linux-ci-pilot' &&
-      github.run_number == '1' && github.run_attempt == '1'
+      github.run_number == '2' && github.run_attempt == '1'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
