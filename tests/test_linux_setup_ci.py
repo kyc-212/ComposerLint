@@ -17,7 +17,7 @@ ci=importlib.util.module_from_spec(SPEC);SPEC.loader.exec_module(ci)
 
 def environment():
     return dict(GITHUB_ACTIONS='true',GITHUB_EVENT_NAME='workflow_dispatch',GITHUB_REPOSITORY='kyc-212/ComposerLint',
-        GITHUB_ACTOR='kyc-212',GITHUB_REF='refs/heads/codex/linux-ci-pilot',GITHUB_RUN_NUMBER='6',GITHUB_RUN_ATTEMPT='1',
+        GITHUB_ACTOR='kyc-212',GITHUB_REF='refs/heads/codex/linux-ci-pilot',GITHUB_RUN_NUMBER='7',GITHUB_RUN_ATTEMPT='1',
         RUNNER_OS='Linux',RUNNER_ARCH='X64',REVIEWED_COMMIT='a'*40,GITHUB_SHA='a'*40)
 
 
@@ -27,7 +27,7 @@ def test_new_workflow_is_manual_readonly_and_matches_approval_gate():
     assert ('\n      false &&' in text) == (not ci.prerequisites()['approved'])
     assert 'contents: read' in text and 'timeout-minutes: 45' in text and 'runs-on: ubuntu-24.04' in text
     assert 'persist-credentials: false' in text and "github.run_attempt == '1'" in text
-    assert "github.run_number == '6'" in text
+    assert "github.run_number == '7'" in text
     assert 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' in text
     assert 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9' in text
     assert 'secrets.' not in text and 'pull_request' not in text and 'schedule:' not in text
@@ -52,7 +52,7 @@ def test_unapproved_prerequisites_refuse_before_any_tool_or_mutation(tmp_path,mo
     assert not list(tmp_path.iterdir())
 
 
-@pytest.mark.parametrize('key,value',[('GITHUB_ACTOR','other'),('GITHUB_REF','refs/heads/main'),('GITHUB_RUN_NUMBER','1'),('GITHUB_RUN_NUMBER','2'),('GITHUB_RUN_NUMBER','3'),('GITHUB_RUN_NUMBER','4'),('GITHUB_RUN_NUMBER','5'),('GITHUB_RUN_NUMBER','7'),
+@pytest.mark.parametrize('key,value',[('GITHUB_ACTOR','other'),('GITHUB_REF','refs/heads/main'),('GITHUB_RUN_NUMBER','1'),('GITHUB_RUN_NUMBER','2'),('GITHUB_RUN_NUMBER','3'),('GITHUB_RUN_NUMBER','4'),('GITHUB_RUN_NUMBER','5'),('GITHUB_RUN_NUMBER','6'),('GITHUB_RUN_NUMBER','8'),
     ('GITHUB_RUN_ATTEMPT','2'),('GITHUB_EVENT_NAME','push'),('REVIEWED_COMMIT','b'*40),('RUNNER_ARCH','ARM64')])
 def test_native_dispatch_identity_refuses_before_acquisition(monkeypatch,key,value):
     env=environment();env[key]=value
@@ -113,7 +113,7 @@ def test_packaging_uses_exact_requested_zip_name():
     assert build.ARCHIVE=='ComposerLint-Setup-Linux-x86_64.zip'
 
 
-def test_exact_sixth_dispatch_can_pass_only_with_explicit_approval(monkeypatch):
+def test_exact_seventh_dispatch_can_pass_only_with_explicit_approval(monkeypatch):
     monkeypatch.setattr(ci.host,'linux_pilot_host',lambda:True)
     monkeypatch.setattr(ci.subprocess,'check_output',lambda *a,**k:'a'*40)
     monkeypatch.setattr(ci,'prerequisites',lambda:dict(approved=True))

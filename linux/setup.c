@@ -434,6 +434,8 @@ static void activate(GtkApplication *application,gpointer data) {
     gtk_header_bar_set_title_widget(GTK_HEADER_BAR(header),gtk_label_new("ComposerLint Setup"));
     GtkWidget *outer=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,0);gtk_window_set_child(a->window,outer);
     GtkWidget *side_scroll=gtk_scrolled_window_new();a->sidebar=side_scroll;
+    /* Override child expansion inherited from the step-label boxes. */
+    gtk_widget_set_hexpand(side_scroll,FALSE);
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(side_scroll),GTK_POLICY_NEVER,GTK_POLICY_AUTOMATIC);
     gtk_scrolled_window_set_min_content_width(GTK_SCROLLED_WINDOW(side_scroll),270);gtk_scrolled_window_set_max_content_width(GTK_SCROLLED_WINDOW(side_scroll),270);gtk_scrolled_window_set_propagate_natural_width(GTK_SCROLLED_WINDOW(side_scroll),TRUE);gtk_widget_set_size_request(side_scroll,270,-1);gtk_box_append(GTK_BOX(outer),side_scroll);
     GtkWidget *side=gtk_box_new(GTK_ORIENTATION_VERTICAL,20);gtk_widget_add_css_class(side,"sidebar");gtk_widget_set_vexpand(side,TRUE);gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(side_scroll),side);

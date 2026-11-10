@@ -82,6 +82,8 @@ int main(int argc,char **argv) {
     gtk_check_button_set_active(GTK_CHECK_BUTTON(full?app.full:app.text),TRUE);
     g_assert_true(gtk_widget_get_focusable(app.full));
     settle();
+    g_assert_true(gtk_widget_get_hexpand_set(app.sidebar));
+    g_assert_false(gtk_widget_get_hexpand(app.sidebar));
     g_assert_cmpint(gtk_widget_get_width(app.sidebar),<=,300);
     g_assert_cmpfloat(gtk_label_get_xalign(GTK_LABEL(app.step_numbers[0])),==,0.5);
     screen(&app,argv[4],"initial");layout_checks(&app,argv[4],FALSE);
@@ -113,6 +115,8 @@ int main(int argc,char **argv) {
     g_assert_true(gtk_widget_get_visible(app.connection));
     g_assert_false(gtk_expander_get_expanded(GTK_EXPANDER(app.advanced)));
     visible_in_window(&app,app.copy_connection);
+    g_assert_true(gtk_widget_get_hexpand_set(app.sidebar));
+    g_assert_false(gtk_widget_get_hexpand(app.sidebar));
     g_assert_cmpint(gtk_widget_get_width(app.sidebar),<=,300);
     snapshot(&app,argv[4]);layout_checks(&app,argv[4],TRUE);
     gtk_expander_set_expanded(GTK_EXPANDER(app.advanced),TRUE);settle();
