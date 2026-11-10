@@ -6,13 +6,14 @@ The native executable and ZIP have **not yet been built or visually verified** f
 this candidate. Do not publish a source-only stand-in as the graphical download.
 
 
-**Diagnostic run #2 authorized (2026-11-10):** the initial native build stopped
-when archive.ubuntu.com closed a prerequisite-download connection. No system
-packages were installed and no graphical ZIP was produced. Kenneth approved one
-new diagnostic execution. The feature workflow/driver now admit only run #2,
-attempt 1, with unchanged prerequisite hashes, download hosts and approval gates.
-Per-package download/verification identity is logged; there is no automatic
-network retry or fallback. The registration copy on main remains disabled.
+**Corrected run #3 authorized (2026-11-10):** the initial native build stopped
+when archive.ubuntu.com closed a prerequisite-download connection. Run #2 used
+main and was safely skipped without executing the build. Kenneth explicitly
+approved one corrected feature-branch dispatch, run #3 / attempt 1. The branch
+dropdown must visibly show `codex/linux-ci-pilot` before submission; the commit
+input does not select a branch. All dependency hashes, download logging and
+security/artifact restrictions remain unchanged. No automatic retry or fallback.
+The registration copy on main remains explicitly disabled.
 
 ## Intended volunteer journey
 
