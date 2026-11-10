@@ -113,6 +113,7 @@ static void send_reply(App *a, const char *action) {
     if (!g_output_stream_write_all(g_subprocess_get_stdin_pipe(a->job->process),line,strlen(line),&written,NULL,&error)) {
         append_log(a,error->message,-1); g_clear_error(&error); stop(a);
     } else {
+        set_step(a,g_str_equal(action,"approve")?3:1);
         phase(a,"running","Installing and verifying","Only the actions in your approved plan are running.");
         gtk_widget_set_sensitive(a->primary,FALSE);
     }
@@ -352,6 +353,8 @@ static gboolean tick(gpointer data) {
     App *a=data;
     int width=gtk_widget_get_width(GTK_WIDGET(a->window));
     gtk_widget_set_visible(a->sidebar,width>=900);
+    gtk_widget_set_halign(a->primary,width<620?GTK_ALIGN_FILL:GTK_ALIGN_END);
+    gtk_widget_set_halign(a->copy_connection,width<620?GTK_ALIGN_FILL:GTK_ALIGN_END);
     gtk_orientable_set_orientation(GTK_ORIENTABLE(a->actions),width<620?GTK_ORIENTATION_VERTICAL:GTK_ORIENTATION_HORIZONTAL);
     if(width<900)gtk_widget_add_css_class(a->body,"compact");else gtk_widget_remove_css_class(a->body,"compact");if(a->job)gtk_progress_bar_pulse(GTK_PROGRESS_BAR(a->progress));
     if(a->job)read_backend_log(a,FALSE);
@@ -407,6 +410,11 @@ static GtkWidget *mode_card(const char *title,const char *subtitle) {
     gtk_accessible_update_property(GTK_ACCESSIBLE(check),GTK_ACCESSIBLE_PROPERTY_LABEL,title,GTK_ACCESSIBLE_PROPERTY_DESCRIPTION,subtitle,-1);
     return check;
 }
+static GtkWidget *side_label(const char *text,const char *style) {
+    GtkWidget *widget=label(text,style);
+    gtk_label_set_max_width_chars(GTK_LABEL(widget),24);
+    return widget;
+}
 static void activate(GtkApplication *application,gpointer data) {
     App *a=data;a->application=application;a->phase=g_strdup("welcome");a->diagnostic=json_object_new();
     a->window=GTK_WINDOW(gtk_application_window_new(application));gtk_window_set_title(a->window,"ComposerLint Setup");gtk_window_set_default_size(a->window,1160,880);
@@ -427,7 +435,7 @@ static void activate(GtkApplication *application,gpointer data) {
     GtkWidget *outer=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,0);gtk_window_set_child(a->window,outer);
     GtkWidget *side_scroll=gtk_scrolled_window_new();a->sidebar=side_scroll;
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(side_scroll),GTK_POLICY_NEVER,GTK_POLICY_AUTOMATIC);
-    gtk_widget_set_size_request(side_scroll,270,-1);gtk_box_append(GTK_BOX(outer),side_scroll);
+    gtk_scrolled_window_set_min_content_width(GTK_SCROLLED_WINDOW(side_scroll),270);gtk_scrolled_window_set_max_content_width(GTK_SCROLLED_WINDOW(side_scroll),270);gtk_scrolled_window_set_propagate_natural_width(GTK_SCROLLED_WINDOW(side_scroll),TRUE);gtk_widget_set_size_request(side_scroll,270,-1);gtk_box_append(GTK_BOX(outer),side_scroll);
     GtkWidget *side=gtk_box_new(GTK_ORIENTATION_VERTICAL,20);gtk_widget_add_css_class(side,"sidebar");gtk_widget_set_vexpand(side,TRUE);gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(side_scroll),side);
     gchar *icon=g_build_filename(a->root,"resources","composerlint.png",NULL);
     GError *error=NULL;GdkTexture *texture=gdk_texture_new_from_filename(icon,&error);g_free(icon);
@@ -439,20 +447,20 @@ static void activate(GtkApplication *application,gpointer data) {
     gtk_image_set_pixel_size(GTK_IMAGE(a->icon),88);gtk_widget_set_halign(a->icon,GTK_ALIGN_START);
     gtk_accessible_update_property(GTK_ACCESSIBLE(a->icon),GTK_ACCESSIBLE_PROPERTY_LABEL,"ComposerLint logo",-1);
     gtk_box_append(GTK_BOX(side),a->icon);
-    gtk_box_append(GTK_BOX(side),label("ComposerLint","brand"));
-    gtk_box_append(GTK_BOX(side),label("SETUP · LINUX x86-64","eyebrow"));
+    gtk_box_append(GTK_BOX(side),side_label("ComposerLint","brand"));
+    gtk_box_append(GTK_BOX(side),side_label("SETUP · LINUX x86-64","eyebrow"));
     const char *names[]={"Choose your setup","Prepare tools","Review installation","Install & verify","Connect your AI assistant"};
     const char *descriptions[]={"Full experience or text analysis","Review private Python and uv tools","Approve the complete plan","Build locally, then run checks","Copy your connection instructions"};
     for(guint i=0;i<5;i++) {
         GtkWidget *row=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,12);a->step_rows[i]=row;gtk_widget_add_css_class(row,"step");
-        a->step_numbers[i]=label("", "step-number");gtk_widget_set_valign(a->step_numbers[i],GTK_ALIGN_START);gtk_box_append(GTK_BOX(row),a->step_numbers[i]);
+        a->step_numbers[i]=label("", "step-number");gtk_label_set_xalign(GTK_LABEL(a->step_numbers[i]),0.5);gtk_label_set_yalign(GTK_LABEL(a->step_numbers[i]),0.5);gtk_widget_set_valign(a->step_numbers[i],GTK_ALIGN_START);gtk_box_append(GTK_BOX(row),a->step_numbers[i]);
         GtkWidget *words=gtk_box_new(GTK_ORIENTATION_VERTICAL,4);gtk_widget_set_hexpand(words,TRUE);
-        gtk_box_append(GTK_BOX(words),label(names[i],"step-title"));gtk_box_append(GTK_BOX(words),label(descriptions[i],"step-description"));
+        gtk_box_append(GTK_BOX(words),side_label(names[i],"step-title"));gtk_box_append(GTK_BOX(words),side_label(descriptions[i],"step-description"));
         gtk_box_append(GTK_BOX(row),words);gtk_box_append(GTK_BOX(side),row);
     }
     GtkWidget *space=gtk_box_new(GTK_ORIENTATION_VERTICAL,0);gtk_widget_set_vexpand(space,TRUE);gtk_box_append(GTK_BOX(side),space);
-    gtk_box_append(GTK_BOX(side),label("Local by design","step-title"));
-    gtk_box_append(GTK_BOX(side),label("Your scores stay yours. No AI client settings are changed automatically.","secondary"));
+    gtk_box_append(GTK_BOX(side),side_label("Local by design","step-title"));
+    gtk_box_append(GTK_BOX(side),side_label("Your scores stay yours. No AI client settings are changed automatically.","secondary"));
     GtkWidget *main=gtk_box_new(GTK_ORIENTATION_VERTICAL,0);gtk_widget_set_hexpand(main,TRUE);gtk_box_append(GTK_BOX(outer),main);
     a->content_scroll=gtk_scrolled_window_new();gtk_widget_set_vexpand(a->content_scroll,TRUE);
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(a->content_scroll),GTK_POLICY_NEVER,GTK_POLICY_AUTOMATIC);

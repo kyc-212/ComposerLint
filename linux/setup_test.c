@@ -81,6 +81,9 @@ int main(int argc,char **argv) {
     g_assert_false(gtk_check_button_get_active(GTK_CHECK_BUTTON(app.full)));
     gtk_check_button_set_active(GTK_CHECK_BUTTON(full?app.full:app.text),TRUE);
     g_assert_true(gtk_widget_get_focusable(app.full));
+    settle();
+    g_assert_cmpint(gtk_widget_get_width(app.sidebar),<=,300);
+    g_assert_cmpfloat(gtk_label_get_xalign(GTK_LABEL(app.step_numbers[0])),==,0.5);
     screen(&app,argv[4],"initial");layout_checks(&app,argv[4],FALSE);
     primary(NULL,&app);await_phase(&app,"bootstrapReview",FALSE,180);
     screen(&app,argv[4],"tools-review");
@@ -101,7 +104,7 @@ int main(int argc,char **argv) {
     primary(NULL,&app);await_phase(&app,"bootstrapReview",FALSE,180);
     primary(NULL,&app);await_phase(&app,"installReview",FALSE,900);
     g_assert_nonnull(app.prefix);
-    primary(NULL,&app);screen(&app,argv[4],"progress");await_phase(&app,"complete",TRUE,full?1800:300);
+    primary(NULL,&app);g_assert_cmpuint(app.step,==,3);screen(&app,argv[4],"progress");await_phase(&app,"complete",TRUE,full?1800:300);
     g_assert_true(gtk_widget_get_sensitive(app.copy_connection));
     g_assert_nonnull(app.completion);
     g_assert_nonnull(strstr(app.completion,"18 tools"));
@@ -110,6 +113,7 @@ int main(int argc,char **argv) {
     g_assert_true(gtk_widget_get_visible(app.connection));
     g_assert_false(gtk_expander_get_expanded(GTK_EXPANDER(app.advanced)));
     visible_in_window(&app,app.copy_connection);
+    g_assert_cmpint(gtk_widget_get_width(app.sidebar),<=,300);
     snapshot(&app,argv[4]);layout_checks(&app,argv[4],TRUE);
     gtk_expander_set_expanded(GTK_EXPANDER(app.advanced),TRUE);settle();
     GtkAdjustment *adjustment=gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(app.content_scroll));
@@ -141,6 +145,7 @@ int main(int argc,char **argv) {
     json_object_set_boolean_member(report,"gtk_protocol_complete",TRUE);
     json_object_set_boolean_member(report,"desktop_acceptance",FALSE);
     json_object_set_boolean_member(report,"responsive_footer",TRUE);
+    json_object_set_boolean_member(report,"stable_sidebar_and_step_alignment",TRUE);
     json_object_set_boolean_member(report,"font_scaling",TRUE);
     json_object_set_boolean_member(report,"long_path_scrolling",TRUE);
     json_object_set_boolean_member(report,"packaged_icon_loaded",TRUE);

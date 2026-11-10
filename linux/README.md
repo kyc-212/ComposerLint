@@ -16,7 +16,7 @@ are edited. Fonts follow the GTK font setting; keyboard focus and choice labels
 are explicit. The bundled PNG is extracted from the existing original macOS icon
 and SHA-256 verified before loading, without an SVG-loader dependency.
 
-Native Ubuntu verification is gated to Run #5 / attempt 1 on the feature branch.
+Native Ubuntu verification is gated to Run #6 / attempt 1 on the feature branch.
 It captures initial, tools review, installation review, progress, cancellation and
 completion screens, plus small-window/font-scaling/long-path/advanced-scroll cases.
 Error-layout screenshots are explicitly authored presentation checks; they are

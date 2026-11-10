@@ -60,10 +60,10 @@ def prerequisites():
 def validate_run(env):
     expected = dict(GITHUB_ACTIONS='true', GITHUB_EVENT_NAME='workflow_dispatch',
         GITHUB_REPOSITORY='kyc-212/ComposerLint',GITHUB_ACTOR='kyc-212',
-        GITHUB_REF='refs/heads/codex/linux-ci-pilot',GITHUB_RUN_NUMBER='5',
+        GITHUB_REF='refs/heads/codex/linux-ci-pilot',GITHUB_RUN_NUMBER='6',
         GITHUB_RUN_ATTEMPT='1',RUNNER_OS='Linux',RUNNER_ARCH='X64')
     if any(env.get(key) != value for key,value in expected.items()) or not host.linux_pilot_host():
-        raise ValueError('Only the explicitly approved fifth native Ubuntu GUI build is enabled.')
+        raise ValueError('Only the explicitly approved sixth native Ubuntu GUI build is enabled.')
     commit = env.get('REVIEWED_COMMIT','')
     if not re.fullmatch(r'[0-9a-f]{40}',commit) or commit != env.get('GITHUB_SHA'):
         raise ValueError('Dispatch must select the exact reviewed feature commit.')
