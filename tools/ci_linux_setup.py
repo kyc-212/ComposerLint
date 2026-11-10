@@ -60,10 +60,10 @@ def prerequisites():
 def validate_run(env):
     expected = dict(GITHUB_ACTIONS='true', GITHUB_EVENT_NAME='workflow_dispatch',
         GITHUB_REPOSITORY='kyc-212/ComposerLint',GITHUB_ACTOR='kyc-212',
-        GITHUB_REF='refs/heads/codex/linux-ci-pilot',GITHUB_RUN_NUMBER='4',
+        GITHUB_REF='refs/heads/codex/linux-ci-pilot',GITHUB_RUN_NUMBER='5',
         GITHUB_RUN_ATTEMPT='1',RUNNER_OS='Linux',RUNNER_ARCH='X64')
     if any(env.get(key) != value for key,value in expected.items()) or not host.linux_pilot_host():
-        raise ValueError('Only the explicitly approved fourth native Ubuntu GUI build is enabled.')
+        raise ValueError('Only the explicitly approved fifth native Ubuntu GUI build is enabled.')
     commit = env.get('REVIEWED_COMMIT','')
     if not re.fullmatch(r'[0-9a-f]{40}',commit) or commit != env.get('GITHUB_SHA'):
         raise ValueError('Dispatch must select the exact reviewed feature commit.')
@@ -248,7 +248,7 @@ def provision(base):
 
 def compile_harness(app,base):
     identity=base/'harness';host.private_dir(identity)
-    mapping={'MANIFEST':'manifest.json','SUPPORT':'setup_support.py','STYLE':'setup.css','ICON':'composerlint.svg'}
+    mapping={'MANIFEST':'manifest.json','SUPPORT':'setup_support.py','STYLE':'setup.css','ICON':'composerlint.png'}
     (identity/'bundle_identity.h').write_text(''.join(f'#define {key}_SHA256 "{setup.digest(app/"resources"/name)}"\n' for key,name in mapping.items()))
     flags=shlex.split(run(['pkg-config','--cflags','--libs','gtk4','json-glib-1.0']))
     cc=host.compiler_capability('c11')
@@ -342,7 +342,7 @@ def worker(base):
     report['gtk']={mode:{k:v for k,v in result.items() if k not in ('prefix','instructions','source')} for mode,result in modes.items()}
     report['prerequisites']=json.loads((base/'prerequisite-report.json').read_text())
     destination=base/'deliverables';host.private_dir(destination)
-    for path in (archive,archive.with_suffix('.zip.sha256'),base/'text-gui.png',base/'full-gui.png'):
+    for path in (archive,archive.with_suffix('.zip.sha256'),*sorted(base.glob('*-gui*.png'))):
         shutil.copyfile(path,destination/path.name)
     report['zip']=dict(filename=archive.name,sha256=setup.digest(archive),bytes=archive.stat().st_size)
     report['status']='native_automated_checks_passed_real_desktop_pending'

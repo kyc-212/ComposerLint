@@ -129,10 +129,10 @@ def prepare_resources(app):
             markdown.write_text(re.sub(r'(!?\[[^\]]*\])\(([^)]+)\)',rewrite,markdown.read_text()))
     linux_source = app / 'Source/linux'
     linux_source.mkdir()
-    for name in ('setup.c','setup_test.c','setup_support.py','setup.css','composerlint.svg','README.md','RELEASE-NOTES.md','THIRD-PARTY.md'):
+    for name in ('setup.c','setup_test.c','setup_support.py','setup.css','composerlint.png','README.md','RELEASE-NOTES.md','THIRD-PARTY.md'):
         shutil.copyfile(ROOT / 'linux' / name, linux_source / name)
     shutil.copyfile(ROOT / 'tools/build_linux_setup.py', app / 'Source/tools/build_linux_setup.py')
-    for name in ('setup_support.py','setup.css','composerlint.svg'):
+    for name in ('setup_support.py','setup.css','composerlint.png'):
         shutil.copyfile(linux_source / name, resources / name)
     readme = (linux_source / 'README.md').read_text()
     (app / 'READ ME FIRST.md').write_text(readme.replace('(RELEASE-NOTES.md)', '(Source/linux/RELEASE-NOTES.md)').replace('(THIRD-PARTY.md)', '(Source/linux/THIRD-PARTY.md)'))
@@ -173,7 +173,7 @@ def build(output):
         (temporary / 'bundle_identity.h').write_text(
             f'#define MANIFEST_SHA256 "{manifest_hash}"\n#define SUPPORT_SHA256 "{support_hash}"\n'
             f'#define STYLE_SHA256 "{sha(app / "resources/setup.css")}"\n'
-            f'#define ICON_SHA256 "{sha(app / "resources/composerlint.svg")}"\n')
+            f'#define ICON_SHA256 "{sha(app / "resources/composerlint.png")}"\n')
         flags = run(['pkg-config','--cflags','--libs','gtk4','json-glib-1.0'], capture=True)
         import shlex
         run([compiler['path'],'-std=c11','-O2','-Wall','-Wextra','-Werror=implicit-function-declaration',

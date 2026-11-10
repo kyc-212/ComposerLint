@@ -1,3 +1,17 @@
+## Linux GTK visual refresh — review candidate
+
+The sidebar identifies ComposerLint / SETUP · LINUX x86-64. This does not imply
+universal Linux compatibility. Native automated verification targets Ubuntu 24.04
+x86-64 under GTK/X11 with a virtual display; real Arch Linux, Niri and Wayland
+acceptance remains pending. Installation still requires the documented capability
+checks. Linux permanent MusicXML export remains disabled.
+
+The interface now uses the existing original ComposerLint icon as an integrity-
+checked PNG, responsive persistent actions, readable selection cards and an
+expandable connection section. Exact paths and commands remain copied from the
+shared backend. Local AI client setup is described neutrally; actual client Skill
+and live-selection discovery must still be tested per client.
+
 # Draft — ComposerLint Linux graphical setup volunteer preview
 
 **Unpublished candidate. Native GUI build/verification and final ZIP/checksum are

@@ -1,14 +1,43 @@
-window { background: #101b2b; color: #eef5fa; }
-headerbar { background: #132236; color: #eef5fa; }
-.sidebar { padding: 28px 20px; background: #0a1422; border-right: 1px solid #294052; }
-.body { padding: 28px; }
-.brand { color: #72dbc1; font-size: 15px; font-weight: 800; letter-spacing: 1px; }
-.title { font-size: 27px; font-weight: 800; }
-.steps { color: #d3e1ec; font-size: 14px; }
-.muted { color: #a5bccf; font-size: 12px; }
-.card { padding: 20px; background: #192b3e; border: 1px solid #304b60; border-radius: 14px; }
-button { border-radius: 9px; padding: 10px 14px; }
-button.suggested-action { background: #65d3b7; color: #09281f; font-weight: 700; }
-checkbutton { padding: 8px 0; }
-textview text { background: #091522; color: #e2edf5; }
-progressbar progress { background: #65d3b7; }
+window { background: #1c2026; color: #f1f4f6; font-family: sans-serif; font-size: 1.0em; }
+headerbar { background: #1c2026; color: #b8c5d1; border-bottom: 1px solid #303842; box-shadow: none; }
+.sidebar { padding: 30px 24px; background: linear-gradient(145deg, #102238, #103d43); }
+.brand { font-size: 1.733em; font-weight: 800; color: #ffffff; }
+.eyebrow { color: #b4c5d3; font-size: 0.8em; font-weight: 700; letter-spacing: 1.2px; }
+.body { padding: 32px 36px; }
+.body.compact { padding: 22px 20px; }
+.body.compact .title { font-size: 1.867em; }
+.title { font-size: 2.267em; font-weight: 800; letter-spacing: -0.6px; }
+.subtitle { color: #bac5cf; font-size: 1.067em; }
+.section-title { font-size: 1.333em; font-weight: 700; }
+.secondary { color: #b3c2cc; font-size: 0.933em; }
+.step { padding: 7px 0; color: #b6c9d2; }
+.step-title { font-size: 1.0em; font-weight: 700; }
+.step-description { font-size: 0.867em; color: #b0c5d1; }
+.step-number { min-width: 30px; min-height: 30px; border-radius: 50%; background: #254453; color: #cfdee5; font-size: 0.933em; font-weight: 700; }
+.step.current { color: #ffffff; }
+.step.current .step-number { background: #58d3b5; color: #092f32; }
+.step.finished .step-number { background: #226659; color: #b3f7df; }
+.card { padding: 22px; background: #252c35; border: 1px solid #3c4856; border-radius: 16px; }
+.status { padding: 2px 0; }
+.status.warning { padding: 16px; background: #382e22; border: 1px solid #cbaa6a; border-radius: 12px; }
+.status.success .subtitle { color: #b2ebd6; }
+checkbutton.choice { padding: 20px; background: #222831; border: 2px solid #46515f; border-radius: 16px; }
+checkbutton.choice.selected { background: #23363e; border-color: #58d3b5; }
+checkbutton.choice:hover { background: #2c3946; border-color: #a1c7d4; }
+checkbutton.choice:focus-within { outline: 3px solid #a8dcff; outline-offset: 3px; }
+checkbutton.choice radio { margin-right: 16px; min-height: 22px; min-width: 22px; border: 2px solid #b0bdc8; border-radius: 50%; background: #1b2530; }
+checkbutton.choice radio:checked { background: #58d3b5; color: #092f32; border-color: #58d3b5; }
+.choice-title { font-size: 1.267em; font-weight: 700; }
+.footer { padding: 16px 24px 22px; background: #1c2026; border-top: 1px solid #3b4550; }
+button { background: #303b47; color: #f1f4f6; border: 1px solid #53616f; border-radius: 24px; padding: 12px 18px; font-weight: 600; box-shadow: none; }
+button:hover { background: #415363; }
+button:active { background: #1c2b38; }
+button:focus-visible, expander:focus-visible { outline: 3px solid #a8dcff; outline-offset: 3px; }
+button.suggested-action { background: #147c6c; border-color: #6cdec3; color: #ffffff; }
+button.suggested-action:hover { background: #1d9581; }
+button:disabled, checkbutton:disabled { opacity: 0.55; }
+expander > title { padding: 10px 2px; font-weight: 600; }
+.technical { font-family: monospace; font-size: 0.867em; color: #d9e5ed; }
+textview text { background: #121c25; color: #dbe7ef; }
+progressbar trough { min-height: 5px; background: #36434c; border-radius: 4px; }
+progressbar progress { background: #58d3b5; border-radius: 4px; }

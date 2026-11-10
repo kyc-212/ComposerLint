@@ -650,3 +650,18 @@ def test_gtk_reports_connected_backend_instead_of_environment_guess(monkeypatch,
     monkeypatch.setattr(host,'run_owned',lambda *a,**k:subprocess.CompletedProcess(a,0,backend+'\n',''))
     report=host.linux_display_capability()
     assert report['available']==available and report['session']==session
+
+
+def test_linux_brand_artwork_is_packaged_and_integrity_bound(resources, tmp_path):
+    original, manifest, helper = resources
+    app = tmp_path/"artwork-copy"
+    shutil.copytree(original,app)
+    entries, unused = support.verify_bundle(app, manifest)
+    icon = app/'resources/composerlint.png'
+    assert icon.read_bytes().startswith(b'\x89PNG\r\n\x1a\n')
+    assert entries['resources/composerlint.png']['sha256'] == support.digest(ROOT/'linux/composerlint.png')
+    assert (app/'Source/linux/composerlint.png').read_bytes() == icon.read_bytes()
+    assert not (app/'resources/composerlint.svg').exists()
+    icon.write_bytes(b'invalid')
+    with pytest.raises(ValueError,match='differ'):
+        support.verify_bundle(app,manifest)

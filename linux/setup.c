@@ -24,6 +24,10 @@ struct App {
     GtkWindow *window;
     GtkWidget *heading, *message, *details, *full, *text, *primary, *cancel, *retry;
     GtkWidget *progress, *stage, *copy_connection;
+    GtkWidget *sidebar, *body, *choices, *review, *connection, *advanced, *technical;
+    GtkWidget *actions, *close, *status_card, *step_rows[5], *step_numbers[5];
+    GtkWidget *content_scroll, *icon;
+    guint step;
     GtkTextBuffer *logs;
     Job *job;
     gchar *root, *plan_id, *phase, *completion, *prefix;
@@ -33,11 +37,30 @@ struct App {
     guint ticker;
 };
 static void read_backend_log(App *a,gboolean final);
+static void refresh_view(App *a);
+static void set_step(App *a,guint step) {
+    a->step=step;
+    if(!a->stage)return;
+    gchar *text=g_strdup_printf("STEP %u OF 5",step+1);
+    gtk_label_set_text(GTK_LABEL(a->stage),text);g_free(text);
+    for(guint i=0;i<5;i++) {
+        gtk_widget_remove_css_class(a->step_rows[i],"current");
+        gtk_widget_remove_css_class(a->step_rows[i],"finished");
+        if(i==step)gtk_widget_add_css_class(a->step_rows[i],"current");
+        if(i<step)gtk_widget_add_css_class(a->step_rows[i],"finished");
+        gchar *number=i<step?g_strdup("✓"):g_strdup_printf("%u",i+1);
+        gtk_label_set_text(GTK_LABEL(a->step_numbers[i]),number);g_free(number);
+        const char *names[]={"Choose your setup","Prepare tools","Review installation","Install and verify","Connect your AI assistant"};
+        gchar *name=g_strdup_printf("Step %u: %s, %s",i+1,names[i],i<step?"complete":i==step?"current":"pending");
+        gtk_accessible_update_property(GTK_ACCESSIBLE(a->step_rows[i]),GTK_ACCESSIBLE_PROPERTY_LABEL,name,-1);g_free(name);
+    }
+}
 
 static void phase(App *a, const char *name, const char *title, const char *message) {
     g_free(a->phase); a->phase = g_strdup(name);
     gtk_label_set_text(GTK_LABEL(a->heading), title);
     gtk_label_set_text(GTK_LABEL(a->message), message ? message : "");
+    refresh_view(a);
 }
 static void append_log(App *a, const char *bytes, gssize length) {
     char *valid = g_utf8_make_valid(bytes, length);
@@ -152,11 +175,13 @@ static void receive(App *a, const char *text) {
             }
         }
         json_object_set_boolean_member(a->diagnostic,"linux_export_available",FALSE);
-        phase(a,a->supported?"welcome":"unsupported",a->supported?"Choose your ComposerLint setup":"This configuration needs attention",string(o,"message"));
+        gtk_label_set_text(GTK_LABEL(a->technical),string(o,"message"));
+        phase(a,a->supported?"welcome":"unsupported",a->supported?"Make room for your next idea.":"Let’s resolve this first.",a->supported?"A guided installation for your music workspace.":"Review this computer’s capability details below before continuing.");
+        gtk_expander_set_expanded(GTK_EXPANDER(a->advanced),!a->supported);
         gtk_widget_set_sensitive(a->full,a->full_available);
         if (!a->full_available) gtk_check_button_set_active(GTK_CHECK_BUTTON(a->text),TRUE);
-        set_details(a,"Full setup builds the verified renderer locally. Text-only setup needs no compiler.\nLinux permanent export is disabled in this prerelease. No system packages are installed automatically.");
-        gtk_label_set_text(GTK_LABEL(a->stage),"1 / 5 · Choose your setup");
+        set_details(a,"Private Python and uv tools are prepared only after your approval. Full experience builds the verified renderer locally; text analysis needs no compiler.\n\nYour scores stay yours. No system packages or AI client settings are changed automatically.");
+        set_step(a,0);
     } else if (g_str_equal(kind,"bootstrap_plan") || g_str_equal(kind,"plan")) {
         const char *id=string(o,"plan_id"); if (!valid_plan(id)) goto invalid;
         g_free(a->plan_id); a->plan_id=g_strdup(id);
@@ -166,12 +191,12 @@ static void receive(App *a, const char *text) {
         if (!first) { g_free(a->prefix);a->prefix=g_strdup(string(o,"prefix")); a->log_offset=0; }
         gtk_button_set_label(GTK_BUTTON(a->primary),first?"Approve private tools":"Approve installation");
         gtk_widget_set_sensitive(a->primary,TRUE);
-        gtk_label_set_text(GTK_LABEL(a->stage),first?"2 / 5 · Prepare private tools":"3 / 5 · Review installation");
+        set_step(a,first?1:2);
     } else if (g_str_equal(kind,"progress")) {
         gtk_label_set_text(GTK_LABEL(a->message),string(o,"message"));
         const char *stage=string(o,"stage");
         gboolean preparing=g_str_equal(stage,"source")||g_str_equal(stage,"bootstrap")||g_str_equal(stage,"filesystem");
-        gtk_label_set_text(GTK_LABEL(a->stage),preparing?"2 / 5 · Prepare private tools":"4 / 5 · Install & verify");
+        set_step(a,preparing?1:3);
     } else if (g_str_equal(kind,"complete")) {
         g_free(a->completion);a->completion=g_strdup(string(o,"instructions"));
         phase(a,"finishing","Verification finished","Waiting for successful backend shutdown…");
@@ -192,12 +217,12 @@ static void finish(Job *job) {
     gtk_widget_set_sensitive(a->cancel,FALSE);gtk_widget_set_sensitive(a->retry,TRUE);
     gtk_widget_set_sensitive(a->text,TRUE);gtk_widget_set_sensitive(a->full,a->full_available);
     if (job->status==0 && !job->probe && a->completion) {
-        phase(a,"complete","ComposerLint installation verified","Your private installation is independent of this extracted setup folder.");
-        set_details(a,a->completion);gtk_widget_set_sensitive(a->copy_connection,TRUE);
-        gtk_label_set_text(GTK_LABEL(a->stage),"5 / 5 · Connect your client");
+        phase(a,"complete","ComposerLint is ready.","One final connection, then bring your score to the conversation.");
+        gtk_label_set_text(GTK_LABEL(a->technical),a->completion);gtk_expander_set_expanded(GTK_EXPANDER(a->advanced),FALSE);gtk_widget_set_sensitive(a->copy_connection,TRUE);
+        set_step(a,4);
         gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(a->progress),1.0);
     } else if (job->probe && job->status==0) {
-        gtk_button_set_label(GTK_BUTTON(a->primary),"Review prerequisites");
+        gtk_button_set_label(GTK_BUTTON(a->primary),"Review Setup");
         gtk_widget_set_sensitive(a->primary,a->supported);
     } else if (!g_str_equal(a->phase,"cancelled") && !g_str_equal(a->phase,"cancelling") && !g_str_equal(a->phase,"error")) {
         phase(a,"error","Setup did not complete","Review the local log, copy safe diagnostics if needed, and recheck before retrying. Existing installations are preserved.");
@@ -324,7 +349,11 @@ static void read_backend_log(App *a,gboolean final) {
     }
 }
 static gboolean tick(gpointer data) {
-    App *a=data;if(a->job)gtk_progress_bar_pulse(GTK_PROGRESS_BAR(a->progress));
+    App *a=data;
+    int width=gtk_widget_get_width(GTK_WIDGET(a->window));
+    gtk_widget_set_visible(a->sidebar,width>=900);
+    gtk_orientable_set_orientation(GTK_ORIENTABLE(a->actions),width<620?GTK_ORIENTATION_VERTICAL:GTK_ORIENTATION_HORIZONTAL);
+    if(width<900)gtk_widget_add_css_class(a->body,"compact");else gtk_widget_remove_css_class(a->body,"compact");if(a->job)gtk_progress_bar_pulse(GTK_PROGRESS_BAR(a->progress));
     if(a->job)read_backend_log(a,FALSE);
     return G_SOURCE_CONTINUE;
 }
@@ -336,54 +365,138 @@ static GtkWidget *label(const char *text,const char *style) {
 static GtkWidget *button(const char *title,GCallback callback,App *a) {
     GtkWidget *b=gtk_button_new_with_label(title);g_signal_connect(b,"clicked",callback,a);return b;
 }
+static void refresh_view(App *a) {
+    if(!a->choices)return;
+    gboolean welcome=g_str_equal(a->phase,"welcome")||g_str_equal(a->phase,"unsupported")||g_str_equal(a->phase,"checking");
+    gboolean complete=g_str_equal(a->phase,"complete");
+    gboolean review=g_str_equal(a->phase,"bootstrapReview")||g_str_equal(a->phase,"installReview");
+    gboolean interrupted=g_str_equal(a->phase,"error")||g_str_equal(a->phase,"unsupported")||g_str_equal(a->phase,"cancelled");
+    gtk_widget_set_visible(a->choices,welcome);
+    gtk_widget_set_visible(a->review,!complete && (welcome||review));
+    gtk_widget_set_visible(a->connection,complete);
+    gtk_widget_set_visible(a->copy_connection,complete);
+    gtk_widget_set_visible(a->primary,welcome||review);
+    gtk_widget_set_visible(a->retry,welcome||interrupted||complete);
+    gtk_widget_set_visible(a->cancel,!complete && !welcome);
+    gtk_widget_set_visible(a->progress,!welcome && !review && !interrupted);
+    gtk_widget_set_visible(a->advanced,welcome||interrupted||complete);
+    gtk_expander_set_label(GTK_EXPANDER(a->advanced),complete?"Advanced connection details":"Computer checks & troubleshooting");
+    gtk_widget_remove_css_class(a->status_card,"warning");
+    gtk_widget_remove_css_class(a->status_card,"success");
+    if(interrupted)gtk_widget_add_css_class(a->status_card,"warning");
+    if(complete)gtk_widget_add_css_class(a->status_card,"success");
+    gtk_button_set_label(GTK_BUTTON(a->retry),complete?"Check again":"Recheck / Retry");
+}
+static void close_clicked(GtkButton *button,gpointer data) {
+    (void)button;App *a=data;gtk_window_close(a->window);
+}
+static void mode_changed(GtkCheckButton *button,gpointer data) {
+    (void)button;App *a=data;
+    GtkWidget *buttons[]={a->full,a->text};
+    for(int i=0;i<2;i++) {
+        if(gtk_check_button_get_active(GTK_CHECK_BUTTON(buttons[i])))gtk_widget_add_css_class(buttons[i],"selected");
+        else gtk_widget_remove_css_class(buttons[i],"selected");
+    }
+}
+static GtkWidget *mode_card(const char *title,const char *subtitle) {
+    GtkWidget *check=gtk_check_button_new();gtk_widget_add_css_class(check,"choice");
+    GtkWidget *content=gtk_box_new(GTK_ORIENTATION_VERTICAL,6);
+    gtk_box_append(GTK_BOX(content),label(title,"choice-title"));
+    gtk_box_append(GTK_BOX(content),label(subtitle,"secondary"));
+    gtk_check_button_set_child(GTK_CHECK_BUTTON(check),content);
+    gtk_accessible_update_property(GTK_ACCESSIBLE(check),GTK_ACCESSIBLE_PROPERTY_LABEL,title,GTK_ACCESSIBLE_PROPERTY_DESCRIPTION,subtitle,-1);
+    return check;
+}
 static void activate(GtkApplication *application,gpointer data) {
     App *a=data;a->application=application;a->phase=g_strdup("welcome");a->diagnostic=json_object_new();
-    a->window=GTK_WINDOW(gtk_application_window_new(application));gtk_window_set_title(a->window,"ComposerLint Setup — Linux preview");gtk_window_set_default_size(a->window,1040,800);
+    a->window=GTK_WINDOW(gtk_application_window_new(application));gtk_window_set_title(a->window,"ComposerLint Setup");gtk_window_set_default_size(a->window,1160,880);
+    gtk_widget_set_size_request(GTK_WIDGET(a->window),360,420);
     g_signal_connect(a->window,"close-request",G_CALLBACK(closing),a);
-    const char *files[]={"setup_support.py","manifest.json","setup.css","composerlint.svg",NULL};
+    const char *files[]={"setup_support.py","manifest.json","setup.css","composerlint.png",NULL};
     const char *hashes[]={SUPPORT_SHA256,MANIFEST_SHA256,STYLE_SHA256,ICON_SHA256};
     for(int i=0;files[i];i++) {
         gchar *path=g_build_filename(a->root,"resources",files[i],NULL);
         gboolean trusted=regular_hash(path,hashes[i]);g_free(path);
         if(!trusted) {
-            GtkWidget *failure=gtk_label_new("Setup resource integrity failed. Extract a fresh ZIP and verify its SHA-256 checksum. No source code was executed.");
-            gtk_label_set_wrap(GTK_LABEL(failure),TRUE);gtk_window_set_child(a->window,failure);gtk_window_present(a->window);return;
+            GtkWidget *failure=label("Setup resource integrity failed. Extract a fresh ZIP and verify its SHA-256 checksum. No source code was executed.",NULL);
+            gtk_window_set_child(a->window,failure);gtk_window_present(a->window);return;
         }
     }
     GtkWidget *header=gtk_header_bar_new();gtk_window_set_titlebar(a->window,header);
     gtk_header_bar_set_title_widget(GTK_HEADER_BAR(header),gtk_label_new("ComposerLint Setup"));
     GtkWidget *outer=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,0);gtk_window_set_child(a->window,outer);
-    GtkWidget *side=gtk_box_new(GTK_ORIENTATION_VERTICAL,24);gtk_widget_add_css_class(side,"sidebar");gtk_widget_set_size_request(side,200,-1);gtk_box_append(GTK_BOX(outer),side);
-    gchar *icon=g_build_filename(a->root,"resources","composerlint.svg",NULL);GtkWidget *image=gtk_image_new_from_file(icon);g_free(icon);gtk_image_set_pixel_size(GTK_IMAGE(image),96);gtk_box_append(GTK_BOX(side),image);
-    gtk_box_append(GTK_BOX(side),label("COMPOSERLINT","brand"));
-    gtk_box_append(GTK_BOX(side),label("01  Choose your setup\n\n02  Prepare private tools\n\n03  Review installation\n\n04  Install & verify\n\n05  Connect your client","steps"));
-    gtk_box_append(GTK_BOX(side),label("Linux volunteer preview\nArch · Ubuntu\n\nYour music stays yours.","muted"));
-    GtkWidget *scroll=gtk_scrolled_window_new();gtk_widget_set_hexpand(scroll,TRUE);gtk_box_append(GTK_BOX(outer),scroll);
-    GtkWidget *body=gtk_box_new(GTK_ORIENTATION_VERTICAL,16);gtk_widget_add_css_class(body,"body");gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroll),body);
-    a->heading=label("Choose your ComposerLint setup","title");gtk_box_append(GTK_BOX(body),a->heading);
-    a->message=label("Checking this computer…",NULL);gtk_label_set_selectable(GTK_LABEL(a->message),TRUE);gtk_box_append(GTK_BOX(body),a->message);
-    a->full=gtk_check_button_new_with_label("Full experience — analysis, notation & verified temporary editing");
-    a->text=gtk_check_button_new_with_label("Text analysis only — no renderer or compiler needed");
+    GtkWidget *side_scroll=gtk_scrolled_window_new();a->sidebar=side_scroll;
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(side_scroll),GTK_POLICY_NEVER,GTK_POLICY_AUTOMATIC);
+    gtk_widget_set_size_request(side_scroll,270,-1);gtk_box_append(GTK_BOX(outer),side_scroll);
+    GtkWidget *side=gtk_box_new(GTK_ORIENTATION_VERTICAL,20);gtk_widget_add_css_class(side,"sidebar");gtk_widget_set_vexpand(side,TRUE);gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(side_scroll),side);
+    gchar *icon=g_build_filename(a->root,"resources","composerlint.png",NULL);
+    GError *error=NULL;GdkTexture *texture=gdk_texture_new_from_filename(icon,&error);g_free(icon);
+    if(!texture) {
+        GtkWidget *failure=label("Packaged artwork could not load. Extract a fresh verified ZIP.",NULL);
+        gtk_window_set_child(a->window,failure);gtk_window_present(a->window);g_clear_error(&error);return;
+    }
+    a->icon=gtk_image_new_from_paintable(GDK_PAINTABLE(texture));g_object_unref(texture);
+    gtk_image_set_pixel_size(GTK_IMAGE(a->icon),88);gtk_widget_set_halign(a->icon,GTK_ALIGN_START);
+    gtk_accessible_update_property(GTK_ACCESSIBLE(a->icon),GTK_ACCESSIBLE_PROPERTY_LABEL,"ComposerLint logo",-1);
+    gtk_box_append(GTK_BOX(side),a->icon);
+    gtk_box_append(GTK_BOX(side),label("ComposerLint","brand"));
+    gtk_box_append(GTK_BOX(side),label("SETUP · LINUX x86-64","eyebrow"));
+    const char *names[]={"Choose your setup","Prepare tools","Review installation","Install & verify","Connect your AI assistant"};
+    const char *descriptions[]={"Full experience or text analysis","Review private Python and uv tools","Approve the complete plan","Build locally, then run checks","Copy your connection instructions"};
+    for(guint i=0;i<5;i++) {
+        GtkWidget *row=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,12);a->step_rows[i]=row;gtk_widget_add_css_class(row,"step");
+        a->step_numbers[i]=label("", "step-number");gtk_widget_set_valign(a->step_numbers[i],GTK_ALIGN_START);gtk_box_append(GTK_BOX(row),a->step_numbers[i]);
+        GtkWidget *words=gtk_box_new(GTK_ORIENTATION_VERTICAL,4);gtk_widget_set_hexpand(words,TRUE);
+        gtk_box_append(GTK_BOX(words),label(names[i],"step-title"));gtk_box_append(GTK_BOX(words),label(descriptions[i],"step-description"));
+        gtk_box_append(GTK_BOX(row),words);gtk_box_append(GTK_BOX(side),row);
+    }
+    GtkWidget *space=gtk_box_new(GTK_ORIENTATION_VERTICAL,0);gtk_widget_set_vexpand(space,TRUE);gtk_box_append(GTK_BOX(side),space);
+    gtk_box_append(GTK_BOX(side),label("Local by design","step-title"));
+    gtk_box_append(GTK_BOX(side),label("Your scores stay yours. No AI client settings are changed automatically.","secondary"));
+    GtkWidget *main=gtk_box_new(GTK_ORIENTATION_VERTICAL,0);gtk_widget_set_hexpand(main,TRUE);gtk_box_append(GTK_BOX(outer),main);
+    a->content_scroll=gtk_scrolled_window_new();gtk_widget_set_vexpand(a->content_scroll,TRUE);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(a->content_scroll),GTK_POLICY_NEVER,GTK_POLICY_AUTOMATIC);
+    gtk_box_append(GTK_BOX(main),a->content_scroll);
+    a->body=gtk_box_new(GTK_ORIENTATION_VERTICAL,22);gtk_widget_add_css_class(a->body,"body");gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(a->content_scroll),a->body);
+    GtkWidget *top=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,12);a->stage=label("STEP 1 OF 5","eyebrow");gtk_widget_set_hexpand(a->stage,TRUE);gtk_box_append(GTK_BOX(top),a->stage);gtk_box_append(GTK_BOX(top),label("v0.2.0","secondary"));gtk_box_append(GTK_BOX(a->body),top);
+    a->heading=label("Make room for your next idea.","title");gtk_box_append(GTK_BOX(a->body),a->heading);
+    a->status_card=gtk_box_new(GTK_ORIENTATION_VERTICAL,8);gtk_widget_add_css_class(a->status_card,"status");
+    a->message=label("Checking this computer…","subtitle");gtk_label_set_selectable(GTK_LABEL(a->message),TRUE);gtk_box_append(GTK_BOX(a->status_card),a->message);gtk_box_append(GTK_BOX(a->body),a->status_card);
+    a->choices=gtk_box_new(GTK_ORIENTATION_VERTICAL,14);gtk_box_append(GTK_BOX(a->body),a->choices);
+    gtk_box_append(GTK_BOX(a->choices),label("Choose your installation","section-title"));
+    a->full=mode_card("Full experience","Notation, analysis and verified temporary editing");
+    a->text=mode_card("Text analysis only","Musical analysis without renderer compilation");
     gtk_check_button_set_group(GTK_CHECK_BUTTON(a->text),GTK_CHECK_BUTTON(a->full));gtk_check_button_set_active(GTK_CHECK_BUTTON(a->full),TRUE);
-    gtk_box_append(GTK_BOX(body),a->full);gtk_box_append(GTK_BOX(body),a->text);
-    GtkWidget *card=gtk_box_new(GTK_ORIENTATION_VERTICAL,8);gtk_widget_add_css_class(card,"card");gtk_box_append(GTK_BOX(body),card);
-    a->details=label("",NULL);gtk_label_set_selectable(GTK_LABEL(a->details),TRUE);gtk_box_append(GTK_BOX(card),a->details);
-    a->stage=label("Prerequisites","muted");gtk_box_append(GTK_BOX(body),a->stage);
-    a->progress=gtk_progress_bar_new();gtk_box_append(GTK_BOX(body),a->progress);
-    GtkWidget *actions=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,8);gtk_box_append(GTK_BOX(body),actions);
-    a->primary=button("Review prerequisites",G_CALLBACK(primary),a);gtk_widget_add_css_class(a->primary,"suggested-action");gtk_widget_set_sensitive(a->primary,FALSE);gtk_box_append(GTK_BOX(actions),a->primary);
-    a->retry=button("Recheck / Retry",G_CALLBACK(recheck),a);gtk_box_append(GTK_BOX(actions),a->retry);
-    a->cancel=button("Cancel safely",G_CALLBACK(cancel),a);gtk_widget_set_sensitive(a->cancel,FALSE);gtk_box_append(GTK_BOX(actions),a->cancel);
-    a->copy_connection=button("Copy connection instructions",G_CALLBACK(copy_connection),a);gtk_widget_set_sensitive(a->copy_connection,FALSE);gtk_box_append(GTK_BOX(body),a->copy_connection);
-    GtkWidget *diagnostics=button("Copy safe diagnostics",G_CALLBACK(copy_diagnostics),a);gtk_box_append(GTK_BOX(body),diagnostics);
-    gtk_box_append(GTK_BOX(body),label("Diagnostics include platform and setup status only. Local logs below can contain local paths; they are never uploaded automatically.","muted"));
-    GtkWidget *expander=gtk_expander_new("Installation details & local log");gtk_box_append(GTK_BOX(body),expander);
+    gtk_box_append(GTK_BOX(a->choices),a->full);gtk_box_append(GTK_BOX(a->choices),a->text);
+    g_signal_connect(a->full,"toggled",G_CALLBACK(mode_changed),a);g_signal_connect(a->text,"toggled",G_CALLBACK(mode_changed),a);mode_changed(NULL,a);
+    a->review=gtk_box_new(GTK_ORIENTATION_VERTICAL,12);gtk_widget_add_css_class(a->review,"card");gtk_box_append(GTK_BOX(a->body),a->review);
+    a->details=label("",NULL);gtk_label_set_selectable(GTK_LABEL(a->details),TRUE);gtk_box_append(GTK_BOX(a->review),a->details);
+    a->connection=gtk_box_new(GTK_ORIENTATION_VERTICAL,16);gtk_widget_add_css_class(a->connection,"card");gtk_box_append(GTK_BOX(a->body),a->connection);
+    gtk_box_append(GTK_BOX(a->connection),label("Connect your AI assistant","section-title"));
+    gtk_box_append(GTK_BOX(a->connection),label("1   Open your AI assistant’s local MCP server settings.\n\n2   Add ComposerLint as a stdio server using the connection instructions below.\n\n3   Reconnect and verify ComposerLint 0.2.0 and 18 tools.",NULL));
+    gtk_box_append(GTK_BOX(a->connection),label("Keep your private installation folder. You can remove this extracted setup folder. Client-specific Skills and live selection still need verification. Linux permanent MusicXML export remains disabled.","secondary"));
+    a->advanced=gtk_expander_new("Computer checks & troubleshooting");gtk_box_append(GTK_BOX(a->body),a->advanced);
+    GtkWidget *advanced_body=gtk_box_new(GTK_ORIENTATION_VERTICAL,12);gtk_widget_add_css_class(advanced_body,"card");gtk_expander_set_child(GTK_EXPANDER(a->advanced),advanced_body);
+    a->technical=label("", "technical");gtk_label_set_selectable(GTK_LABEL(a->technical),TRUE);gtk_box_append(GTK_BOX(advanced_body),a->technical);
+    GtkWidget *diagnostics=button("Copy safe diagnostics",G_CALLBACK(copy_diagnostics),a);gtk_box_append(GTK_BOX(advanced_body),diagnostics);
+    gtk_box_append(GTK_BOX(advanced_body),label("Diagnostics include platform and setup status only. Logs can contain local paths and are never uploaded automatically.","secondary"));
+    GtkWidget *expander=gtk_expander_new("Installation details & local log");gtk_box_append(GTK_BOX(a->body),expander);
     GtkWidget *logs=gtk_text_view_new();gtk_text_view_set_editable(GTK_TEXT_VIEW(logs),FALSE);gtk_text_view_set_monospace(GTK_TEXT_VIEW(logs),TRUE);gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(logs),GTK_WRAP_WORD_CHAR);a->logs=gtk_text_view_get_buffer(GTK_TEXT_VIEW(logs));
-    GtkWidget *log_scroll=gtk_scrolled_window_new();gtk_widget_set_size_request(log_scroll,-1,200);gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(log_scroll),logs);gtk_expander_set_child(GTK_EXPANDER(expander),log_scroll);
+    gtk_accessible_update_property(GTK_ACCESSIBLE(logs),GTK_ACCESSIBLE_PROPERTY_LABEL,"Local installation log",-1);
+    GtkWidget *log_scroll=gtk_scrolled_window_new();gtk_widget_set_size_request(log_scroll,-1,180);gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(log_scroll),logs);gtk_expander_set_child(GTK_EXPANDER(expander),log_scroll);
+    GtkWidget *footer=gtk_box_new(GTK_ORIENTATION_VERTICAL,12);gtk_widget_add_css_class(footer,"footer");gtk_box_append(GTK_BOX(main),footer);
+    a->progress=gtk_progress_bar_new();gtk_accessible_update_property(GTK_ACCESSIBLE(a->progress),GTK_ACCESSIBLE_PROPERTY_LABEL,"Installation activity",-1);gtk_box_append(GTK_BOX(footer),a->progress);
+    a->actions=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,10);gtk_box_append(GTK_BOX(footer),a->actions);
+    a->close=button("Close",G_CALLBACK(close_clicked),a);gtk_box_append(GTK_BOX(a->actions),a->close);
+    a->retry=button("Recheck / Retry",G_CALLBACK(recheck),a);gtk_box_append(GTK_BOX(a->actions),a->retry);
+    a->cancel=button("Cancel safely",G_CALLBACK(cancel),a);gtk_widget_set_sensitive(a->cancel,FALSE);gtk_box_append(GTK_BOX(a->actions),a->cancel);
+    a->primary=button("Review Setup",G_CALLBACK(primary),a);gtk_widget_add_css_class(a->primary,"suggested-action");gtk_widget_set_hexpand(a->primary,TRUE);gtk_widget_set_sensitive(a->primary,FALSE);gtk_box_append(GTK_BOX(a->actions),a->primary);
+    a->copy_connection=button("Copy connection instructions",G_CALLBACK(copy_connection),a);gtk_widget_add_css_class(a->copy_connection,"suggested-action");gtk_widget_set_hexpand(a->copy_connection,TRUE);gtk_widget_set_sensitive(a->copy_connection,FALSE);gtk_box_append(GTK_BOX(a->actions),a->copy_connection);
     gchar *css=g_build_filename(a->root,"resources","setup.css",NULL);GtkCssProvider *provider=gtk_css_provider_new();gtk_css_provider_load_from_path(provider,css);g_free(css);
     gtk_style_context_add_provider_for_display(gtk_widget_get_display(GTK_WIDGET(a->window)),GTK_STYLE_PROVIDER(provider),GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);g_object_unref(provider);
-    gtk_window_present(a->window);a->ticker=g_timeout_add(250,tick,a);launch(a,TRUE);
+    set_step(a,0);refresh_view(a);gtk_window_present(a->window);a->ticker=g_timeout_add(250,tick,a);launch(a,TRUE);
 }
+
 int main(int argc,char **argv) {
     char executable[4096];ssize_t size=readlink("/proc/self/exe",executable,sizeof executable-1);
     if(size<=0 || size>=(ssize_t)sizeof executable-1)return 1;
