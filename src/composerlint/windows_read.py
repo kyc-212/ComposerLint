@@ -80,7 +80,7 @@ class _FileAPI:
             raise OSError('A local disk handle is required.')
         info = _FileAttributeTagInfo()
         if not self.file_info(handle, 9, ctypes.byref(info), ctypes.sizeof(info)):
-            raise ctypes.WinError()
+            raise ctypes.WinError(ctypes.get_last_error())
         if info.attributes & _REPARSE_POINT:
             raise OSError('Windows reparse points are refused.')
         if bool(info.attributes & _DIRECTORY) != directory:
@@ -94,7 +94,7 @@ class _FileAPI:
         handle = self.create_file(root, _READ_ATTRIBUTES, _SHARE_READ | _SHARE_WRITE,
                                   None, 3, 0x02000000 | _OPEN_REPARSE_POINT, None)
         if handle == ctypes.c_void_p(-1).value:
-            raise ctypes.WinError()
+            raise ctypes.WinError(ctypes.get_last_error())
         stack.callback(self.close, handle)
         self.check_type(handle, directory=True)
 
@@ -103,32 +103,43 @@ class _FileAPI:
         path = ctypes.create_unicode_buffer(128)
         size = self.final_path(handle, path, len(path), 1)  # VOLUME_NAME_GUID
         if not size:
-            raise ctypes.WinError()
+            raise ctypes.WinError(ctypes.get_last_error())
         if size >= len(path) or not _VOLUME_ROOT.fullmatch(path.value):
             raise UnsupportedPlatformOperation('The drive must name a local volume root.')
         flags = win.DWORD()
         filesystem = ctypes.create_unicode_buffer(32)
         if not self.volume_info(handle, None, 0, None, None, ctypes.byref(flags),
                                 filesystem, len(filesystem)):
-            raise ctypes.WinError()
+            raise ctypes.WinError(ctypes.get_last_error())
         required = 0x00000008 | 0x00000080  # persistent ACLs and reparse-point support
         if filesystem.value.upper() != 'NTFS' or flags.value & required != required:
             raise UnsupportedPlatformOperation('NTFS with persistent ACLs and reparse points is required.')
         return handle
 
-    def child(self, parent, name, *, directory):
+    def open_component(self, parent, name, *, access, share, disposition, options,
+                       descriptor=None, refuse_reparse=False):
         # NtCreateFile counts UTF-16 bytes, including both halves of surrogate pairs.
         encoded_size = len(name.encode('utf-16-le'))
         if encoded_size > 0xfffc:
             raise ValueError('Windows path component exceeds the native name limit.')
         component = _UnicodeString(encoded_size, encoded_size + 2, name)
+        object_flags = 0x40 | (0x1000 if refuse_reparse else 0)
         attributes = _ObjectAttributes(ctypes.sizeof(_ObjectAttributes), parent,
-                                       ctypes.pointer(component), 0x40, None, None)
+                                       ctypes.pointer(component), object_flags, descriptor, None)
         result = win.HANDLE()
         status_block = _IoStatusBlock()
-        access = _READ_ATTRIBUTES | _SYNCHRONIZE
+        status = self.open_relative(ctypes.byref(result), access | _SYNCHRONIZE,
+                                    ctypes.byref(attributes), ctypes.byref(status_block),
+                                    None, 0, share, disposition,
+                                    options | 0x20, None, 0)  # FILE_SYNCHRONOUS_IO_NONALERT
+        if status < 0:
+            raise ctypes.WinError(self.status_to_error(status))
+        return result.value
+
+    def child(self, parent, name, *, directory):
+        access = _READ_ATTRIBUTES
         share = _SHARE_READ
-        options = _OPEN_REPARSE_POINT | 0x20  # FILE_SYNCHRONOUS_IO_NONALERT
+        options = _OPEN_REPARSE_POINT
         if directory:
             # Attributes-only opens do not enforce the delete-sharing rule.
             access |= _TRAVERSE
@@ -136,12 +147,28 @@ class _FileAPI:
         else:
             access |= _READ_DATA
             options |= 0x40  # FILE_NON_DIRECTORY_FILE
-        status = self.open_relative(ctypes.byref(result), access, ctypes.byref(attributes),
-                                    ctypes.byref(status_block), None, 0, share,
-                                    1, options, None, 0)  # FILE_OPEN
-        if status < 0:
-            raise ctypes.WinError(self.status_to_error(status))
-        return result.value
+        return self.open_component(parent, name, access=access, share=share,
+                                   disposition=1, options=options)  # FILE_OPEN
+
+
+@contextmanager
+def _stream(api, handle, mode):
+    """Consume the handle, transferring ownership to the CRT exactly once."""
+    import msvcrt
+
+    access = os.O_RDWR if mode == 'w+b' else os.O_RDONLY
+    try:
+        fd = msvcrt.open_osfhandle(handle, access | os.O_BINARY | os.O_NOINHERIT)
+    except BaseException:
+        api.close(handle)
+        raise
+    try:
+        stream = os.fdopen(fd, mode)
+    except BaseException:
+        os.close(fd)
+        raise
+    with stream:
+        yield stream
 
 
 @contextmanager
@@ -149,7 +176,6 @@ def open_regular(path):
     """Pilot-only read from a held file handle after walking held directories."""
     if sys.platform != 'win32':
         raise UnsupportedPlatformOperation('The NTFS reader requires native Windows.')
-    import msvcrt
 
     path = PureWindowsPath(local_path_text(path, target='win32'))
     api = _FileAPI()
@@ -163,15 +189,8 @@ def open_regular(path):
         handle = api.child(parent, path.name, directory=False)
         try:
             api.check_type(handle, directory=False)
-            fd = msvcrt.open_osfhandle(handle, os.O_RDONLY | os.O_BINARY | os.O_NOINHERIT)
         except BaseException:
             api.close(handle)
             raise
-        # The CRT owns the native handle from here on.
-        try:
-            stream = os.fdopen(fd, 'rb')
-        except BaseException:
-            os.close(fd)
-            raise
-        with stream:
+        with _stream(api, handle, 'rb') as stream:
             yield stream
