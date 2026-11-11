@@ -106,15 +106,19 @@ class _FileAPI:
             raise ctypes.WinError(ctypes.get_last_error())
         if size >= len(path) or not _VOLUME_ROOT.fullmatch(path.value):
             raise UnsupportedPlatformOperation('The drive must name a local volume root.')
+        filesystem, flags = self.volume_capabilities(handle)
+        required = 0x00000008 | 0x00000080  # persistent ACLs and reparse-point support
+        if filesystem.upper() != 'NTFS' or flags & required != required:
+            raise UnsupportedPlatformOperation('NTFS with persistent ACLs and reparse points is required.')
+        return handle
+
+    def volume_capabilities(self, handle):
         flags = win.DWORD()
         filesystem = ctypes.create_unicode_buffer(32)
         if not self.volume_info(handle, None, 0, None, None, ctypes.byref(flags),
                                 filesystem, len(filesystem)):
             raise ctypes.WinError(ctypes.get_last_error())
-        required = 0x00000008 | 0x00000080  # persistent ACLs and reparse-point support
-        if filesystem.value.upper() != 'NTFS' or flags.value & required != required:
-            raise UnsupportedPlatformOperation('NTFS with persistent ACLs and reparse points is required.')
-        return handle
+        return filesystem.value, flags.value
 
     def open_component(self, parent, name, *, access, share, disposition, options,
                        descriptor=None, refuse_reparse=False):
