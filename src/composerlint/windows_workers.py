@@ -23,10 +23,23 @@ _BROKEN_PIPE = (109, 232, 233)
 _IO_INCOMPLETE = 996
 _JOB_LIST = 0x0002000D
 _HANDLE_LIST = 0x00020002
+_PROCESS_QUERY_AND_WAIT = 0x00101000  # PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE
+_ERROR_MORE_DATA = 234
+_WAIT_OBJECT_0 = 0
+_WAIT_TIMEOUT = 258
+_WAIT_FAILED = 0xFFFFFFFF
 
 
 class WorkerCancelled(RuntimeError):
     pass
+
+
+class WorkerCleanupTimeout(TimeoutError):
+    """The cleanup deadline expired before Windows confirmed termination."""
+
+
+class WorkerTerminationUnconfirmed(RuntimeError):
+    """The handles available to cleanup do not establish complete termination."""
 
 
 class _BasicLimits(ctypes.Structure):
@@ -48,6 +61,11 @@ class _JobAccounting(ctypes.Structure):
                 ('total', win.DWORD), ('active', win.DWORD), ('terminated', win.DWORD)]
 
 
+class _JobProcessList(ctypes.Structure):
+    _fields_ = [('assigned', win.DWORD), ('listed', win.DWORD),
+                ('process_ids', ctypes.c_size_t * 1)]
+
+
 class _StartupInfo(ctypes.Structure):
     _fields_ = [('size', win.DWORD), ('reserved', win.LPWSTR), ('desktop', win.LPWSTR),
                 ('title', win.LPWSTR), ('dimensions', win.DWORD * 7), ('flags', win.DWORD),
@@ -65,11 +83,24 @@ class _ProcessInfo(ctypes.Structure):
                 ('pid', win.DWORD), ('tid', win.DWORD)]
 
 
+def _cleanup_remaining(deadline):
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise WorkerCleanupTimeout('Windows worker termination was not confirmed within the cleanup deadline.')
+    return remaining
+
+
+def _api_error(operation, code=None):
+    error = ctypes.WinError(ctypes.get_last_error() if code is None else code)
+    error.add_note(f'{operation} failed during Windows worker lifecycle.')
+    return error
+
+
 class _WorkerAPI:
     def __init__(self):
         kernel = ctypes.WinDLL('kernel32.dll', use_last_error=True, winmode=0x0800)
         p = ctypes.c_void_p
-        self.close = _bind(kernel, 'CloseHandle', win.BOOL, win.HANDLE)
+        self._close = _bind(kernel, 'CloseHandle', win.BOOL, win.HANDLE)
         self.create_job = _bind(kernel, 'CreateJobObjectW', win.HANDLE, p, win.LPCWSTR)
         self.set_job = _bind(kernel, 'SetInformationJobObject', win.BOOL,
                              win.HANDLE, ctypes.c_int, p, win.DWORD)
@@ -78,6 +109,10 @@ class _WorkerAPI:
         self.terminate_job = _bind(kernel, 'TerminateJobObject', win.BOOL, win.HANDLE, win.UINT)
         self.in_job = _bind(kernel, 'IsProcessInJob', win.BOOL,
                             win.HANDLE, win.HANDLE, ctypes.POINTER(win.BOOL))
+        self.open_process = _bind(kernel, 'OpenProcess', win.HANDLE,
+                                  win.DWORD, win.BOOL, win.DWORD)
+        self.process_id = _bind(kernel, 'GetProcessId', win.DWORD, win.HANDLE)
+        self.wait = _bind(kernel, 'WaitForSingleObject', win.DWORD, win.HANDLE, win.DWORD)
         self.resume = _bind(kernel, 'ResumeThread', win.DWORD, win.HANDLE)
         self.init_attributes = _bind(kernel, 'InitializeProcThreadAttributeList', win.BOOL,
                                      p, win.DWORD, win.DWORD, ctypes.POINTER(ctypes.c_size_t))
@@ -97,33 +132,107 @@ class _WorkerAPI:
         self.pipe_client = _bind(kernel, 'GetNamedPipeClientProcessId', win.BOOL,
                                  win.HANDLE, win.LPDWORD)
 
+    def close(self, handle):
+        if not self._close(handle):
+            raise _api_error('CloseHandle')
+
     def job(self, stack):
+        # An unnamed, noninheritable handle owned by this scope. JOB_LIST
+        # assigns membership; only HANDLE_LIST passes handles to the child.
         handle = self.create_job(None, None)
         if not handle:
             raise ctypes.WinError(ctypes.get_last_error())
         stack.callback(self.close, handle)
+        if os.get_handle_inheritable(handle):
+            raise WorkerTerminationUnconfirmed('The Windows worker job handle is inheritable.')
         limits = _ExtendedLimits()
         limits.basic.flags = 0x2000  # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
         if not self.set_job(handle, 9, ctypes.byref(limits), ctypes.sizeof(limits)):
             raise ctypes.WinError(ctypes.get_last_error())
         return handle
 
-    def active_processes(self, job):
+    def accounting(self, job):
         accounting = _JobAccounting()
         if not self.query_job(job, 1, ctypes.byref(accounting), ctypes.sizeof(accounting), None):
-            raise ctypes.WinError(ctypes.get_last_error())
-        return accounting.active
+            raise _api_error('QueryInformationJobObject (accounting)')
+        return accounting
 
-    def stop_job(self, job):
-        if not self.active_processes(job):
-            return
-        if not self.terminate_job(job, 1):
-            raise ctypes.WinError(ctypes.get_last_error())
+    def process_ids(self, job, capacity, deadline):
+        offset = _JobProcessList.process_ids.offset
+        while True:
+            _cleanup_remaining(deadline)
+            size = offset + capacity * ctypes.sizeof(ctypes.c_size_t)
+            if size > 0xFFFFFFFF:
+                raise WorkerTerminationUnconfirmed('The Windows job process list exceeds the native buffer size.')
+            buffer = ctypes.create_string_buffer(size)
+            header = _JobProcessList.from_buffer(buffer)
+            # JobObjectBasicProcessIdList has a variable-length PID array.
+            if not self.query_job(job, 3, buffer, size, None):
+                error = ctypes.get_last_error()
+                if error != _ERROR_MORE_DATA or header.assigned <= capacity:
+                    raise _api_error('QueryInformationJobObject (process list)', error)
+            if header.assigned > capacity:
+                capacity = header.assigned
+                continue
+            if header.listed != header.assigned:
+                raise WorkerTerminationUnconfirmed('Windows returned an incomplete job process list.')
+            pids = (ctypes.c_size_t * header.listed).from_buffer(buffer, offset)
+            return tuple(pids)
+
+    def is_job_member(self, process, job):
+        member = win.BOOL()
+        if not self.in_job(process, job, ctypes.byref(member)):
+            raise _api_error('IsProcessInJob')
+        return bool(member.value)
+
+    def wait_for_exit(self, process, deadline):
+        milliseconds = math.floor(_cleanup_remaining(deadline) * 1000)
+        result = self.wait(process, milliseconds)
+        if result == _WAIT_TIMEOUT:
+            raise WorkerCleanupTimeout('A Windows worker process did not exit within the cleanup deadline.')
+        if result == _WAIT_FAILED:
+            raise _api_error('WaitForSingleObject (worker exit)')
+        if result != _WAIT_OBJECT_0:
+            raise WorkerTerminationUnconfirmed(f'Unexpected Windows process wait result: {result}.')
+
+    def stop_job(self, job, leader):
         deadline = time.monotonic() + _CLEANUP_SECONDS
-        while self.active_processes(job):
-            if time.monotonic() >= deadline:
-                raise RuntimeError('Windows did not confirm that the worker job is empty.')
-            time.sleep(.01)
+        processes = [] if leader is None else [leader]
+        with ExitStack() as held:
+            try:
+                leader_pid = None
+                if leader is not None:
+                    leader_pid = self.process_id(leader)
+                    if not leader_pid:
+                        raise _api_error('GetProcessId (worker leader)')
+                accounting = self.accounting(job)
+                for pid in self.process_ids(job, max(1, accounting.active), deadline):
+                    _cleanup_remaining(deadline)
+                    if not 0 < pid <= 0xFFFFFFFF:
+                        raise WorkerTerminationUnconfirmed('Windows returned an invalid job process ID.')
+                    if pid == leader_pid:
+                        continue  # The verified creation handle is already held.
+                    process = self.open_process(_PROCESS_QUERY_AND_WAIT, False, pid)
+                    if not process:
+                        raise _api_error('OpenProcess (job member)')
+                    held.callback(self.close, process)
+                    # A PID may have been recycled between the list and open.
+                    if not self.is_job_member(process, job):
+                        raise WorkerTerminationUnconfirmed('A listed Windows process is no longer in the worker job.')
+                    processes.append(process)
+            finally:
+                # Explicit termination works even if an extra job handle is
+                # still open. The outer scope also closes its kill-on-close
+                # handle if discovery, termination, or confirmation fails.
+                if not self.terminate_job(job, 1):
+                    raise _api_error('TerminateJobObject')
+                for process in processes:
+                    self.wait_for_exit(process, deadline)
+            # A process born during shutdown may have escaped the snapshot.
+            # The lifetime count can detect this even if it already exited.
+            if self.accounting(job).total != accounting.total:
+                raise WorkerTerminationUnconfirmed('Windows job membership changed during termination.')
+            _cleanup_remaining(deadline)
 
     def pipe(self, winapi, descriptor, *, input_pipe, parent_ends, child_ends):
         address = r'\\.\pipe\ComposerLint-' + secrets.token_hex(16)
@@ -191,19 +300,15 @@ class _WorkerAPI:
                 raise ctypes.WinError(ctypes.get_last_error())
         stack.callback(self.close, info.process)
         stack.callback(self.close, info.thread)
-        member = win.BOOL()
         try:
-            if not self.in_job(info.process, job, ctypes.byref(member)):
-                raise ctypes.WinError(ctypes.get_last_error())
-            if not member.value:
+            if not self.is_job_member(info.process, job):
                 raise OSError('Windows worker is missing its assigned job.')
         except BaseException:
             # Only the exact newly created, still suspended process can reach
             # this path. A failure to confirm job membership cannot leave it alive.
-            if winapi.WaitForSingleObject(info.process, 0) != 0:
+            if winapi.WaitForSingleObject(info.process, 0) != _WAIT_OBJECT_0:
                 winapi.TerminateProcess(info.process, 1)
-                if winapi.WaitForSingleObject(info.process, _CLEANUP_SECONDS * 1000) != 0:
-                    raise RuntimeError('Unverified suspended worker did not terminate.')
+                self.wait_for_exit(info.process, time.monotonic() + _CLEANUP_SECONDS)
             raise
         if self.resume(info.thread) != 1:
             raise OSError('Windows worker thread could not be resumed safely.')
@@ -326,12 +431,13 @@ def run_worker(command, payload, *, timeout, cancelled=None, max_request=_LIMIT,
     api, security = _WorkerAPI(), _SecurityAPI()
     with ExitStack() as parents, ExitStack() as process_handles:
         pending = {}
+        process = None
         try:
             # Close the kill-on-close job before draining pipe completions,
             # including when explicit termination or accounting fails.
             with ExitStack() as jobs:
                 job = api.job(jobs)
-                jobs.callback(api.stop_job, job)
+                jobs.callback(lambda: api.stop_job(job, process))
                 with ExitStack() as children, security.private_descriptor(security.user_sid()) as descriptor:
                     pipes = [api.pipe(_winapi, descriptor, input_pipe=index == 0,
                                       parent_ends=parents, child_ends=children) for index in range(3)]
@@ -339,8 +445,11 @@ def run_worker(command, payload, *, timeout, cancelled=None, max_request=_LIMIT,
                     process = api.launch(_winapi, command, job, [pair[1] for pair in pipes], process_handles)
                 stdout, stderr = _exchange(_winapi, [pair[0] for pair in pipes], payload, deadline,
                                            cancelled, max_stdout, max_stderr, pending)
-                while _winapi.WaitForSingleObject(process, 0) != 0:
-                    time.sleep(min(.01, _check_deadline(deadline, cancelled)))
+                while True:
+                    remaining = _check_deadline(deadline, cancelled)
+                    interval = max(1, min(25, math.ceil(remaining * 1000)))
+                    if _winapi.WaitForSingleObject(process, interval) == _WAIT_OBJECT_0:
+                        break
                 _check_deadline(deadline, cancelled)
                 if _winapi.GetExitCodeProcess(process):
                     raise RuntimeError('Windows worker failed: ' + stderr[-4000:].decode('utf-8', 'replace'))

@@ -419,7 +419,7 @@ class WindowsWorkerTests(WindowsPilotCase):
             self._run('import sys; sys.stdin.buffer.readline(); sys.exit("fixture failure")')
 
     def test_timeout_unblocks_pending_input_and_both_reads(self):
-        with self.assertRaises(TimeoutError):
+        with self.assertRaisesRegex(TimeoutError, 'exceeded its deadline'):
             self._run('import time; time.sleep(60)', b'x' * 1000000 + b'\n', timeout=.5)
         self.assertEqual(self._run('import sys; sys.stdout.buffer.write(sys.stdin.buffer.readline())'),
                          b'request\n')
@@ -433,7 +433,7 @@ class WindowsWorkerTests(WindowsPilotCase):
                 self.fail('Worker did not create its descendant marker')
             time.sleep(.02)
         pid = int(marker.read_text(encoding='ascii'))
-        handle = _winapi.OpenProcess(0x00100000, False, pid)  # SYNCHRONIZE
+        handle = _winapi.OpenProcess(self.workers._PROCESS_QUERY_AND_WAIT, False, pid)
         self.addCleanup(_winapi.CloseHandle, handle)
         self.assertEqual(_winapi.WaitForSingleObject(handle, 0), 258)  # WAIT_TIMEOUT
         return handle
@@ -444,13 +444,21 @@ class WindowsWorkerTests(WindowsPilotCase):
         marker = self.root / 'child.pid'
         cancelled = threading.Event()
         results = []
-        leader = []
+        observed = []
+        ready = threading.Event()
         current = _winapi.GetCurrentProcess()
         real_launch = self.workers._WorkerAPI.launch
 
         def observe_launch(api, winapi, command, job, handles, stack):
             process = real_launch(api, winapi, command, job, handles, stack)
-            leader.append(_winapi.DuplicateHandle(current, process, current, 0, False, 2))
+            leader = _winapi.DuplicateHandle(current, process, current, 0, False, 2)
+            self.addCleanup(_winapi.CloseHandle, leader)
+            # Keep a query-only handle open across cancellation. Kill-on-close
+            # alone cannot terminate the child while this handle remains open.
+            query_job = _winapi.DuplicateHandle(current, job, current, 0x0004, False, 0)
+            self.addCleanup(_winapi.CloseHandle, query_job)
+            observed.append((api, leader, query_job))
+            ready.set()
             return process
 
         def run():
@@ -464,14 +472,15 @@ class WindowsWorkerTests(WindowsPilotCase):
         with patch.object(self.workers._WorkerAPI, 'launch', observe_launch):
             thread.start()
             try:
+                self.assertTrue(ready.wait(5), 'Worker did not expose its process and job handles.')
+                api, leader, query_job = observed[0]
                 child = self._open_live_child(marker)
-                self.assertEqual(len(leader), 1)
-                self.assertEqual(_winapi.WaitForSingleObject(leader[0], 5000), 0)
+                self.assertEqual(_winapi.WaitForSingleObject(leader, 5000), 0)
+                self.assertTrue(api.is_job_member(child, query_job))
+                self.assertEqual(_winapi.WaitForSingleObject(child, 0), 258)
             finally:
                 cancelled.set()
                 thread.join(8)
-                for handle in leader:
-                    _winapi.CloseHandle(handle)
         self.assertFalse(thread.is_alive())
         self.assertEqual(len(results), 1)
         self.assertIsInstance(results[0], self.workers.WorkerCancelled)
