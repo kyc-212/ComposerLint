@@ -46,6 +46,11 @@ jobs:
         run: |
           python -I -S -B -X utf8 tools/preflight_windows.py
           exit $LASTEXITCODE
+      - name: Run Windows terminal setup security fixtures
+        shell: pwsh
+        run: |
+          python -I -S -B -X utf8 -m unittest discover -s tests -p test_windows_setup.py -v
+          exit $LASTEXITCODE
       - name: Verify the checkout is clean
         if: ${{ !cancelled() && steps.reviewed-checkout.outcome == 'success' }}
         shell: pwsh
