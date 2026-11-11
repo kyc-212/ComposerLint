@@ -25,6 +25,8 @@ import urllib.parse
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
+if sys.platform == 'win32':
+    sys.dont_write_bytecode = True  # Windows consent must precede any setup writes.
 # Load only the shared stdlib boundaries: importing composerlint would require
 # the dependencies which this backend has not installed yet.
 _spec = importlib.util.spec_from_file_location('_composerlint_platform', ROOT / 'src/composerlint/platform_support.py')
@@ -556,6 +558,30 @@ def owned_prefix(prefix, identity):
 
 
 def main(argv=None):
+    if sys.platform == 'win32' and '--windows-text-pilot' in (sys.argv[1:] if argv is None else argv):
+        from importlib import import_module
+        from importlib.machinery import ModuleSpec
+        from importlib.util import module_from_spec
+
+        parser = argparse.ArgumentParser(description='Experimental Windows x64 text setup from reviewed source.')
+        parser.add_argument('--windows-text-pilot', action='store_true', required=True)
+        parser.parse_args(argv)
+        # The stdlib-only adapter must run before ComposerLint's dependencies
+        # exist. Never import the ambient ComposerLint package for setup.
+        name = '_composerlint_windows_setup'
+        spec = ModuleSpec(name, loader=None, is_package=True)
+        spec.submodule_search_locations = [str(ROOT / 'src' / 'composerlint')]
+        sys.modules[name] = module_from_spec(spec)
+        try:
+            windows = import_module(f'{name}.windows_setup')
+            return windows.install(ROOT, status=status)
+        except (OSError, ValueError, RuntimeError, KeyError) as error:
+            print(f'Windows setup stopped: {error}', file=sys.stderr)
+            return 1
+        finally:
+            for module in tuple(sys.modules):
+                if module == name or module.startswith(f'{name}.'):
+                    del sys.modules[module]
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--mode', choices=['full', 'text'], help='otherwise ask interactively')
     parser.add_argument('--check', action='store_true', help='read-only readiness/integrity inspection; no network')

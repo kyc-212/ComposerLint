@@ -1,0 +1,412 @@
+"""Consent-gated Windows x64 text setup pilot, using the shared uv.lock."""
+
+import ctypes
+from ctypes import wintypes as win
+from dataclasses import dataclass
+import hashlib
+import http.client
+import io
+import json
+import os
+from pathlib import Path
+import re
+import stat
+import sys
+import tarfile
+import time
+import tomllib
+import urllib.parse
+import urllib.request
+import zipfile
+
+from . import windows_preflight as preflight
+from .windows_install_storage import _component, transaction
+from .windows_private import read_stable
+from .windows_read import _bind
+from .windows_workers import run_setup_command
+
+
+class SetupError(RuntimeError):
+    pass
+
+
+@dataclass(frozen=True)
+class Asset:
+    filename: str
+    url: str
+    sha256: str
+    size: int
+    name: str = ''
+    version: str = ''
+
+    def __post_init__(self):
+        _component(self.filename)
+        if (type(self.size) is not int or not 0 < self.size <= 128 * 1024**2
+                or not re.fullmatch('[a-f0-9]{64}', self.sha256)):
+            raise SetupError(f'Invalid artifact pin: {self.filename}')
+        url = urllib.parse.urlsplit(self.url)
+        if (url.scheme != 'https' or url.netloc not in ('github.com', 'files.pythonhosted.org')
+                or url.query or url.fragment
+                or urllib.parse.unquote(url.path.rsplit('/', 1)[-1]) != self.filename):
+            raise SetupError(f'Unexpected artifact source: {self.filename}')
+
+
+@dataclass(frozen=True)
+class Plan:
+    destination: Path
+    python: Asset
+    uv: Asset
+    wheels: tuple
+    source: tuple
+    lock_sha256: str
+    identity: str
+
+
+def _sha(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def _asset_plan(manifest_bytes, lock_bytes):
+    manifest = json.loads(manifest_bytes)
+    lock_sha = _sha(lock_bytes)
+    if manifest['lock_sha256'] != lock_sha:
+        raise SetupError('uv.lock changed. Review the Windows wheel set again before setup.')
+    boot = tuple(Asset(**manifest['bootstrap'][key]) for key in ('python', 'uv'))
+    origins = (
+        'https://github.com/astral-sh/python-build-standalone/releases/download/20260807/',
+        'https://github.com/astral-sh/uv/releases/download/0.12.3/',
+    )
+    for asset, (_, filename, digest), origin in zip(boot, preflight._BOOTSTRAP_PINS, origins, strict=True):
+        if ((asset.filename, asset.sha256) != (filename, digest)
+                or asset.url != origin + urllib.parse.quote(filename, safe='')):
+            raise SetupError('Bootstrap asset differs from the reviewed Windows preflight pin.')
+    wheels = tuple(Asset(**value) for value in manifest['wheels'])
+    locked = {(p['name'], p['version'], w['url'], w['hash'], w['size'])
+              for p in tomllib.loads(lock_bytes.decode('utf-8'))['package']
+              if p['source'] == {'registry': 'https://pypi.org/simple'} for w in p.get('wheels', ())}
+    if (not wheels or len({w.name for w in wheels}) != len(wheels)
+            or len({w.filename.casefold() for w in wheels}) != len(wheels)):
+        raise SetupError('The Windows wheel manifest is empty or ambiguous.')
+    for w in wheels:
+        if (not re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*', w.name)
+                or not re.fullmatch(r'[a-zA-Z0-9.!+]+', w.version)
+                or not w.url.startswith('https://files.pythonhosted.org/')
+                or not w.filename.endswith(('-win_amd64.whl', '-any.whl'))
+                or (w.name, w.version, w.url, 'sha256:' + w.sha256, w.size) not in locked):
+            raise SetupError(f'Windows wheel is not in the reviewed lock: {w.filename}')
+    return *boot, wheels, lock_sha
+
+
+def _read_source(path, limit):
+    data, stamp = read_stable(path, limit=limit)
+    if stamp.links != 1:
+        raise SetupError(f'Setup source must be a single regular file: {path}')
+    return data
+
+
+def prepare(root, destination):
+    manifest = _read_source(root / 'tools' / 'windows-setup-assets.json', 128 * 1024)
+    lock = _read_source(root / 'uv.lock', 4 * 1024**2)
+    python, uv, wheels, lock_sha = _asset_plan(manifest, lock)
+    paths = [root / name for name in ('pyproject.toml', 'README.md', 'LICENSE')]
+    package = root / 'src' / 'composerlint'
+    def reject_walk_error(error):
+        raise error
+
+    for directory, subdirs, files in os.walk(package, followlinks=False, onerror=reject_walk_error):
+        if Path(directory).lstat().st_file_attributes & stat.FILE_ATTRIBUTE_REPARSE_POINT:
+            raise SetupError(f'Setup source reparse directory refused: {directory}')
+        # An ignored bytecode cache is never part of the staged source. Any
+        # other reparse directory is refused before enumeration can descend.
+        subdirs[:] = sorted(name for name in subdirs if name != '__pycache__')
+        for name in subdirs:
+            candidate = Path(directory, name)
+            if candidate.lstat().st_file_attributes & stat.FILE_ATTRIBUTE_REPARSE_POINT:
+                raise SetupError(f'Setup source reparse directory refused: {candidate}')
+        paths.extend(Path(directory, name) for name in files if not name.endswith('.pyc'))
+    if package / '__init__.py' not in paths or len(paths) > 1024:
+        raise SetupError('The reviewed ComposerLint source package is missing or unexpectedly large.')
+    source = [(('uv.lock',), lock)]
+    for path in sorted(paths):
+        parts = tuple(_component(part) for part in path.relative_to(root).parts)
+        source.append((parts, _read_source(path, 4 * 1024**2)))
+    identity = _sha(json.dumps(
+        [str(destination), _sha(manifest), [(parts, _sha(data)) for parts, data in source]],
+        ensure_ascii=True, separators=(',', ':')).encode())
+    return Plan(Path(destination), python, uv, wheels, tuple(source), lock_sha, identity)
+
+
+class _AssetRedirects(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        origin, target = (urllib.parse.urlsplit(url) for url in (req.full_url, newurl))
+        allowed = {'github.com': {'release-assets.githubusercontent.com'},
+                   'release-assets.githubusercontent.com': {'release-assets.githubusercontent.com'},
+                   'files.pythonhosted.org': {'files.pythonhosted.org'}}
+        if (target.scheme != 'https' or target.netloc not in allowed.get(origin.netloc, ())
+                or target.fragment):
+            raise SetupError('Unexpected artifact redirect refused.')
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def acquire(asset, *, opener=None):
+    """Return bytes only after comparing length and the reviewed SHA-256."""
+    opener = opener or urllib.request.build_opener(_AssetRedirects())
+    deadline = time.monotonic() + 180
+    try:
+        request = urllib.request.Request(asset.url, headers={'Accept-Encoding': 'identity'})
+        with opener.open(request, timeout=20) as response:
+            content = bytearray()
+            digest = hashlib.sha256()
+            while True:
+                if time.monotonic() >= deadline:
+                    raise SetupError(f'Download timed out: {asset.filename}')
+                chunk = response.read1(min(1024**2, asset.size + 1 - len(content)))
+                if not chunk:
+                    break
+                content.extend(chunk)
+                if len(content) > asset.size:
+                    raise SetupError(f'Download exceeded the reviewed size: {asset.filename}')
+                digest.update(chunk)
+    except (OSError, http.client.HTTPException) as error:
+        # Do not print a signed redirect URL, token, or proxy credentials.
+        raise SetupError(f'Could not acquire {asset.filename} ({type(error).__name__}).') from error
+    if len(content) != asset.size or digest.hexdigest() != asset.sha256:
+        raise SetupError(f'Artifact integrity check failed: {asset.filename}')
+    return bytes(content)
+
+
+def _archive_path(name, directory):
+    if directory and name.endswith('/'):
+        name = name[:-1]
+    parts = tuple(_component(part) for part in name.split('/'))
+    if len(parts) > 64:
+        raise SetupError('Archive path is too deep.')
+    return parts
+
+
+def unpack(stage, data, kind):
+    """Extract only reviewed layouts and regular files; never call extractall."""
+    seen, total = set(), 0
+    has_executable = False
+
+    def member(parts, directory, size, open_member):
+        nonlocal total, has_executable
+        key = tuple(p.casefold() for p in parts)
+        if key in seen or len(seen) >= 25_000:
+            raise SetupError('Archive contains duplicate Windows paths or too many entries.')
+        seen.add(key)
+        total += size
+        if not 0 <= size <= 256 * 1024**2 or total > 512 * 1024**2:
+            raise SetupError('Archive exceeds the expanded size limit.')
+        if directory:
+            if size:
+                raise SetupError('An archive directory unexpectedly has content.')
+            stage.mkdir(parts)
+            return
+        with open_member() as source, stage.create(parts) as dest:
+            remaining = size
+            while remaining:
+                block = source.read(min(1024**2, remaining))
+                if not block:
+                    raise SetupError('Truncated archive member.')
+                dest.write(block)
+                remaining -= len(block)
+            if source.read(1):
+                raise SetupError('Archive member exceeds its declared size.')
+        has_executable |= parts in (('python', 'python.exe'), ('uv', 'uv.exe'))
+
+    if kind == 'python':
+        with tarfile.open(fileobj=io.BytesIO(data), mode='r|gz') as archive:
+            for item in archive:
+                directory = item.isdir()
+                if not directory and (item.type not in (tarfile.REGTYPE, tarfile.AREGTYPE) or item.issparse()):
+                    raise SetupError('Python archive links, sparse entries and special files are refused.')
+                parts = _archive_path(item.name, directory)
+                if parts[0] != 'python' or (len(parts) == 1 and not directory):
+                    raise SetupError('Unexpected Python archive layout.')
+                member(parts, directory, item.size, lambda: archive.extractfile(item))
+    elif kind == 'uv':
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            for item in archive.infolist():
+                directory = item.is_dir()
+                if stat.S_IFMT(item.external_attr >> 16) not in (0, stat.S_IFREG, stat.S_IFDIR):
+                    raise SetupError('uv archive links and special files are refused.')
+                parts = _archive_path(item.filename, directory)
+                if parts[0] == 'uv-x86_64-pc-windows-msvc':
+                    parts = parts[1:]
+                if not parts and directory:
+                    continue
+                if len(parts) != 1 or directory or parts[0] not in (
+                        'uv.exe', 'uvx.exe', 'uvw.exe', 'LICENSE-APACHE', 'LICENSE-MIT', 'README.md'):
+                    raise SetupError('Unexpected uv archive layout.')
+                member(('uv', *parts), False, item.file_size, lambda: archive.open(item))
+    else:
+        raise SetupError('Unknown Windows bootstrap archive type.')
+    if not has_executable:
+        raise SetupError(f'The {kind} archive did not supply the expected executable.')
+
+
+def _system_root():
+    kernel = ctypes.WinDLL('kernel32.dll', use_last_error=True, winmode=0x0800)
+    query = _bind(kernel, 'GetWindowsDirectoryW', win.UINT, win.LPWSTR, win.UINT)
+    buffer = ctypes.create_unicode_buffer(32768)
+    count = query(buffer, len(buffer))
+    if not 0 < count < len(buffer):
+        raise OSError('Could not resolve the system Windows directory.')
+    return Path(buffer.value)
+
+
+def _write(stage, parts, data):
+    with stage.create(parts) as stream:
+        stream.write(data)
+
+
+_VERIFY = r'''
+import json, re, sys
+from importlib.metadata import distributions
+from pathlib import Path
+from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name
+versions = json.loads(sys.argv[1])
+locked = {}
+for line in Path(sys.argv[2]).read_text(encoding='utf-8').splitlines():
+    line = line.strip()
+    if not line or line.startswith('#'):
+        continue
+    req = Requirement(line)
+    if req.marker is None or req.marker.evaluate():
+        match = re.fullmatch(r'==([^*]+)', str(req.specifier))
+        if not match or req.url or req.extras or req.name in locked:
+            raise RuntimeError('Lock export is not an exact wheel plan.')
+        locked[req.name] = match[1]
+if locked != versions:
+    raise RuntimeError('Windows wheel manifest differs from the Windows lock closure.')
+expected = versions | {'composerlint': '0.2.0'}
+installed = {}
+for dist in distributions():
+    name = canonicalize_name(dist.metadata['Name'])
+    if name in installed:
+        raise RuntimeError('Duplicate installed distribution: ' + name)
+    installed[name] = dist.version
+if expected != installed:
+    raise RuntimeError('Installed Python distributions do not match the plan.')
+import composerlint, numpy, pydantic_core, win32api
+print('Verified locked distributions, core import and native extension loading.')
+'''
+
+
+def populate(plan, stage, status, *, fetch=acquire, command=run_setup_command, windows_root=_system_root):
+    # Exercise inherited directory and file access before the first transfer.
+    for directory in ('home', 'tmp', 'wheels', 'dist', 'cache'):
+        stage.mkdir(('work', directory))
+    source = stage.path / 'work' / 'source'
+    for parts, data in plan.source:
+        _write(stage, ('work', 'source', *parts), data)
+
+    work = stage.path / 'work'
+    home, temp = work / 'home', work / 'tmp'
+    system = windows_root()
+    env = {key: str(value) for key, value in {
+        'SystemRoot': system, 'WINDIR': system, 'PATH': system / 'System32',
+        'HOME': home, 'USERPROFILE': home, 'LOCALAPPDATA': home, 'APPDATA': home,
+        'TMP': temp, 'TEMP': temp, 'MPLCONFIGDIR': home, 'UV_CACHE_DIR': work / 'cache',
+        'UV_PYTHON_INSTALL_DIR': home / 'python-versions',
+        'UV_PYTHON_BIN_DIR': home / 'python-shims', 'UV_TOOL_DIR': home / 'uv-tools',
+        'UV_TOOL_BIN_DIR': home / 'uv-bin',
+    }.items()}
+    env.update(UV_PYTHON_DOWNLOADS='never', PYTHONDONTWRITEBYTECODE='1', PYTHONUTF8='1')
+
+    status('bootstrap', 'Acquiring and verifying the pinned private Python and uv.')
+    for asset, kind in ((plan.python, 'python'), (plan.uv, 'uv')):
+        try:
+            unpack(stage, fetch(asset), kind)
+        except (tarfile.TarError, zipfile.BadZipFile, EOFError) as error:
+            raise SetupError(f'Cannot unpack the verified {kind} archive: {error}') from error
+
+    def run(parts, *args, cwd=work, timeout=180):
+        with stage.held_file(parts) as executable:
+            return command([str(item) for item in (executable, *args)],
+                           cwd=str(cwd), env=env, timeout=timeout)
+
+    python = ('python', 'python.exe')
+    runtime = ('runtime', 'Scripts', 'python.exe')
+    uv = ('uv', 'uv.exe')
+    base_python = stage.path.joinpath(*python)
+    target_python = stage.path.joinpath(*runtime)
+
+    def uv_run(*args, cwd=work):
+        return run(uv, '--offline', '--no-config', '--no-progress', '--no-python-downloads',
+                   *args, cwd=cwd)
+
+    result = run(python, '-I', '-S', '-B', '-c',
+                 'import struct,sys; print(sys.implementation.name, sys.version.split()[0], struct.calcsize("P"))')
+    if result.strip() != b'cpython 3.12.13 8' or uv_run('--version').split()[:2] != [b'uv', b'0.12.3']:
+        raise SetupError('Private bootstrap tools did not report the reviewed identities.')
+
+    status('dependencies', 'Verifying and staging the exact Windows wheels from uv.lock.')
+    export = uv_run('export', '--locked', '--python', base_python,
+                    '--no-emit-project', '--no-header', '--no-annotate', '--no-hashes',
+                    '--format', 'requirements-txt',
+                    cwd=source)
+    _write(stage, ('work', 'export.txt'), export)
+    for wheel in plan.wheels:
+        _write(stage, ('work', 'wheels', wheel.filename), fetch(wheel))
+    requirements = ''.join(f'{w.name}=={w.version} --hash=sha256:{w.sha256}\n' for w in plan.wheels)
+    _write(stage, ('work', 'windows-requirements.txt'), requirements.encode('ascii'))
+    uv_run('venv', '--python', base_python, stage.path / 'runtime')
+    pip = ('pip', 'install', '--python', target_python, '--no-index', '--no-deps',
+           '--link-mode', 'copy', '--no-build')
+    uv_run(*pip, '--require-hashes', '--find-links', work / 'wheels',
+           '-r', work / 'windows-requirements.txt')
+    status('verification', 'Building only ComposerLint from the reviewed local source and checking the private environment.')
+    # Hatchling came from the same hash-verified wheel set. No isolated build
+    # environment, build dependency resolution or index access is possible.
+    local_wheel = 'composerlint-0.2.0-py3-none-any.whl'
+    result = run(runtime, '-I', '-B', '-c',
+                 'from hatchling.build import build_wheel; import sys; print(build_wheel(sys.argv[1]))',
+                 work / 'dist', cwd=source)
+    if result.strip().decode('ascii') != local_wheel:
+        raise SetupError('Local ComposerLint wheel did not match the expected name.')
+    with stage.held_file(('work', 'dist', local_wheel)) as wheel_path:
+        uv_run(*pip, wheel_path)
+    uv_run('pip', 'check', '--python', target_python)
+    run(runtime, '-I', '-B', '-c', _VERIFY,
+        json.dumps({w.name: w.version for w in plan.wheels}), work / 'export.txt')
+    stage.clear_work()
+    stage.commit({'schema': 1, 'target': 'windows-x64-text-pilot', 'plan': plan.identity,
+                  'lock_sha256': plan.lock_sha256, 'python': str(target_python)})
+    return target_python
+
+
+def install(root, *, status, confirm=input, inspect=preflight.inspect, make_plan=prepare,
+            storage=transaction, build=populate):
+    report = inspect()
+    if not report.compatible:
+        preflight.print_report(report)
+        raise SetupError('Read-only Windows preflight refused installation.')
+    plan = make_plan(root, report.destination)
+    assets = (plan.python, plan.uv, *plan.wheels)
+    print('Windows x64 text setup pilot')
+    print('Private destination:', plan.destination)
+    print('Reviewed setup plan:', plan.identity)
+    print(f'Will acquire {len(assets)} SHA-256-pinned files ({sum(a.size for a in assets):,} bytes).')
+    for asset in (plan.python, plan.uv):
+        print(f'  {asset.filename}\n    SHA-256 {asset.sha256}')
+    print(f'  {len(plan.wheels)} wheels selected from uv.lock; exact pins in tools/windows-setup-assets.json.')
+    print('No system PATH, global Python, registry settings, or AI-assistant configuration changes.')
+    print('Renderer, persistent workers, client registration and Windows Approve & Export remain unavailable.')
+    try:
+        consent = confirm('Type INSTALL to download these files and install privately, or press Enter to cancel: ')
+    except EOFError:
+        consent = ''
+    if consent != 'INSTALL':
+        print('Cancelled; no downloads or changes made.')
+        return 0
+    current = inspect()
+    if not current.compatible or current.destination != report.destination:
+        raise SetupError('Windows destination or capabilities changed after consent. Review the plan again.')
+    with storage(plan.destination) as stage:
+        runtime = build(plan, stage, status)
+    print('Private Windows text environment verified:', runtime)
+    print('MCP startup and Windows desktop acceptance require separate verification.')
+    return 0

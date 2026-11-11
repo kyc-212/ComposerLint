@@ -130,11 +130,12 @@ class _SecurityAPI:
         finally:
             self.free(descriptor)
 
-    def private_descriptor(self, sid):
-        grants = ''.join(f'(A;;FA;;;{trustee})' for trustee in sorted({sid, _SYSTEM_SID}))
+    def private_descriptor(self, sid, *, inheritable=False):
+        flags = 'OICI' if inheritable else ''
+        grants = ''.join(f'(A;{flags};FA;;;{trustee})' for trustee in sorted({sid, _SYSTEM_SID}))
         return self.descriptor(f'O:{sid}D:P{grants}')
 
-    def require_private(self, handle, sid):
+    def require_private(self, handle, sid, *, tree_root=False, inherited_directory=None):
         owner, acl, descriptor = (ctypes.c_void_p() for _ in range(3))
         result = self.get_security(handle, 1, 5, ctypes.byref(owner), None,
                                    ctypes.byref(acl), None, ctypes.byref(descriptor))
@@ -146,8 +147,18 @@ class _SecurityAPI:
             control, revision = win.WORD(), win.DWORD()
             if not self.descriptor_control(descriptor, ctypes.byref(control), ctypes.byref(revision)):
                 raise ctypes.WinError(ctypes.get_last_error())
-            if not acl or control.value & 0x1004 != 0x1004:
-                raise PermissionError('A present, protected Windows DACL is required.')
+            protected = inherited_directory is None
+            expected_control = 0x1004 if protected else 0x0004
+            if not acl or control.value & 0x1004 != expected_control:
+                raise PermissionError('A present, protected Windows DACL is required.' if protected else
+                                      'Expected a present Windows DACL with private inheritance.')
+            # Setup tools create descendants through regular Windows APIs.
+            # Require the exact private inheritable grants on their root and
+            # only those same, inherited grants on every output.
+            if protected:
+                flags = 0x03 if tree_root else 0
+            else:
+                flags = 0x13 if inherited_directory else 0x10
             info = _AclSizeInfo()
             if not self.acl_info(acl, ctypes.byref(info), ctypes.sizeof(info), 2):
                 raise ctypes.WinError(ctypes.get_last_error())
@@ -157,7 +168,7 @@ class _SecurityAPI:
                 if not self.get_ace(acl, index, ctypes.byref(address)):
                     raise ctypes.WinError(ctypes.get_last_error())
                 ace = _AllowAce.from_address(address.value)
-                if ace.kind or ace.flags or ace.mask != _FILE_ALL_ACCESS:
+                if ace.kind or ace.flags != flags or ace.mask != _FILE_ALL_ACCESS:
                     raise PermissionError('Unexpected ACE in private Windows DACL.')
                 trustee = self.sid_text(address.value + _AllowAce.sid_start.offset)
                 if trustee not in remaining:

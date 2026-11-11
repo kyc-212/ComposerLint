@@ -42,6 +42,10 @@ class WorkerTerminationUnconfirmed(RuntimeError):
     """The handles available to cleanup do not establish complete termination."""
 
 
+class SetupProcessCleanupUnconfirmed(RuntimeError):
+    """A failed installer process may still have access to its staging area."""
+
+
 class _BasicLimits(ctypes.Structure):
     _fields_ = [('process_time', ctypes.c_int64), ('job_time', ctypes.c_int64),
                 ('flags', win.DWORD), ('working_set_min', ctypes.c_size_t),
@@ -288,14 +292,19 @@ class _WorkerAPI:
         finally:
             self.delete_attributes(attributes)
 
-    def launch(self, winapi, command, job, handles, stack):
+    def launch(self, winapi, command, job, handles, stack, *, cwd=None, env=None):
         info = _ProcessInfo()
         line = ctypes.create_unicode_buffer(subprocess.list2cmdline(command))
         with self.startup(job, handles) as startup:
             # Assign the job at creation. Start suspended to verify membership
             # before running worker code, even on runners using nested jobs.
             flags = 0x00080000 | 0x08000000 | 0x00000004
-            if not self.create_process(command[0], line, None, None, True, flags, None, None,
+            environment = None
+            if env is not None:
+                flags |= 0x00000400  # CREATE_UNICODE_ENVIRONMENT
+                environment = ctypes.create_unicode_buffer('\0'.join(
+                    f'{key}={env[key]}' for key in sorted(env, key=str.upper)) + '\0')
+            if not self.create_process(command[0], line, None, None, True, flags, environment, cwd,
                                        ctypes.byref(startup), ctypes.byref(info)):
                 raise ctypes.WinError(ctypes.get_last_error())
         stack.callback(self.close, info.process)
@@ -363,7 +372,8 @@ def _exchange(winapi, handles, payload, deadline, cancelled, max_stdout, max_std
         operation = _operation(winapi, handle)
         if operation is not None:
             pending[handle] = operation
-    pending[stdin] = _operation(winapi, stdin, data=payload[:_CHUNK])
+    if payload is not None:
+        pending[stdin] = _operation(winapi, stdin, data=payload[:_CHUNK])
     while pending:
         _check_deadline(deadline, cancelled)
         progressed = False
@@ -405,6 +415,22 @@ def _exchange(winapi, handles, payload, deadline, cancelled, max_stdout, max_std
 def run_worker(command, payload, *, timeout, cancelled=None, max_request=_LIMIT,
                max_stdout=_LIMIT, max_stderr=256 * 1024):
     """Run a trusted local executable exchanging exactly one LF-framed request and reply."""
+    return _run_owned(command, payload, timeout=timeout, cancelled=cancelled,
+                      max_request=max_request, max_stdout=max_stdout, max_stderr=max_stderr)
+
+
+def run_setup_command(command, *, cwd, env, timeout):
+    """One-shot installer tools only; EOF on stdin, bounded output, no ambient environment."""
+    cwd = local_path_text(cwd, target='win32')
+    if not env or any(not key or '=' in key or '\0' in key or '\0' in value
+                      for key, value in env.items()) or len({key.upper() for key in env}) != len(env):
+        raise ValueError('Invalid Windows setup command environment.')
+    return _run_owned(command, None, timeout=timeout, cwd=cwd, env=env,
+                      max_stdout=1024 * 1024, max_stderr=1024 * 1024)
+
+
+def _run_owned(command, payload, *, timeout, cancelled=None, max_request=_LIMIT,
+               max_stdout, max_stderr, cwd=None, env=None):
     if sys.platform != 'win32':
         raise UnsupportedPlatformOperation('Windows worker pilot requires native Windows.')
     import _winapi
@@ -419,9 +445,9 @@ def run_worker(command, payload, *, timeout, cancelled=None, max_request=_LIMIT,
     for limit in (max_request, max_stdout, max_stderr):
         if type(limit) is not int or not 0 <= limit <= _LIMIT:
             raise ValueError('Windows worker byte limits must be between zero and 64 MiB.')
-    if not isinstance(payload, bytes) or len(payload) > max_request:
+    if cwd is None and (not isinstance(payload, bytes) or len(payload) > max_request):
         raise PipeLimitError('Windows worker exceeded the request byte limit.')
-    if payload.count(b'\n') != 1 or not payload.endswith(b'\n'):
+    if payload is not None and (payload.count(b'\n') != 1 or not payload.endswith(b'\n')):
         raise ValueError('Expected one LF-terminated Windows worker request.')
     if not math.isfinite(timeout) or timeout <= 0:
         raise ValueError('A finite positive Windows worker timeout is required.')
@@ -429,20 +455,34 @@ def run_worker(command, payload, *, timeout, cancelled=None, max_request=_LIMIT,
     deadline = time.monotonic() + timeout
     _check_deadline(deadline, cancelled)
     api, security = _WorkerAPI(), _SecurityAPI()
-    with ExitStack() as parents, ExitStack() as process_handles:
+    with ExitStack() as parents, ExitStack() as process_handles, ExitStack() as input_end:
         pending = {}
         process = None
+        cleanup_unconfirmed = None
         try:
             # Close the kill-on-close job before draining pipe completions,
             # including when explicit termination or accounting fails.
             with ExitStack() as jobs:
                 job = api.job(jobs)
-                jobs.callback(lambda: api.stop_job(job, process))
+                def stop():
+                    nonlocal cleanup_unconfirmed
+                    try:
+                        api.stop_job(job, process)
+                    except BaseException as error:
+                        if payload is None:
+                            cleanup_unconfirmed = SetupProcessCleanupUnconfirmed(str(error))
+                            raise cleanup_unconfirmed from error
+                        raise
+
+                jobs.callback(stop)
                 with ExitStack() as children, security.private_descriptor(security.user_sid()) as descriptor:
                     pipes = [api.pipe(_winapi, descriptor, input_pipe=index == 0,
-                                      parent_ends=parents, child_ends=children) for index in range(3)]
+                                      parent_ends=input_end if index == 0 and payload is None else parents,
+                                      child_ends=children) for index in range(3)]
                     _check_deadline(deadline, cancelled)
-                    process = api.launch(_winapi, command, job, [pair[1] for pair in pipes], process_handles)
+                    process = api.launch(_winapi, command, job, [pair[1] for pair in pipes], process_handles,
+                                         cwd=cwd, env=env)
+                input_end.close()
                 stdout, stderr = _exchange(_winapi, [pair[0] for pair in pipes], payload, deadline,
                                            cancelled, max_stdout, max_stderr, pending)
                 while True:
@@ -453,8 +493,13 @@ def run_worker(command, payload, *, timeout, cancelled=None, max_request=_LIMIT,
                 _check_deadline(deadline, cancelled)
                 if _winapi.GetExitCodeProcess(process):
                     raise RuntimeError('Windows worker failed: ' + stderr[-4000:].decode('utf-8', 'replace'))
-                if stdout.count(b'\n') != 1 or not stdout.endswith(b'\n'):
+                if payload is not None and (stdout.count(b'\n') != 1 or not stdout.endswith(b'\n')):
                     raise ValueError('Expected exactly one LF-terminated Windows worker response.')
                 return stdout
         finally:
-            _cancel_operations(pending)
+            try:
+                _cancel_operations(pending)
+            except BaseException as error:
+                if cleanup_unconfirmed is not None:
+                    raise cleanup_unconfirmed from error
+                raise
