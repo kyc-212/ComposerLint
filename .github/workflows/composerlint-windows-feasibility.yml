@@ -22,6 +22,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Check out the reviewed source
+        id: reviewed-checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -35,3 +36,24 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python -I -S -B -X utf8 -m unittest discover -s tests -p test_windows_read_native.py -v
           exit $LASTEXITCODE
+      - name: Run Windows preflight tests
+        shell: pwsh
+        run: |
+          python -I -S -B -X utf8 -m unittest discover -s tests -p test_windows_preflight.py -v
+          exit $LASTEXITCODE
+      - name: Show the standalone Windows preflight diagnostics
+        shell: pwsh
+        run: |
+          python -I -S -B -X utf8 tools/preflight_windows.py
+          exit $LASTEXITCODE
+      - name: Verify the checkout is clean
+        if: ${{ !cancelled() && steps.reviewed-checkout.outcome == 'success' }}
+        shell: pwsh
+        run: |
+          $changes = git status --porcelain=v1 --untracked-files=all --ignored=traditional --ignore-submodules=none
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($changes) {
+            $changes | Write-Output
+            throw 'Checkout changed during Windows verification.'
+          }
+          Write-Output 'Checkout is clean: no tracked changes or unexpected files.'
