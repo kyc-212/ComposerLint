@@ -292,7 +292,13 @@ class _WorkerAPI:
         finally:
             self.delete_attributes(attributes)
 
-    def launch(self, winapi, command, job, handles, stack, *, cwd=None, env=None):
+    def launch(self, winapi, command, job, handles, stack):
+        return self._launch(winapi, command, job, handles, stack, cwd=None, env=None)
+
+    def launch_setup(self, winapi, command, job, handles, stack, *, cwd, env):
+        return self._launch(winapi, command, job, handles, stack, cwd=cwd, env=env)
+
+    def _launch(self, winapi, command, job, handles, stack, *, cwd, env):
         info = _ProcessInfo()
         line = ctypes.create_unicode_buffer(subprocess.list2cmdline(command))
         with self.startup(job, handles) as startup:
@@ -480,8 +486,12 @@ def _run_owned(command, payload, *, timeout, cancelled=None, max_request=_LIMIT,
                                       parent_ends=input_end if index == 0 and payload is None else parents,
                                       child_ends=children) for index in range(3)]
                     _check_deadline(deadline, cancelled)
-                    process = api.launch(_winapi, command, job, [pair[1] for pair in pipes], process_handles,
-                                         cwd=cwd, env=env)
+                    child_handles = [pair[1] for pair in pipes]
+                    if cwd is None:
+                        process = api.launch(_winapi, command, job, child_handles, process_handles)
+                    else:
+                        process = api.launch_setup(_winapi, command, job, child_handles, process_handles,
+                                                   cwd=cwd, env=env)
                 input_end.close()
                 stdout, stderr = _exchange(_winapi, [pair[0] for pair in pipes], payload, deadline,
                                            cancelled, max_stdout, max_stderr, pending)

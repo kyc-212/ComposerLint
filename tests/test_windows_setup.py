@@ -1,6 +1,6 @@
 """Windows terminal setup tests. Default native tests use fixtures, not downloads."""
 
-from contextlib import contextmanager, redirect_stdout
+from contextlib import contextmanager, nullcontext, redirect_stdout
 import hashlib
 from importlib import import_module
 from importlib.machinery import ModuleSpec
@@ -25,7 +25,7 @@ ROOT = Path(__file__).absolute().parents[1]
 
 
 def setUpModule():
-    global setup, storage
+    global setup, storage, workers
     name = '_composerlint_windows_setup_tests'
     spec = ModuleSpec(name, loader=None, is_package=True)
     spec.submodule_search_locations = [str(ROOT / 'src' / 'composerlint')]
@@ -33,6 +33,7 @@ def setUpModule():
     unittest.addModuleCleanup(_remove_modules, name)
     setup = import_module(f'{name}.windows_setup')
     storage = import_module(f'{name}.windows_install_storage')
+    workers = import_module(f'{name}.windows_workers')
 
 
 def _remove_modules(name):
@@ -144,6 +145,36 @@ def fixture_build(plan, stage, files, *, fail=None):
 
 
 class WindowsSetupTests(unittest.TestCase):
+    def test_worker_launch_stays_positional_and_setup_has_its_own_launch(self):
+        def launch_worker(winapi, command, job, handles, stack, /):
+            return 'worker process'
+
+        def launch_setup(winapi, command, job, handles, stack, /, *, cwd, env):
+            return 'setup process'
+
+        api = SimpleNamespace(
+            job=Mock(return_value='owned job'), pipe=Mock(return_value=('parent', 'child')),
+            launch=Mock(side_effect=launch_worker), launch_setup=Mock(side_effect=launch_setup),
+            stop_job=Mock(),
+        )
+        winapi = SimpleNamespace(WaitForSingleObject=Mock(return_value=0),
+                                 GetExitCodeProcess=Mock(return_value=0))
+        security = SimpleNamespace(user_sid=lambda: 'fixture SID',
+                                   private_descriptor=lambda sid: nullcontext('descriptor'))
+        command = [r'C:\fixture\python.exe']
+        cwd, env = r'C:\fixture', {'SystemRoot': r'C:\Windows'}
+        with (patch.object(workers, 'sys', SimpleNamespace(platform='win32')),
+              patch.dict(sys.modules, {'_winapi': winapi}),
+              patch.object(workers, '_WorkerAPI', return_value=api),
+              patch.object(workers, '_SecurityAPI', return_value=security),
+              patch.object(workers, '_exchange', side_effect=[(b'reply\n', b''), (b'first\nsecond\n', b'')])):
+            self.assertEqual(workers.run_worker(command, b'request\n', timeout=15), b'reply\n')
+            self.assertEqual(workers.run_setup_command(command, cwd=cwd, env=env, timeout=15),
+                             b'first\nsecond\n')
+        api.launch.assert_called_once()
+        api.launch_setup.assert_called_once()
+        self.assertEqual(api.launch_setup.call_args.kwargs, {'cwd': cwd, 'env': env})
+
     def test_exact_asset_pins_match_lock_and_preflight(self):
         manifest = (ROOT / 'tools/windows-setup-assets.json').read_bytes()
         lock = (ROOT / 'uv.lock').read_bytes()
