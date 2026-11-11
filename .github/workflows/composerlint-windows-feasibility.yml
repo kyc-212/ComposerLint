@@ -1,0 +1,38 @@
+name: ComposerLint Windows NTFS feasibility pilot
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Full commit SHA reviewed for this pilot
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  windows-ntfs:
+    if: >-
+      false &&
+      github.repository == 'kyc-212/ComposerLint' &&
+      github.actor == github.repository_owner &&
+      github.ref == 'refs/heads/codex/windows-ci-pilot' &&
+      github.sha == inputs.expected_sha
+    runs-on: windows-2025
+    timeout-minutes: 10
+    steps:
+      - name: Check out the reviewed source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          submodules: false
+          lfs: false
+      - name: Run native NTFS controls using the runner's Python
+        shell: pwsh
+        run: |
+          python -I -S -B -c "import sys; assert sys.platform == 'win32' and sys.implementation.name == 'cpython' and sys.version_info[:2] == (3, 12), sys.version"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -I -S -B -X utf8 -m unittest discover -s tests -p test_windows_read_native.py -v
+          exit $LASTEXITCODE
