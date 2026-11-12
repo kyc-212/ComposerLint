@@ -1,4 +1,5 @@
 """Opt-in comparison of installed official/patched builds; authored controls only."""
+from contextlib import nullcontext
 from pathlib import Path
 import os
 import sys
@@ -13,10 +14,10 @@ def build(request,monkeypatch):
     if os.environ.get('COMPOSERLINT_RENDERER_EQUIVALENCE')!='1':
         pytest.skip('Explicit opt-in required for installed renderer comparison.')
     if request.param=='patched':
-        executable,identity=verovio.renderer_command()
+        _,identity=verovio.renderer_command()
         assert identity=='6.3.0+composerlint.tie1'
-    else:executable,identity=sys.executable,None
-    monkeypatch.setattr(verovio,'renderer_command',lambda:(executable,identity))
+    else:
+        monkeypatch.setattr(verovio,'renderer_scope',lambda:nullcontext((sys.executable,None)))
     return request.param
 
 
@@ -53,3 +54,66 @@ def test_complete_authored_page_source_mapping(build):
     result=verovio.render(ET.tostring(root,encoding='unicode'))
     pages=verify_pages(result,measures,notes,source_bound=True)
     assert len(pages)==result['page_count']>1
+
+
+@pytest.mark.parametrize('altered', [False, True])
+def test_windows_render_holds_pins_through_worker_exit(monkeypatch, tmp_path, altered):
+    from contextlib import contextmanager
+    import json
+    import subprocess
+
+    from composerlint import windows_install_storage, windows_renderer as pins
+
+    config = tmp_path / 'renderer.json'
+    executable = 'renderer/Scripts/python.exe'
+    native_module = 'renderer/Lib/site-packages/verovio/_verovio.pyd'
+    artifacts = (pins.OFFICIAL_WHEEL, pins.SOURCE_ARCHIVE, pins.PATCH, pins.PATCHED_WHEEL)
+    data = {name: name.encode() for name in (
+        executable, native_module, 'python/python.exe', 'renderer/pyvenv.cfg',
+        *('renderer-artifacts/' + name for name in artifacts),
+    )}
+    hashes = {name: pins.sha(raw) for name, raw in data.items()}
+    for name, attribute in zip(artifacts[:3], ('OFFICIAL_SHA256', 'SOURCE_SHA256', 'PATCH_SHA256'), strict=True):
+        monkeypatch.setattr(pins, attribute, hashes['renderer-artifacts/' + name])
+    data[config.name] = json.dumps({
+        'package_version': pins.BUILD, 'python': executable, 'files_sha256': hashes,
+    }).encode()
+    if altered:
+        data[native_module] = b'changed after manifest'
+    held = set()
+    launches = []
+
+    @contextmanager
+    def install_files(root):
+        assert root == tmp_path
+
+        def read(parts, *, limit):
+            key = '/'.join(parts)
+            held.add(key)
+            return data[key]
+
+        try:
+            yield read, lambda: None
+        finally:
+            held.clear()
+
+    def run(command, **kwargs):
+        assert set(data) == held
+        assert command[0] == str(tmp_path.joinpath(*executable.split('/')))
+        launches.append(command)
+        return subprocess.CompletedProcess(command, 0, json.dumps({
+            'package_version': pins.BUILD, 'pages': ['<svg/>'], 'log': '',
+        }), '')
+
+    monkeypatch.setattr(windows_install_storage, 'pinned_install_files', install_files)
+    monkeypatch.setattr(verovio.host, 'platform_name', lambda: 'win32')
+    monkeypatch.setattr(verovio.host, 'run_owned', run)
+    monkeypatch.setattr(verovio.runtime_paths, 'renderer_config', lambda: config)
+    monkeypatch.setattr(verovio, 'version', lambda package: '6.3.0')
+    if altered:
+        with pytest.raises(ViewerFailure, match='verified files'):
+            verovio.render('<score-partwise/>')
+    else:
+        assert verovio.render('<score-partwise/>')['pages'] == ['<svg/>']
+    assert len(launches) == (0 if altered else 1)
+    assert not held

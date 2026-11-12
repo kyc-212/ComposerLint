@@ -558,14 +558,24 @@ def owned_prefix(prefix, identity):
 
 
 def main(argv=None):
-    if sys.platform == 'win32' and '--windows-text-pilot' in (sys.argv[1:] if argv is None else argv):
+    arguments = sys.argv[1:] if argv is None else argv
+    if sys.platform == 'win32' and {'--windows-text-pilot', '--windows-full-pilot'}.intersection(arguments):
         from importlib import import_module
         from importlib.machinery import ModuleSpec
         from importlib.util import module_from_spec
 
-        parser = argparse.ArgumentParser(description='Experimental Windows x64 text setup from reviewed source.')
-        parser.add_argument('--windows-text-pilot', action='store_true', required=True)
-        parser.parse_args(argv)
+        parser = argparse.ArgumentParser(description='Experimental private Windows x64 setup.')
+        modes = parser.add_mutually_exclusive_group(required=True)
+        modes.add_argument('--windows-text-pilot', action='store_true')
+        modes.add_argument('--windows-full-pilot', action='store_true')
+        parser.add_argument('--renderer-bundle', type=Path)
+        parser.add_argument('--renderer-sha256')
+        options = parser.parse_args(argv)
+        if options.windows_full_pilot:
+            if not options.renderer_bundle or not re.fullmatch('[0-9a-f]{64}', options.renderer_sha256 or ''):
+                parser.error('Full setup requires a local renderer bundle and the reviewed candidate SHA-256.')
+        elif options.renderer_bundle or options.renderer_sha256:
+            parser.error('Renderer arguments require --windows-full-pilot.')
         # The stdlib-only adapter must run before ComposerLint's dependencies
         # exist. Never import the ambient ComposerLint package for setup.
         name = '_composerlint_windows_setup'
@@ -574,7 +584,8 @@ def main(argv=None):
         sys.modules[name] = module_from_spec(spec)
         try:
             windows = import_module(f'{name}.windows_setup')
-            return windows.install(ROOT, status=status)
+            return windows.install(ROOT, status=status, renderer_bundle=options.renderer_bundle,
+                                   renderer_sha256=options.renderer_sha256)
         except (OSError, ValueError, RuntimeError, KeyError) as error:
             print(f'Windows setup stopped: {error}', file=sys.stderr)
             return 1

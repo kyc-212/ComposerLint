@@ -1,2 +1,3 @@
 # The Windows installer verifies the raw bytes against its reviewed asset manifest.
 /uv.lock -text
+/patches/verovio-6.3.0-deferred-tie-stops.patch -text

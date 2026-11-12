@@ -5,6 +5,7 @@ import json,sys,hashlib
 
 def main():
     sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+    from composerlint.platform_support import read_score_bytes
     from composerlint.engine.evaluation import compute
     from composerlint.evaluation_models import EvaluationArguments,EvaluationFailure
     from composerlint.advanced_models import AdvancedFailure
@@ -22,7 +23,7 @@ def main():
         else:
             path=request['path'];bundle=compute(path,request['options'],request['query'])
             result={'report':bundle.advanced.report.model_dump(mode='json'),'advanced_snapshot':bundle.advanced.snapshot.model_dump(mode='json'),'snapshot':bundle.snapshot.model_dump(mode='json')}
-        if hashlib.sha256(Path(path).expanduser().read_bytes()).hexdigest()!=bundle.snapshot.source_sha256:raise EvaluationFailure('stale_snapshot','Source changed during evaluation/projection; no successful result returned.')
+        if hashlib.sha256(read_score_bytes(Path(path).expanduser())).hexdigest()!=bundle.snapshot.source_sha256:raise EvaluationFailure('stale_snapshot','Source changed during evaluation/projection; no successful result returned.')
         output={'ok':True,'result':result}
     except (EvaluationFailure,AdvancedFailure,ComposerLintError) as exc:
         output={'ok':False,'error':{'code':exc.code,'reason':exc.reason,'record_ref':getattr(exc,'record_ref',None),'legacy':isinstance(exc,ComposerLintError)}}

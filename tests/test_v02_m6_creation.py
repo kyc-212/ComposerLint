@@ -198,6 +198,7 @@ def test_four_measure_actual_worker_export_and_staged_checks(tmp_path,monkeypatc
         p=w['proposal'];assert all(p['verification']['gates'].values())
         assert len(p['manifest']['changed_note_ids'])==16 and len(p['manifest']['original_changed_note_ids'])==4
         assert p['verification']['musical_comparison']['status']=='available'
+        (tmp_path/'output').mkdir()
         monkeypatch.setattr(ex,'EXPORT_ROOT',tmp_path/'output'/'exports');monkeypatch.setattr(ex,'confirm',lambda _:False)
         with pytest.raises(ViewerFailure):ex.approve_export(editing,w['id'],ex.binding(w))
         monkeypatch.setattr(ex,'confirm',lambda _:True) # engineering control only

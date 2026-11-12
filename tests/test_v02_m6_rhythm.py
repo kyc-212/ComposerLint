@@ -146,6 +146,7 @@ def test_actual_bound_worker_preview_export_and_revalidation(tmp_path,monkeypatc
         assert p['verification']['musical_comparison']['status']=='available'
         assert p['verification']['notation']['rhythm_onset_voice_rest_beams']
         assert len(p['manifest']['changed_note_ids'])==6
+        (tmp_path/'output').mkdir()
         monkeypatch.setattr(ex,'EXPORT_ROOT',tmp_path/'output'/'exports')
         monkeypatch.setattr(ex,'confirm',lambda message:False)
         with pytest.raises(ViewerFailure):ex.approve_export(editing,w['id'],ex.binding(w))

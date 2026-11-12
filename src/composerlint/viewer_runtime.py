@@ -8,6 +8,7 @@ from pathlib import Path
 import secrets
 import threading
 import time
+from composerlint.platform_support import read_score_bytes
 from composerlint.review import canonical
 from composerlint.viewer_models import Selection
 from composerlint.viewer_source import fail, ViewerFailure
@@ -18,7 +19,7 @@ ASSETS = Path(__file__).with_name('viewer_assets')
 def current_source(entry):
     """Keep no-proposal live context bound to the original source bytes."""
     try:
-        same = hashlib.sha256(Path(entry['source_path']).read_bytes()).hexdigest() == entry['manifest']['scope']['source_sha256']
+        same = hashlib.sha256(read_score_bytes(Path(entry['source_path']))).hexdigest() == entry['manifest']['scope']['source_sha256']
     except (OSError, KeyError):
         same = False
     if not same:

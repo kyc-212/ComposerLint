@@ -3,6 +3,7 @@ import base64
 import hashlib
 import json
 from pathlib import Path
+from composerlint.platform_support import read_score_bytes
 from composerlint import service
 from composerlint.review import digest, canonical, RecordGraph
 from composerlint.viewer_models import Selection, ViewerPage
@@ -32,7 +33,7 @@ def prepare(args):
     try:
         if path.stat().st_size > 10 * 1024 * 1024:
             fail('asset_too_large', 'Source exceeds the tested 10 MiB viewer limit.')
-        data = path.read_bytes()
+        data = read_score_bytes(path)
     except OSError:
         fail('file_not_found', 'Source is not readable.')
     # Check XML safety before handing bytes to any parser/renderer.
@@ -57,7 +58,7 @@ def check_source(path, data):
     try: verify_import(path)
     except ComposerLintError: fail('stale_source', 'Imported source changed; import the original again.')
     try:
-        same = path.read_bytes() == data
+        same = read_score_bytes(path) == data
     except OSError:
         same = False
     if not same:

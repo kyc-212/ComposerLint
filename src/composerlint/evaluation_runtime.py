@@ -17,6 +17,7 @@ def request_worker(request,*,timeout=None):
     if remaining<=0:raise EvaluationFailure('analysis_timeout','Whole evaluation deadline exceeded before worker launch.')
     try:cp=host.run_owned([sys.executable,'-I','-B',str(Path(__file__).with_name('evaluation_worker.py'))],input=payload,capture_output=True,text=True,timeout=remaining)
     except host.UnsupportedPlatformOperation as exc:raise EvaluationFailure('unsupported_analysis_case',str(exc)) from exc
+    except host.PipeLimitError as exc:raise EvaluationFailure('analysis_limit_exceeded',str(exc)) from exc
     except subprocess.TimeoutExpired as exc:raise EvaluationFailure('analysis_timeout',f'Evaluation exceeded {deadline} seconds; isolated worker terminated and reaped. Narrow the scope.') from exc
     if cp.returncode:raise RuntimeError('Evaluation worker implementation failure: '+cp.stderr[-4000:])
     if len(cp.stdout.encode())>64*1024*1024:raise EvaluationFailure('analysis_limit_exceeded','Worker exceeded 64 MiB response limit.')

@@ -322,3 +322,82 @@ export. M5-only pitch previews remain temporary. The AI must not operate approva
 or copy temporary XML as a substitute. Existing independent staged-byte verification,
 exclusive file creation and receipt validation remain mandatory.
 
+
+## Experimental Windows x64 renderer checkpoint
+
+The Windows text pilot verifies the 61 existing prerequisites and creates a
+private NTFS runtime. The full pilot adds a pinned local renderer candidate and
+requires native loading, all ten existing renderer equivalence controls and the
+authored MCP/loopback/editing probe before publishing its completion receipt.
+Windows Server and Windows 11 desktop results are separate gates.
+
+### Build with already available inputs
+
+Use an installed **x64 MSVC v143** developer environment. The first native
+candidate is Visual Studio 2022 **17.14**, MSVC **19.44 / toolset 14.44** and
+Windows SDK **10.0.26100.0**. Record the actual `_MSC_FULL_VER`, toolset directory
+version and SDK on the runner. The capability probe compiles, links and runs x64
+C++20 with STL and Win32 calls. It checks `cl.exe`, `link.exe`, `rc.exe` and
+`mt.exe` in the explicit developer environment. Python needs headers and the
+stable-ABI import library `python3.lib`. The renderer may require the compatible
+x64 MSVC runtime DLLs alongside the UCRT. Native loading is the gate for those
+dependencies. [Microsoft command-line build tools](https://learn.microsoft.com/en-us/cpp/build/building-on-the-command-line?view=msvc-170)
+· [Windows runner inventory](https://github.com/actions/runner-images/blob/main/images/windows/Windows2025-Readme.md)
+
+From that developer shell, start with `tools/build_windows_renderer.py --probe-only`
+using an existing trusted Python. To build, run the same script with private
+CPython 3.12.13 and absolute `--inputs`, `--wheelhouse`, `--uv`
+(the private uv 0.12.3 executable) and `--output` (a fresh local NTFS directory
+with an existing parent). The script uses existing tools and local inputs. It
+installs build dependencies into a private scratch environment from the
+hash-pinned binary-only wheelhouse with index access and build isolation
+disabled. The upstream CMake/SWIG stable-ABI build compiles just the reviewed
+MusicXML change into the patched renderer. No renderer binary is distributed here.
+
+| Input | Version or filename | SHA-256 |
+| --- | --- | --- |
+| Verovio upstream source | `verovio-6.3.0.tar.gz` | `33dc3b6816896a649198acd7cce291f54636fbfffa893dd78d84c3073b40d87c` |
+| Official native wheel | `verovio-6.3.0-cp310-abi3-win_amd64.whl` | `cc8bab65570ccb38d6a440fa13d3e4820df34ee9ca483decdbe8371c4291b1a8` |
+| CMake | `cmake-4.4.4-py3-none-win_amd64.whl` | `ad8e0a38b5707e27882701146bdfffecacd80e7703fa0fc36c77528518d545af` |
+| Ninja | `ninja-1.13.2-py3-none-win_amd64.whl` | `1293f4078278b70d0ee4b6cc8f3a9e030656c9b2f59909970343c4fe76070118` |
+| SWIG | `swig-4.5.1-py3-none-win_amd64.whl` | `0e9218aacd2f221bc6c29282cf9e0546ec68b6aab826239f3d383ff975565914` |
+
+Use the universal wheels pinned in [requirements-renderer-build.txt](../requirements-renderer-build.txt)
+for build 1.6.1, scikit-build-core 1.1.1, packaging 26.3, pathspec 1.1.1 and
+pyproject-hooks 1.3.3. The wheelhouse and Verovio inputs require separate
+acquisition approval. Prefer MSVC and the SDK already present on the runner.
+Review the Microsoft component catalog and payload identities separately if
+provisioning is needed. [Verovio](https://pypi.org/project/verovio/6.3.0/#files)
+· [CMake](https://pypi.org/project/cmake/4.4.4/#files)
+· [Ninja](https://pypi.org/project/ninja/1.13.2/#files)
+· [SWIG](https://pypi.org/project/swig/4.5.1/#files)
+
+### Full setup and native acceptance
+
+Run `tools/setup_composerlint.py --windows-full-pilot --renderer-bundle ABSOLUTE_DIRECTORY --renderer-sha256 REVIEWED_WHEEL_SHA256`
+with the usual Windows setup bootstrap. The bundle must be the locally built
+output. Review its `build-provenance.json` and candidate digest before running
+setup. Setup verifies the official wheel, source, reviewed patch and candidate
+digest, then requests explicit consent for the same 61 pinned bootstrap/runtime
+prerequisites. It installs official 6.3.0 in the base environment and
+`6.3.0+composerlint.tie1` in a separate renderer environment. The local digest
+binds the chosen wheel to the install and receipt. Build provenance is produced
+by the reviewed local build and does not independently authenticate an external
+wheel. Full setup prints the absolute MCP command and the renderer manifest
+environment value. The renderer requires the private installation tree and keeps the verified
+manifest, files, and directory handles open for the worker lifetime. Windows
+permanent Approve & Export is disabled.
+
+For native verification, start with the existing read-only host snapshot and
+Windows tests. Probe and record the compiler and SDK. Build the exact patched
+wheel, record the source/patch/postimage and candidate hashes, and exercise the
+full setup once from a clean per-user location. Retain the ten-control counts
+and the actual MCP probe output. The probe checks real stdio 18-tool discovery,
+Unicode-path MusicXML and MXL import, review, analysis, style and persistent
+passage reuse, and full-mode loopback notation and temporary edit/discard. In a
+fresh text environment, run `tools/ci_windows_mcp.py` without `--full` for
+renderer refusal. Exercise a missing/tampered renderer, worker launch refusal,
+deadline, cancellation, nested jobs and cleanup. Compare the host snapshot
+before and after. Follow up on Windows 11 x64 with actual browser navigation,
+selection, AI-client reconnection and the authored editing workflow before
+building a graphical installer.

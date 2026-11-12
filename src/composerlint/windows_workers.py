@@ -367,11 +367,12 @@ def _drain_operation(operation):
     try:
         operation.GetOverlappedResult(True)
     except OSError as error:
-        if error.winerror not in _BROKEN_PIPE:
+        if error.winerror not in (*_BROKEN_PIPE, 995):  # ERROR_OPERATION_ABORTED
             raise
 
 
-def _exchange(winapi, handles, payload, deadline, cancelled, max_stdout, max_stderr, pending):
+def _exchange(winapi, handles, payload, deadline, cancelled, max_stdout, max_stderr,
+              pending, *, close_input=None, framed=False):
     stdin, stdout, stderr = handles
     outputs = {stdout: bytearray(), stderr: bytearray()}
     limits = {stdout: max_stdout, stderr: max_stderr}
@@ -380,12 +381,15 @@ def _exchange(winapi, handles, payload, deadline, cancelled, max_stdout, max_std
         operation = _operation(winapi, handle)
         if operation is not None:
             pending[handle] = operation
-    if payload is not None:
+    if payload:
         pending[stdin] = _operation(winapi, stdin, data=payload[:_CHUNK])
+    elif close_input is not None:
+        close_input()
     while pending:
         _check_deadline(deadline, cancelled)
         progressed = False
-        for handle, operation in tuple(pending.items()):
+        for handle in sorted(pending, key=lambda handle: handle != stdin):
+            operation = pending[handle]
             try:
                 count, error = operation.GetOverlappedResult(False)
             except OSError as exc:
@@ -404,12 +408,18 @@ def _exchange(winapi, handles, payload, deadline, cancelled, max_stdout, max_std
                 offset += count
                 if offset < len(payload):
                     pending[handle] = _operation(winapi, handle, data=payload[offset:offset + _CHUNK])
+                elif close_input is not None:
+                    close_input()
             elif count:
                 buffer = outputs[handle]
                 if len(buffer) + count > limits[handle]:
                     stream = 'stdout' if handle == stdout else 'stderr'
                     raise PipeLimitError(f'Windows worker exceeded the {stream} byte limit.')
                 buffer.extend(operation.getbuffer())
+                if framed and handle == stdout and b'\n' in buffer:
+                    if buffer.count(b'\n') != 1 or not buffer.endswith(b'\n') or stdin in pending:
+                        raise ValueError('Unexpected framing from Windows passage worker.')
+                    return bytes(buffer), bytes(outputs[stderr])
                 next_operation = _operation(winapi, handle)
                 if next_operation is not None:
                     pending[handle] = next_operation
@@ -427,6 +437,13 @@ def run_worker(command, payload, *, timeout, cancelled=None, max_request=_LIMIT,
                       max_request=max_request, max_stdout=max_stdout, max_stderr=max_stderr)
 
 
+def run_json_worker(command, payload, *, timeout, cancelled=None):
+    """EOF-terminated JSON on bounded owned pipes, with separate diagnostics."""
+    return _run_owned(command, payload, timeout=timeout, cancelled=cancelled,
+                      max_request=12 * 1024 * 1024, max_stdout=_LIMIT,
+                      max_stderr=256 * 1024, json_worker=True)
+
+
 def run_setup_command(command, *, cwd, env, timeout):
     """One-shot installer tools only; EOF on stdin, bounded output, no ambient environment."""
     cwd = local_path_text(cwd, target='win32')
@@ -438,7 +455,7 @@ def run_setup_command(command, *, cwd, env, timeout):
 
 
 def _run_owned(command, payload, *, timeout, cancelled=None, max_request=_LIMIT,
-               max_stdout, max_stderr, cwd=None, env=None):
+               max_stdout, max_stderr, cwd=None, env=None, json_worker=False):
     if sys.platform != 'win32':
         raise UnsupportedPlatformOperation('Windows worker pilot requires native Windows.')
     import _winapi
@@ -455,7 +472,7 @@ def _run_owned(command, payload, *, timeout, cancelled=None, max_request=_LIMIT,
             raise ValueError('Windows worker byte limits must be between zero and 64 MiB.')
     if cwd is None and (not isinstance(payload, bytes) or len(payload) > max_request):
         raise PipeLimitError('Windows worker exceeded the request byte limit.')
-    if payload is not None and (payload.count(b'\n') != 1 or not payload.endswith(b'\n')):
+    if not json_worker and payload is not None and (payload.count(b'\n') != 1 or not payload.endswith(b'\n')):
         raise ValueError('Expected one LF-terminated Windows worker request.')
     if not math.isfinite(timeout) or timeout <= 0:
         raise ValueError('A finite positive Windows worker timeout is required.')
@@ -477,7 +494,7 @@ def _run_owned(command, payload, *, timeout, cancelled=None, max_request=_LIMIT,
                     try:
                         api.stop_job(job, process)
                     except BaseException as error:
-                        if payload is None:
+                        if payload is None or json_worker:
                             cleanup_unconfirmed = SetupProcessCleanupUnconfirmed(str(error))
                             raise cleanup_unconfirmed from error
                         raise
@@ -485,7 +502,7 @@ def _run_owned(command, payload, *, timeout, cancelled=None, max_request=_LIMIT,
                 jobs.callback(stop)
                 with ExitStack() as children, security.private_descriptor(security.user_sid()) as descriptor:
                     pipes = [api.pipe(_winapi, descriptor, input_pipe=index == 0,
-                                      parent_ends=input_end if index == 0 and payload is None else parents,
+                                      parent_ends=input_end if index == 0 and (payload is None or json_worker) else parents,
                                       child_ends=children) for index in range(3)]
                     _check_deadline(deadline, cancelled)
                     child_handles = [pair[1] for pair in pipes]
@@ -494,16 +511,21 @@ def _run_owned(command, payload, *, timeout, cancelled=None, max_request=_LIMIT,
                     else:
                         process = api.launch_setup(_winapi, command, job, child_handles, process_handles,
                                                    cwd=cwd, env=env)
-                input_end.close()
+                if payload is None:
+                    input_end.close()
                 stdout, stderr = _exchange(_winapi, [pair[0] for pair in pipes], payload, deadline,
-                                           cancelled, max_stdout, max_stderr, pending)
+                                           cancelled, max_stdout, max_stderr, pending,
+                                           close_input=input_end.close if json_worker else None)
                 while True:
                     remaining = _check_deadline(deadline, cancelled)
                     interval = max(1, min(25, math.ceil(remaining * 1000)))
                     if _winapi.WaitForSingleObject(process, interval) == _WAIT_OBJECT_0:
                         break
                 _check_deadline(deadline, cancelled)
-                if _winapi.GetExitCodeProcess(process):
+                exit_code = _winapi.GetExitCodeProcess(process)
+                if json_worker:
+                    return subprocess.CompletedProcess(command, exit_code, stdout, stderr)
+                if exit_code:
                     raise RuntimeError('Windows worker failed: ' + stderr[-4000:].decode('utf-8', 'replace'))
                 if payload is not None and (stdout.count(b'\n') != 1 or not stdout.endswith(b'\n')):
                     raise ValueError('Expected exactly one LF-terminated Windows worker response.')
@@ -515,3 +537,53 @@ def _run_owned(command, payload, *, timeout, cancelled=None, max_request=_LIMIT,
                 if cleanup_unconfirmed is not None:
                     raise cleanup_unconfirmed from error
                 raise
+
+
+class PassageProcess:
+    """One persistent worker using the same creation-time job and pipe boundary."""
+
+    def __init__(self, command):
+        import _winapi
+
+        executable = local_path_text(command[0], target='win32')
+        if not executable.lower().endswith('.exe'):
+            raise ValueError('A fully qualified Windows passage worker .exe is required.')
+        self._winapi = _winapi
+        self._stack = ExitStack()
+        self._api = _WorkerAPI()
+        security = _SecurityAPI()
+        try:
+            job = self._api.job(self._stack)
+            with ExitStack() as children, security.private_descriptor(security.user_sid()) as descriptor:
+                pipes = [self._api.pipe(_winapi, descriptor, input_pipe=i == 0,
+                                        parent_ends=self._stack, child_ends=children)
+                         for i in range(3)]
+                self._handles = [pair[0] for pair in pipes]
+                self._process = self._api.launch(_winapi, command, job,
+                                                 [pair[1] for pair in pipes], self._stack)
+            self._stack.callback(self._api.stop_job, job, self._process)
+        except BaseException:
+            self._stack.close()
+            raise
+
+    def exited(self):
+        result = self._winapi.WaitForSingleObject(self._process, 0)
+        if result == _WAIT_OBJECT_0:
+            return True
+        if result != _WAIT_TIMEOUT:
+            raise _api_error('WaitForSingleObject (passage worker)')
+        return False
+
+    def exchange(self, payload, deadline):
+        pending = {}
+        try:
+            stdout, stderr = _exchange(self._winapi, self._handles, payload, deadline, None,
+                                       _LIMIT, 256 * 1024, pending, framed=True)
+            if not stdout.endswith(b'\n'):
+                raise OSError('Windows passage worker exited: ' + stderr.decode('utf-8', 'replace')[-4000:])
+            return stdout
+        finally:
+            _cancel_operations(pending)
+
+    def close(self):
+        self._stack.close()

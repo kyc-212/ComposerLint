@@ -13,7 +13,7 @@ from .windows_preflight import _NTFS_FLAGS, _ReadOnlyDisk
 from .windows_private import (
     _DELETE, _FILE_CREATE, _FILE_DIRECTORY_FILE, _FILE_NON_DIRECTORY_FILE,
     _FILE_OPEN, _FileStandardInfo, _PrivateDirectory, _READ_CONTROL, _SecurityAPI,
-    _WRITE_DATA,
+    _WRITE_DATA, private_directory,
 )
 from .windows_read import (
     _IoStatusBlock, _OPEN_REPARSE_POINT, _READ_ATTRIBUTES, _READ_DATA, _SHARE_READ,
@@ -148,6 +148,17 @@ class Stage:
             stack.callback(self.disk.close, handle)
             yield self.path.joinpath(*parts)
         self.validate()
+
+    def remove(self, parts, *, directory=False):
+        self.validate()
+        with ExitStack() as stack:
+            parent = self._directories(parts[:-1], stack)
+            try:
+                handle = self._open(parent, parts[-1], directory=directory, access=_DELETE)
+            except FileNotFoundError:
+                return
+            stack.callback(self.disk.close, handle)
+            self.disk.remove(handle)
 
     def _scan(self, parent, path, *, remove, depth=0, budget):
         if depth > 64:
@@ -329,3 +340,70 @@ def transaction(destination):
 
             with _verified_stage(stage, rollback):
                 yield stage
+
+
+@contextmanager
+def pinned_install_files(root):
+    """Verify a private install tree and hold the requested NTFS objects open."""
+    path = Path(root)
+    with private_directory(path, tree_root=True) as directory, ExitStack() as pins:
+        stage = Stage(path, directory._api, directory._security, directory._sid, directory._chain, [])
+        folders = {(): stage.handle}
+
+        def read(parts, *, limit):
+            parent = stage.handle
+            for depth, name in enumerate(parts[:-1], 1):
+                prefix = parts[:depth]
+                if prefix not in folders:
+                    handle = stage._open(parent, name, directory=True)
+                    pins.callback(stage.disk.close, handle)
+                    folders[prefix] = handle
+                parent = folders[prefix]
+            handle = stage._open(parent, parts[-1], directory=False, access=_READ_DATA)
+            stream = pins.enter_context(_stream(stage.disk, handle, 'rb'))
+            stamp = stage.disk.stamp(handle)
+            if stamp.size > limit:
+                raise ValueError('Pinned installation file exceeds its size limit.')
+            data = stream.read(stamp.size + 1)
+            if len(data) != stamp.size or stage.disk.stamp(handle) != stamp:
+                raise OSError('Pinned installation file changed while being read.')
+            return data
+
+        yield read, stage.validate
+
+
+@contextmanager
+def private_workspace(parent, prefix):
+    """Own one newly created scratch tree and clean it by held NTFS identity."""
+    path = Path(parent) / (prefix + secrets.token_hex(16))
+    local_path_text(path, target='win32')
+    disk, security = _InstallDisk(), _SecurityAPI()
+    sid = security.user_sid()
+    with ExitStack() as parents, ExitStack() as owned:
+        chain = disk.ancestors(path, parents)
+        root = chain[-1][0]
+        with security.private_descriptor(sid, inheritable=True) as descriptor:
+            handle = disk.open_component(
+                root, path.name, access=_READ_ATTRIBUTES | _TRAVERSE | _READ_CONTROL,
+                share=_SHARE_READ, disposition=_FILE_CREATE,
+                options=_FILE_DIRECTORY_FILE, descriptor=descriptor, refuse_reparse=True)
+        owned.callback(disk.close, handle)
+        identity = disk.identity(handle)
+        stage = Stage(path, disk, security, sid, chain + [(handle, identity)], [])
+        stage.validate()
+
+        def cleanup():
+            stage.audit()
+            stage._scan(handle, path, remove=True, budget=[100_000])
+            owned.close()
+            stage._delete_member(root, path.name, True, identity)
+
+        try:
+            yield stage
+        except SetupProcessCleanupUnconfirmed:
+            raise
+        except BaseException:
+            cleanup()
+            raise
+        else:
+            cleanup()

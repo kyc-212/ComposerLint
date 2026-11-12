@@ -1,11 +1,13 @@
 """Native pilot controls. Run with isolated CPython and the standard library."""
 
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import nullcontext
 import ctypes
 from ctypes import wintypes as win
 import importlib
 import importlib.machinery
 import importlib.util
+import json
 import os
 from pathlib import Path
 import platform
@@ -15,6 +17,7 @@ import sys
 import tempfile
 import threading
 import time
+from types import ModuleType, SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -388,10 +391,138 @@ stage.replace(path)
 '''
 
 
+class WindowsEditingLifecycleTests(WindowsPilotCase):
+    def test_cancelled_edit_waits_for_outcome_and_preserves_unconfirmed_tree(self):
+        # The runner has no ComposerLint dependencies. Stub the musical/UI
+        # interfaces, keeping the real editing runtime, process and NTFS code.
+        import atexit
+
+        class ViewerFailure(Exception):
+            pass
+
+        def fail(code, reason):
+            raise ViewerFailure(reason)
+
+        package = self.workers.__package__
+        install_storage = importlib.import_module(f'{package}.windows_install_storage')
+        modules = {'composerlint': sys.modules[package],
+                   'composerlint.platform_support': self.host,
+                   'composerlint.windows_workers': self.workers,
+                   'composerlint.windows_install_storage': install_storage}
+        for name, exports in {
+            'review': {'canonical': json.dumps, 'digest': None},
+            'editing_models': {'EditResult': None},
+            'editing_source': {'safe_xml': lambda data: None},
+            'score_import': {'verify_import': lambda path: None},
+            'errors': {'ComposerLintError': type('ComposerLintError', (Exception,), {})},
+            'viewer_source': {'fail': fail, 'ViewerFailure': ViewerFailure},
+            'viewer_runtime': {'runtime': SimpleNamespace(entries={})},
+            'runtime_paths': {'temporary_parent': lambda: self.root},
+        }.items():
+            module = ModuleType(f'composerlint.{name}')
+            vars(module).update(exports)
+            modules[module.__name__] = module
+
+        with patch.dict(sys.modules, modules):
+            runtime = importlib.import_module(f'{package}.editing_runtime')
+            try:
+                for unconfirmed in (False, True):
+                    with self.subTest(unconfirmed=unconfirmed):
+                        self.exercise_cancel(runtime, ViewerFailure, unconfirmed)
+            finally:
+                atexit.unregister(runtime.editing.close)
+                sys.modules.pop(runtime.__name__, None)
+
+    def exercise_cancel(self, runtime, failure, unconfirmed):
+        engine = runtime.EditingRuntime()
+        marker = self.root / 'started'
+        handling, release = threading.Event(), threading.Event()
+        child = ("import json, pathlib, sys, time; json.load(sys.stdin); "
+                 f"pathlib.Path({str(marker)!r}).write_bytes(b'ready'); time.sleep(30)")
+        original_run = self.host.run_windows_json
+        original_worker = runtime.worker
+        real_stop = self.workers._WorkerAPI.stop_job
+
+        def run_fixture(command, payload, **kwargs):
+            return original_run([sys.executable, '-I', '-S', '-B', '-c', child], payload, **kwargs)
+
+        def pause_outcome(*args, **kwargs):
+            try:
+                return original_worker(*args, **kwargs)
+            except (self.host.WorkerLifecycleUnconfirmed, failure):
+                handling.set()
+                if not release.wait(5):
+                    raise AssertionError('The test did not release the edit outcome.')
+                raise
+
+        def unconfirmed_stop(api, job, process):
+            real_stop(api, job, process)
+            # Confirm actual teardown for the test host before injecting the
+            # caller-visible failure that must preserve the editing workspace.
+            raise self.workers.WorkerTerminationUnconfirmed('Injected cleanup confirmation failure.')
+
+        stop_patch = (patch.object(self.workers._WorkerAPI, 'stop_job', unconfirmed_stop)
+                      if unconfirmed else nullcontext())
+        args = SimpleNamespace(path=self.score, options=None, expected_snapshot='fixture',
+                               view_instance_id='fixture')
+        with (stop_patch, patch.object(self.host, 'run_windows_json', run_fixture),
+              patch.object(runtime, 'worker', pause_outcome), ThreadPoolExecutor(max_workers=2) as pool):
+            opening = pool.submit(engine.open, args)
+            try:
+                deadline = time.monotonic() + 10
+                while not marker.is_file():
+                    if opening.done():
+                        opening.result()
+                    self.assertLess(time.monotonic(), deadline, 'Edit worker did not start.')
+                    time.sleep(.02)
+                tree = engine.windows_stage.path
+                closing = pool.submit(engine.close)
+                self.assertTrue(handling.wait(5), 'Edit cancellation did not reach its outcome.')
+                self.assertFalse(engine.windows_stage_unsafe)
+                with self.assertRaises(TimeoutError):
+                    closing.result(timeout=.1)
+                self.assertTrue(tree.is_dir())
+            finally:
+                release.set()
+            expected = 'Private workspace preserved' if unconfirmed else 'cancelled during workspace shutdown'
+            with self.assertRaisesRegex(failure, expected):
+                opening.result(timeout=5)
+            closing.result(timeout=5)
+        self.assertEqual(tree.exists(), unconfirmed)
+        if unconfirmed:
+            snapshots = list(tree.glob('*/original.musicxml'))
+            self.assertEqual(len(snapshots), 1)
+            self.assertEqual(snapshots[0].read_bytes(), self.data)
+        self.assertEqual(self.score.read_bytes(), self.data)
+        marker.unlink()
+
+
 class WindowsWorkerTests(WindowsPilotCase):
     def _run(self, script, payload=b'request\n', **kwargs):
         return self.workers.run_worker([sys.executable, '-I', '-S', '-B', '-c', script],
                                        payload, timeout=kwargs.pop('timeout', 10), **kwargs)
+
+    def test_eof_terminated_json_worker_keeps_diagnostics_separate(self):
+        code = ("import json, sys; data=json.load(sys.stdin); "
+                "sys.stderr.write('diagnostic'); sys.stdout.write(json.dumps(data))")
+        payload = {'path': str(self.score), 'text': 'x' * 80000}
+        result = self.host.run_windows_json(
+            [sys.executable, '-I', '-S', '-B', '-c', code], json.dumps(payload), timeout=15)
+        self.assertEqual((result.returncode, json.loads(result.stdout), result.stderr),
+                         (0, payload, 'diagnostic'))
+
+    def test_persistent_passage_worker_accepts_two_frames_and_reaps(self):
+        code = ("import sys\nfor frame in sys.stdin.buffer:\n"
+                " sys.stdout.buffer.write(frame); sys.stdout.buffer.flush()\n")
+        command = [sys.executable, '-I', '-S', '-B', '-c', code]
+        process = self.workers.PassageProcess(command)
+        try:
+            for payload in (b'first\n', b'x' * 80000 + b'\n'):
+                self.assertEqual(process.exchange(payload, time.monotonic() + 15), payload)
+            self.assertFalse(process.exited())
+        finally:
+            process.close()
+        process.close()
 
     def test_multichunk_round_trip_drains_stderr_before_worker_reads(self):
         code = ("import sys; sys.stderr.buffer.write(b'e'*50000); sys.stderr.buffer.flush(); "

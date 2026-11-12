@@ -5,6 +5,7 @@ from fractions import Fraction
 from itertools import combinations
 from pathlib import Path
 import hashlib
+from composerlint.platform_support import read_score_bytes
 from composerlint.models import rt
 from composerlint.advanced_models import (AdvancedQuery,AdvancedSnapshot,AdvancedFailure,ResolvedScope,Span,
     SourceSupport,Observation,FeatureCoverage,CoverageUnit,FEATURES,POLICY)
@@ -176,9 +177,12 @@ def compute(path,options,query,*,_base_report=None):
     opts=_options(options);query=AdvancedQuery.model_validate(query.model_dump(mode='json') if isinstance(query,AdvancedQuery) else query or {})
     local=Path(path).expanduser()
     if local.is_file() and local.stat().st_size>LIMITS['source_bytes']:raise AdvancedFailure('analysis_limit_exceeded','Input exceeds 10 MiB advanced limit.')
-    if local.is_file() and local.suffix.lower() in ('.xml','.musicxml') and b'<!ENTITY' in local.read_bytes().upper():raise AdvancedFailure('unsupported_analysis_case','XML entity declarations are not supported.')
+    try:
+        if local.is_file() and local.suffix.lower() in ('.xml','.musicxml') and b'<!ENTITY' in read_score_bytes(local).upper():raise AdvancedFailure('unsupported_analysis_case','XML entity declarations are not supported.')
+    except OSError as exc:
+        raise AdvancedFailure('parse_failed','Source is unreadable or unsafe.') from exc
     score=load_score(path,opts);preflight(score)
-    data=local.read_bytes();audit=audit_source(score,data)
+    data=read_score_bytes(local);audit=audit_source(score,data)
     source_context=read_source_context(path,score)
     if _base_report is None:
         report=analyze_normalized(score,source_context)
@@ -223,7 +227,7 @@ def compute(path,options,query,*,_base_report=None):
         assumptions=['literal_source_order_no_repeat_expansion','concert_default_without_transpose_no_instrument_name_guess','deterministic_patterns_not_artistic_intent','boundary_candidates_not_formal_segmentation']+(['midi_spelling_lanes_and_quantization_inferred'] if score.format=='midi' else []))
     snapshot.advanced_snapshot_id=digest(snapshot.model_dump(mode='json',exclude={'advanced_snapshot_id'}))
     if len(canonical(snapshot.model_dump(mode='json')).encode())>LIMITS['payload_bytes']:raise AdvancedFailure('analysis_limit_exceeded','Advanced payload exceeds 32 MiB; narrow the query.')
-    if hashlib.sha256(local.read_bytes()).hexdigest()!=score.source_sha256:raise AdvancedFailure('stale_snapshot','Source changed during analysis; no result returned.')
+    if hashlib.sha256(read_score_bytes(local)).hexdigest()!=score.source_sha256:raise AdvancedFailure('stale_snapshot','Source changed during analysis; no result returned.')
     bundle=AdvancedAnalysis(report,snapshot)
     from composerlint.advanced_review import validate_analysis
     validate_analysis(bundle)

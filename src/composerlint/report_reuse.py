@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 import hashlib,json,time,zlib
 from pathlib import Path
+from composerlint.platform_support import read_score_bytes
 from composerlint.review import canonical,digest
 
 MAX_BYTES=32*1024*1024
@@ -45,7 +46,7 @@ def publish(path,report):
     from composerlint.score_import import verify_import
     verify_import(path)
     local=Path(path).expanduser().resolve()
-    try:source=hashlib.sha256(local.read_bytes()).hexdigest()
+    try:source=hashlib.sha256(read_score_bytes(local)).hexdigest()
     except OSError:return
     if source!=report.score.source_sha256:return
     _entry=_Entry(local,source,digest(report.options.model_dump(mode='json')),code_identity(),
@@ -64,7 +65,7 @@ def take(path,options=None):
     verify_import(path)
     local=Path(path).expanduser().resolve()
     if local!=entry.path or digest(_options(options).model_dump(mode='json'))!=entry.options:return None
-    try:fresh=hashlib.sha256(local.read_bytes()).hexdigest()==entry.source
+    try:fresh=hashlib.sha256(read_score_bytes(local)).hexdigest()==entry.source
     except OSError:fresh=False
     if not fresh or code_identity()!=entry.code:
         _entry=None;return None

@@ -217,3 +217,72 @@ def test_edit_first_then_normal_open_reuses_view():
     view,error=dispatch('get_score_view',dict(path=str(p),expected_snapshot=w['snapshot']))
     assert not error and view.viewer_url==opened.data['workspace_url']
     assert len(runtime.entries)==1
+
+
+def test_windows_close_waits_for_edit_failure_to_preserve_workspace(monkeypatch, tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+    from contextlib import contextmanager
+    from types import SimpleNamespace
+
+    import composerlint.editing_runtime as module
+    from composerlint.windows_workers import SetupProcessCleanupUnconfirmed
+
+    engine = module.EditingRuntime()
+    source = F / 'basic.musicxml'
+    raw = source.read_bytes()
+    running, handling_failure, release = (threading.Event() for _ in range(3))
+    cleanup = []
+
+    @contextmanager
+    def stage_scope():
+        try:
+            yield object()
+        except SetupProcessCleanupUnconfirmed:
+            cleanup.append('preserved')
+            raise
+        else:
+            cleanup.append('removed')
+
+    engine.windows_stage = engine.windows_scope.enter_context(stage_scope())
+    monkeypatch.setattr(module, 'sys', SimpleNamespace(platform='win32', executable='python.exe'))
+    monkeypatch.setattr(module, 'read_source', lambda path: (source, raw, ('fixture',)))
+    monkeypatch.setattr(engine, 'snapshot_budget', lambda size: None)
+    monkeypatch.setattr(engine, 'snapshot', lambda data: (tmp_path, tmp_path/'original.musicxml'))
+
+    def worker_until_cancelled(*args, cancelled, **kwargs):
+        running.set()
+        assert cancelled.wait(3)
+        raise module.host.WorkerLifecycleUnconfirmed('fixture')
+
+    monkeypatch.setattr(module.host, 'run_windows_json', worker_until_cancelled)
+    original_worker = module.worker
+
+    def pause_before_reporting_failure(*args, **kwargs):
+        try:
+            return original_worker(*args, **kwargs)
+        except module.host.WorkerLifecycleUnconfirmed:
+            handling_failure.set()
+            assert release.wait(3)
+            raise
+
+    monkeypatch.setattr(module, 'worker', pause_before_reporting_failure)
+    args = SimpleNamespace(path=source, options=None, expected_snapshot='fixture', view_instance_id='fixture')
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        opening = executor.submit(engine.open, args)
+        assert running.wait(3)
+        closing = executor.submit(engine.close)
+        try:
+            assert handling_failure.wait(3)
+            assert not engine.windows_stage_unsafe
+            with pytest.raises(TimeoutError):
+                closing.result(timeout=0.05)
+            assert cleanup == []
+            with pytest.raises(ViewerFailure, match='closing'):
+                engine.open(args)
+        finally:
+            release.set()
+        with pytest.raises(ViewerFailure, match='Private workspace preserved'):
+            opening.result(timeout=3)
+        closing.result(timeout=3)
+    assert cleanup == ['preserved']
+    assert source.read_bytes() == raw

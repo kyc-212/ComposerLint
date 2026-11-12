@@ -7,6 +7,7 @@ from pathlib import Path
 import time
 import xml.etree.ElementTree as ET
 
+from composerlint.platform_support import read_score_bytes
 from composerlint import passage
 from composerlint.review import canonical,digest
 from composerlint.viewer_models import SourceSelection,SourceViewerPage,ViewerPassagePage
@@ -114,7 +115,7 @@ def run(args,resolving=False):
     timings={};started=time.monotonic()
     # Retain viewer XML safety checks before the normalizer sees the source.
     local=Path(args.path).expanduser()
-    try:data=local.read_bytes() if local.stat().st_size<=10*1024*1024 else None
+    try:data=read_score_bytes(local) if local.stat().st_size<=10*1024*1024 else None
     except OSError:fail('file_not_found','Source is not readable.')
     if data is None:fail('asset_too_large','Source exceeds the existing 10 MiB viewer limit.')
     if local.suffix.lower() not in ('.musicxml','.xml'):fail('unsupported_notation','Viewer supports uncompressed MusicXML.')

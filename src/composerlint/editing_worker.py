@@ -9,10 +9,12 @@ import time
 
 def main():
     # Load the same stdlib-only adapter without importing application dependencies.
-    import runpy
-    support=runpy.run_path(str(Path(__file__).parent / 'platform_support.py'))
-    support['watch_parent'](group=True)
+    if sys.platform != 'win32':
+        import runpy
+        support=runpy.run_path(str(Path(__file__).parent / 'platform_support.py'))
+        support['watch_parent'](group=True)
     sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+    from composerlint.platform_support import read_score_bytes
     from composerlint import service
     from composerlint.review import digest,canonical
     from composerlint.viewer_source import ViewerFailure,source_index,aligned_range
@@ -23,7 +25,7 @@ def main():
     from composerlint.errors import ComposerLintError
     request=json.load(sys.stdin);started=time.monotonic()
     try:
-        path=Path(request['original']);data=path.read_bytes();safe_xml(data)
+        path=Path(request['original']);data=read_score_bytes(path);safe_xml(data)
         before=service.analyze_score(path,request['options'])
         if digest(before.model_dump(mode='json'))!=request['expected_snapshot']:raise ViewerFailure('stale_snapshot','Source/options no longer match the requested base snapshot.')
         if request['action'] in ('prepare','export'):
@@ -53,15 +55,20 @@ def main():
                     transform=lambda data,before,target,operations: creation_transform(data,before,request['selection'],request['target'],operations)
                 if (brief['draft'].get('creation_policy') or brief['draft'].get('rhythm_policy') or 'v02_m6_expressive_edit_v1')!=operation['policy']:
                     raise ViewerFailure('stale_brief','Operation policy differs from the bound brief.')
-                candidate=(Path(request['candidate']).read_bytes() if request['action']=='export' else transform(data,before,target,chosen['operations']))
+                candidate=(read_score_bytes(Path(request['candidate'])) if request['action']=='export' else transform(data,before,target,chosen['operations']))
             elif exact:
                 from composerlint.editing_pitch import transform
                 candidate,destinations=transform(data,target,operation)
             else:candidate=transpose(data,target,operation['direction'])
             cp=Path(request['candidate'])
             if request['action']!='export':
-                with os.fdopen(os.open(cp,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600),'wb') as f:f.write(candidate)
-                cp.chmod(0o600)
+                if sys.platform == 'win32':
+                    from composerlint.windows_private import private_directory
+                    with private_directory(cp.parent,tree_root=True) as directory:
+                        directory.write_new(cp.name,candidate)
+                else:
+                    with os.fdopen(os.open(cp,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600),'wb') as f:f.write(candidate)
+                    cp.chmod(0o600)
             after=service.analyze_score(cp,request['options'])
             if expressive:
                 from composerlint.editing_expression_verify import verify,musical_comparison

@@ -8,9 +8,10 @@ from importlib.metadata import version
 
 def main():
     # Load the same stdlib-only adapter without importing application dependencies.
-    import runpy
-    support=runpy.run_path(str(Path(__file__).parents[1] / 'platform_support.py'))
-    support['watch_parent'](group=False)
+    if sys.platform != 'win32':
+        import runpy
+        support=runpy.run_path(str(Path(__file__).parents[1] / 'platform_support.py'))
+        support['watch_parent'](group=False)
     import verovio
     started = time.monotonic()
     request = json.loads(sys.stdin.buffer.read(12 * 1024 * 1024))

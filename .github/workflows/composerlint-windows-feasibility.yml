@@ -17,12 +17,12 @@ concurrency:
 
 jobs:
   windows-ntfs:
-    # One approved real installation on run 13, with no rerun.
+    # One approved compiler and security probe on run 14, with no rerun.
     if: >-
       github.repository == 'kyc-212/ComposerLint' &&
       github.actor == github.repository_owner &&
       github.ref == 'refs/heads/codex/windows-ci-pilot' &&
-      github.run_number == '13' && github.run_attempt == '1' &&
+      github.run_number == '14' && github.run_attempt == '1' &&
       github.sha == inputs.expected_sha
     runs-on: windows-2025
     timeout-minutes: 20
@@ -78,14 +78,27 @@ jobs:
         run: |
           & $env:CI_RUNNER_PYTHON -I -S -B -X utf8 -m unittest discover -s tests -p test_windows_host_snapshot.py -v
           exit $LASTEXITCODE
-      - name: Run the one approved Windows text installation and verify the receipt
+      - name: Probe the preinstalled native x64 compiler, SDK and CPython ABI
         shell: pwsh
         env:
-          REVIEWED_COMMIT: ${{ inputs.expected_sha }}
           CI_RUNNER_PYTHON: ${{ steps.runner-python.outputs.path }}
         run: |
-          $local = [Environment]::GetFolderPath('LocalApplicationData')
-          & $env:CI_RUNNER_PYTHON -I -S -B -X utf8 tools/ci_windows_text_setup.py $local
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
+          $instances = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -format json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $selected = @(($instances -join [Environment]::NewLine) | ConvertFrom-Json)
+          if ($selected.Count -ne 1 -or !$selected[0].installationPath) {
+            throw 'A preinstalled Visual Studio instance with the x64 C++ tools is required.'
+          }
+          Write-Output "Visual Studio $($selected[0].installationVersion) at $($selected[0].installationPath)"
+          $devShell = Join-Path $selected[0].installationPath 'Common7/Tools/Launch-VsDevShell.ps1'
+          & $devShell -Arch amd64 -HostArch amd64 -SkipAutomaticLocation
+          foreach ($name in @('cl.exe', 'link.exe', 'rc.exe', 'mt.exe')) {
+            $tool = Get-Command $name -CommandType Application | Select-Object -First 1
+            $file = Get-Item -LiteralPath $tool.Source
+            Write-Output "$name file version $($file.VersionInfo.FileVersion) at $($file.FullName)"
+          }
+          & $env:CI_RUNNER_PYTHON -I -S -B -X utf8 tools/build_windows_renderer.py --probe-only
           exit $LASTEXITCODE
       - name: Verify the checkout is clean
         if: ${{ !cancelled() && steps.reviewed-checkout.outcome == 'success' }}

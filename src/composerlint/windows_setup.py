@@ -2,7 +2,7 @@
 
 import ctypes
 from ctypes import wintypes as win
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import hashlib
 import http.client
 import io
@@ -60,6 +60,8 @@ class Plan:
     source: tuple
     lock_sha256: str
     identity: str
+    renderer: tuple = ()
+    controls: tuple = ()
 
 
 def _sha(data):
@@ -184,7 +186,7 @@ def _archive_path(name, directory):
     return parts
 
 
-def unpack(stage, data, kind):
+def unpack(stage, data, kind, *, patch=None):
     """Extract only reviewed layouts and regular files; never call extractall."""
     seen, total = set(), 0
     has_executable = False
@@ -215,15 +217,22 @@ def unpack(stage, data, kind):
                 raise SetupError('Archive member exceeds its declared size.')
         has_executable |= parts in (('python', 'python.exe'), ('uv', 'uv.exe'))
 
-    if kind == 'python':
+    if kind in ('python', 'renderer'):
         with tarfile.open(fileobj=io.BytesIO(data), mode='r|gz') as archive:
             for item in archive:
                 directory = item.isdir()
                 if not directory and (item.type not in (tarfile.REGTYPE, tarfile.AREGTYPE) or item.issparse()):
                     raise SetupError('Python archive links, sparse entries and special files are refused.')
                 parts = _archive_path(item.name, directory)
-                if parts[0] != 'python' or (len(parts) == 1 and not directory):
-                    raise SetupError('Unexpected Python archive layout.')
+                expected_root = 'python' if kind == 'python' else 'verovio-6.3.0'
+                if parts[0] != expected_root or (len(parts) == 1 and not directory):
+                    raise SetupError(f'Unexpected {kind} archive layout.')
+                if kind == 'renderer' and parts == (expected_root, 'src', 'iomusxml.cpp'):
+                    from .windows_renderer import apply_reviewed_patch
+                    patched = apply_reviewed_patch(archive.extractfile(item).read(), patch)
+                    member(parts, False, len(patched), lambda: io.BytesIO(patched))
+                    has_executable = True
+                    continue
                 member(parts, directory, item.size, lambda: archive.extractfile(item))
     elif kind == 'uv':
         with zipfile.ZipFile(io.BytesIO(data)) as archive:
@@ -372,21 +381,124 @@ def populate(plan, stage, status, *, fetch=acquire, command=run_setup_command, w
     uv_run('pip', 'check', '--python', target_python)
     run(runtime, '-I', '-B', '-c', _VERIFY,
         json.dumps({w.name: w.version for w in plan.wheels}), work / 'export.txt')
+    receipt = {'schema': 1, 'target': 'windows-x64-text-pilot', 'plan': plan.identity,
+               'lock_sha256': plan.lock_sha256, 'python': str(target_python)}
+    if plan.renderer:
+        receipt.update(install_renderer(plan, stage, run, uv_run, pip, base_python, env, status))
     stage.clear_work()
-    stage.commit({'schema': 1, 'target': 'windows-x64-text-pilot', 'plan': plan.identity,
-                  'lock_sha256': plan.lock_sha256, 'python': str(target_python)})
+    stage.commit(receipt)
     return target_python
 
 
+_CONTROL_FILES = (
+    'tools/ci_windows_mcp.py',
+    'tests/test_renderer_packaging_equivalence.py', 'tests/test_v02_renderer_ties.py',
+    'tests/fixtures/v02_m2/multipage.musicxml', 'tests/fixtures/basic.musicxml',
+)
+
+
+def with_renderer(plan, root, bundle, candidate_sha256):
+    from . import windows_renderer as renderer
+    bundle = Path(bundle)
+    pins = (
+        (renderer.OFFICIAL_WHEEL, renderer.OFFICIAL_SHA256),
+        (renderer.PATCHED_WHEEL, candidate_sha256),
+        (renderer.SOURCE_ARCHIVE, renderer.SOURCE_SHA256),
+        (renderer.PATCH, renderer.PATCH_SHA256),
+    )
+    files = tuple((name, renderer.checked_bytes(bundle / name, expected, 32 * 1024**2))
+                  for name, expected in pins)
+    provenance = _read_source(bundle / 'build-provenance.json', 16 * 1024)
+    build = json.loads(provenance)
+    if any(build.get(key) != expected for key, expected in (
+            ('source_sha256', renderer.SOURCE_SHA256), ('patch_sha256', renderer.PATCH_SHA256),
+            ('postimage_sha256', renderer.POSTIMAGE), ('wheel_sha256', candidate_sha256))):
+        raise SetupError('Renderer build provenance differs from the reviewed inputs or wheel.')
+    files += (('build-provenance.json', provenance),)
+    controls = tuple((tuple(name.split('/')), _read_source(root / name, 4 * 1024**2))
+                     for name in _CONTROL_FILES)
+    identity = _sha(json.dumps([plan.identity, [(name, _sha(data)) for name, data in files],
+                               [(parts, _sha(data)) for parts, data in controls]]).encode())
+    return replace(plan, identity=identity, renderer=files, controls=controls)
+
+
+def install_renderer(plan, stage, run, uv_run, pip, base_python, env, status):
+    import xml.etree.ElementTree as ET
+    from . import windows_renderer as renderer
+
+    status('renderer', 'Installing the pinned official wheel and separate patched Windows renderer candidate.')
+    artifacts = stage.path / 'renderer-artifacts'
+    for name, raw in plan.renderer:
+        _write(stage, ('renderer-artifacts', name), raw)
+    for parts, raw in plan.controls:
+        _write(stage, ('work', 'controls', *parts), raw)
+    child = stage.path / 'renderer'
+    child_python = child / 'Scripts' / 'python.exe'
+    uv_run(*pip, artifacts / renderer.OFFICIAL_WHEEL)
+    uv_run('venv', '--python', base_python, child)
+    uv_run('pip', 'install', '--python', child_python, '--no-index', '--no-deps',
+           '--link-mode', 'copy', '--no-build', artifacts / renderer.PATCHED_WHEEL)
+    run(('renderer', 'Scripts', 'python.exe'), '-I', '-B', '-c',
+        'from importlib.metadata import version; import verovio; '
+        'assert version("verovio")== "6.3.0+composerlint.tie1"; '
+        'assert verovio.toolkit().getVersion().split("-")[0] == "6.3.0"')
+
+    packages = child / 'Lib' / 'site-packages'
+    retained = [base_python, child_python, child / 'pyvenv.cfg']
+    retained.extend(base_python.parent.glob('*.dll'))
+    retained.extend(artifacts / name for name, _ in plan.renderer)
+    retained.extend(p for p in packages.rglob('*') if p.is_file())
+    if not any(path.suffix.lower() == '.pyd' for path in retained):
+        raise SetupError('Patched Windows renderer native module is absent.')
+    files = {}
+    for path in sorted(retained):
+        rel = path.relative_to(stage.path)
+        with stage.held_file(rel.parts) as held, held.open('rb') as stream:
+            files[rel.as_posix()] = hashlib.file_digest(stream, 'sha256').hexdigest()
+    config = stage.path / 'renderer.json'
+    _write(stage, (config.name,), json.dumps({
+        'package_version': renderer.BUILD, 'python': child_python.relative_to(stage.path).as_posix(),
+        'files_sha256': files,
+    }, sort_keys=True).encode('utf-8'))
+
+    env.update(COMPOSERLINT_RENDERER_CONFIG=str(config), COMPOSERLINT_RENDERER_EQUIVALENCE='1',
+               COMPOSERLINT_TEMP_DIR=env['TEMP'], PYTEST_DISABLE_PLUGIN_AUTOLOAD='1')
+    runtime = ('runtime', 'Scripts', 'python.exe')
+    controls = stage.path / 'work' / 'controls'
+    report = stage.path / 'work' / 'renderer-controls.xml'
+    run(runtime, '-I', '-B', '-m', 'pytest', '-q', '-p', 'no:cacheprovider',
+        '--junitxml=' + str(report), controls / 'tests/test_renderer_packaging_equivalence.py', timeout=240)
+    counts = control_counts(ET.parse(report).getroot())
+    run(runtime, '-I', '-B', controls / 'tools/ci_windows_mcp.py', '--full', timeout=180)
+    return dict(target='windows-x64-full-pilot', renderer_config=str(config),
+                renderer_sha256=files['renderer-artifacts/' + renderer.PATCHED_WHEEL],
+                renderer_controls=counts, mcp_tools=18)
+
+
+def control_counts(tree):
+    suites = [tree] if tree.tag == 'testsuite' else tree.findall('testsuite')
+    counts = {key: sum(int(s.get(key, 0)) for s in suites)
+              for key in ('tests', 'failures', 'errors', 'skipped')}
+    if counts != dict(tests=10, failures=0, errors=0, skipped=0):
+        raise SetupError(f'All 10 renderer controls must pass: {counts}')
+    return counts
+
+
 def install(root, *, status, confirm=input, inspect=preflight.inspect, make_plan=prepare,
-            storage=transaction, build=populate):
+            storage=transaction, build=populate, renderer_bundle=None, renderer_sha256=None):
     report = inspect()
     if not report.compatible:
         preflight.print_report(report)
         raise SetupError('Read-only Windows preflight refused installation.')
     plan = make_plan(root, report.destination)
     assets = (plan.python, plan.uv, *plan.wheels)
-    print('Windows x64 text setup pilot')
+    if renderer_bundle is not None:
+        plan = with_renderer(plan, root, renderer_bundle, renderer_sha256)
+        print('Windows x64 full setup pilot')
+        for name, data in plan.renderer:
+            print(f'  {name}\n    SHA-256 {_sha(data)}')
+    else:
+        print('Windows x64 text setup pilot')
     print('Private destination:', plan.destination)
     print('Reviewed setup plan:', plan.identity)
     print(f'Will acquire {len(assets)} SHA-256-pinned files ({sum(a.size for a in assets):,} bytes).')
@@ -394,7 +506,9 @@ def install(root, *, status, confirm=input, inspect=preflight.inspect, make_plan
         print(f'  {asset.filename}\n    SHA-256 {asset.sha256}')
     print(f'  {len(plan.wheels)} wheels selected from uv.lock; exact pins in tools/windows-setup-assets.json.')
     print('No system PATH, global Python, registry settings, or AI-assistant configuration changes.')
-    print('Renderer, persistent workers, client registration and Windows Approve & Export remain unavailable.')
+    if not plan.renderer:
+        print('Text capability only. Renderer and notation editing require full setup.')
+    print('Windows Approve & Export is disabled. Client configuration is manual.')
     try:
         consent = confirm('Type INSTALL to download these files and install privately, or press Enter to cancel: ')
     except EOFError:
@@ -407,6 +521,12 @@ def install(root, *, status, confirm=input, inspect=preflight.inspect, make_plan
         raise SetupError('Windows destination or capabilities changed after consent. Review the plan again.')
     with storage(plan.destination) as stage:
         runtime = build(plan, stage, status)
-    print('Private Windows text environment verified:', runtime)
-    print('MCP startup and Windows desktop acceptance require separate verification.')
+    if plan.renderer:
+        print('Private Windows full environment verified:', runtime)
+        print('MCP environment: COMPOSERLINT_RENDERER_CONFIG=' + str(runtime.parents[2] / 'renderer.json'))
+    else:
+        print('Private Windows text environment verified:', runtime)
+        print('MCP startup and Windows desktop acceptance require separate verification.')
+    print('MCP command:', runtime)
+    print('MCP arguments: -I -B -X utf8 -m composerlint.server')
     return 0

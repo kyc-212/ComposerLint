@@ -4,6 +4,7 @@ import hashlib
 from pathlib import Path
 import xml.etree.ElementTree as ET
 from music21 import interval, key, midi
+from composerlint.platform_support import read_score_bytes
 from composerlint.analysis_models import (SourceContext, KeyObservation, KeyDescriptor,
     XMLKeyLocation, MIDIKeyLocation, RawKeyField, ContextLimitation, reasons)
 from composerlint.models import rt, Transposition
@@ -116,6 +117,6 @@ def context_from_bytes(data: bytes,score):
 
 
 def read_source_context(path,score):
-    try: data=Path(path).expanduser().read_bytes()
+    try: data=read_score_bytes(Path(path).expanduser())
     except OSError as exc: raise ComposerLintError('parse_failed','source_unavailable_during_analysis') from exc
     return context_from_bytes(data,score)

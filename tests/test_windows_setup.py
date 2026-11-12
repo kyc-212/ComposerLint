@@ -176,6 +176,22 @@ class WindowsSetupTests(unittest.TestCase):
         api.launch_setup.assert_called_once()
         self.assertEqual(api.launch_setup.call_args.kwargs, {'cwd': cwd, 'env': env})
 
+    def test_full_setup_requires_all_ten_controls_without_skips(self):
+        import xml.etree.ElementTree as ET
+        clean = ET.fromstring('<testsuites><testsuite tests="10" failures="0" errors="0" skipped="0"/></testsuites>')
+        self.assertEqual(setup.control_counts(clean)['tests'], 10)
+        for attrs in ('tests="9"', 'tests="10" skipped="1"', 'tests="10" failures="1"',
+                      'tests="10" errors="1"'):
+            with self.subTest(attrs=attrs), self.assertRaisesRegex(setup.SetupError, 'All 10'):
+                setup.control_counts(ET.fromstring(f'<testsuite {attrs}/>'))
+
+    def test_renderer_rejects_nonmatching_source_or_patch(self):
+        renderer = import_module(f'{setup.__package__}.windows_renderer')
+        patch_bytes = (ROOT / 'patches' / renderer.PATCH).read_bytes()
+        self.assertEqual(renderer.sha(patch_bytes), renderer.PATCH_SHA256)
+        with self.assertRaisesRegex(ValueError, 'preimage'):
+            renderer.apply_reviewed_patch(b'wrong source', patch_bytes)
+
     def test_exact_asset_pins_match_lock_and_preflight(self):
         manifest = (ROOT / 'tools/windows-setup-assets.json').read_bytes()
         lock = (ROOT / 'uv.lock').read_bytes()
@@ -556,6 +572,30 @@ class WindowsReceiptTests(unittest.TestCase):
 
 @unittest.skipUnless(sys.platform == 'win32', 'requires native Windows')
 class WindowsNativeSetupTests(unittest.TestCase):
+    def test_renderer_pins_hold_files_against_replacement_until_release(self):
+        with tempfile.TemporaryDirectory(prefix='composerlint-renderer-pins-') as temporary:
+            parent = Path(temporary)
+            with storage.private_workspace(parent, 'install-') as stage:
+                parts = ('renderer', 'native.pyd')
+                with stage.create(parts) as stream:
+                    stream.write(b'original')
+                path = stage.path.joinpath(*parts)
+                replacement = stage.path / 'replacement.pyd'
+                with stage.create((replacement.name,)) as stream:
+                    stream.write(b'replacement')
+
+                with storage.pinned_install_files(stage.path) as (read, validate):
+                    self.assertEqual(read(parts, limit=1024), b'original')
+                    validate()
+                    self.assertEqual(path.read_bytes(), b'original')
+                    with self.assertRaises(OSError):
+                        path.write_bytes(b'overwrite')
+                    with self.assertRaises(OSError):
+                        replacement.replace(path)
+
+                replacement.replace(path)
+                self.assertEqual(path.read_bytes(), b'replacement')
+
     def test_real_preflight_and_source_plan_decline_leave_destination_absent(self):
         with tempfile.TemporaryDirectory(prefix='ComposerLint consent ') as tmp:
             with (patch.object(setup.preflight, '_local_app_data', return_value=tmp),

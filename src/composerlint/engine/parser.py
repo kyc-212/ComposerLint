@@ -19,7 +19,7 @@ from music21.exceptions21 import Music21Exception
 from pydantic import ValidationError
 
 from composerlint.errors import ComposerLintError
-from composerlint.platform_support import local_path_text
+from composerlint.platform_support import local_path_text, read_score_bytes
 from composerlint.models import (
     AnalysisOptions, ApiPolicy, ChordGroup, Location, Measure, Meter,
     NormalizationMetadata, NormalizedScore, Part, PitchedEvent, QuantizationMetadata,
@@ -570,9 +570,9 @@ def load_score(path: str | Path, options: AnalysisOptions | dict | None = None) 
     if suffix not in (".xml", ".musicxml", ".mid", ".midi"):
         raise ComposerLintError("unsupported_format", "supported extensions are .xml, .musicxml, .mid, .midi")
     try:
-        data = local.read_bytes()
+        data = read_score_bytes(local)
     except OSError as exc:
-        raise ComposerLintError("parse_failed", f"cannot read local input: {exc.strerror}") from exc
+        raise ComposerLintError("parse_failed", f"cannot read local input: {exc.strerror or exc}") from exc
     fmt = "midi" if suffix in (".mid", ".midi") else "musicxml"
     try:
         if fmt == "midi":

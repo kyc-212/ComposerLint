@@ -2,6 +2,7 @@
 
 from contextlib import ExitStack, contextmanager
 import ctypes
+import os
 from ctypes import wintypes as win
 from dataclasses import dataclass
 from pathlib import PureWindowsPath
@@ -318,9 +319,10 @@ def read_stable(path, *, limit, expected=None):
 
 
 class _PrivateDirectory:
-    def __init__(self, api, security, sid, chain):
+    def __init__(self, api, security, sid, chain, *, tree_root=False):
         self._api, self._security, self._sid = api, security, sid
         self._chain = chain
+        self._tree_root = tree_root
         self._owner_thread = threading.current_thread()
 
     def _validate(self):
@@ -334,7 +336,7 @@ class _PrivateDirectory:
         handle = self._chain[-1][0]
         if self._security.user_sid() != self._sid:
             raise PermissionError('Effective Windows user changed during the private scope.')
-        self._security.require_private(handle, self._sid)
+        self._security.require_private(handle, self._sid, tree_root=self._tree_root)
         return handle
 
     def _open_file(self, name, *, access, disposition, options=0):
@@ -379,6 +381,16 @@ class _PrivateDirectory:
         finally:
             self._api.close(handle)
 
+    def write_new(self, name, data):
+        """Write a new private file exclusively inside the held directory."""
+        handle = self._open_file(name, access=_READ_DATA | _WRITE_DATA, disposition=_FILE_CREATE)
+        with _stream(self._api, handle, 'w+b') as stream:
+            self._validate_file(handle)
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+            self._validate_file(handle)
+
     @contextmanager
     def temporary_file(self, name):
         """Create a new private scratch file; NTFS deletes that handle's link on close."""
@@ -398,12 +410,12 @@ class _PrivateDirectory:
 
 
 @contextmanager
-def private_directory(path, *, create=False):
+def private_directory(path, *, create=False, tree_root=False):
     """Hold an existing or newly created private directory with a verified DACL."""
     path = _native_path(path)
     api, security = _StorageAPI(), _SecurityAPI()
     sid = security.user_sid()
-    with ExitStack() as stack, security.private_descriptor(sid) as descriptor:
+    with ExitStack() as stack, security.private_descriptor(sid, inheritable=tree_root) as descriptor:
         chain = api.ancestors(path, stack)
         handle = api.open_component(
             chain[-1][0], path.name, access=_READ_ATTRIBUTES | _TRAVERSE | _READ_CONTROL,
@@ -412,7 +424,7 @@ def private_directory(path, *, create=False):
         stack.callback(api.close, handle)
         api.check_type(handle, directory=True)
         chain.append((handle, api.identity(handle)))
-        directory = _PrivateDirectory(api, security, sid, chain)
+        directory = _PrivateDirectory(api, security, sid, chain, tree_root=tree_root)
         directory._validate()
         try:
             yield directory

@@ -27,6 +27,8 @@ def request_worker(request,*,timeout=None):
         cp=host.run_owned([sys.executable,'-I','-B',str(Path(__file__).with_name('advanced_worker.py'))],input=payload,capture_output=True,text=True,timeout=remaining)
     except host.UnsupportedPlatformOperation as exc:
         raise AdvancedFailure('unsupported_analysis_case',str(exc)) from exc
+    except host.PipeLimitError as exc:
+        raise AdvancedFailure('analysis_limit_exceeded', str(exc)) from exc
     except subprocess.TimeoutExpired as exc:
         raise AdvancedFailure('analysis_timeout',f'Advanced request exceeded {deadline} seconds; isolated worker terminated and reaped. Narrow the query/features.') from exc
     if cp.returncode:

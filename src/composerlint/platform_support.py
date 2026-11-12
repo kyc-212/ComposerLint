@@ -2,7 +2,7 @@
 
 Linux setup uses capability-checked GNU x86-64 POSIX operations.
 Ubuntu CI evidence does not verify other distributions or desktops.
-Native human approval remains macOS-only; Windows operations remain unavailable.
+Native human approval remains macOS-only. Windows workers use native Job Objects.
 No environment variable or request can enable an unverified security adapter.
 """
 from contextlib import contextmanager
@@ -29,6 +29,10 @@ from typing import NamedTuple
 
 class UnsupportedPlatformOperation(OSError):
     pass
+
+
+class WorkerLifecycleUnconfirmed(UnsupportedPlatformOperation):
+    """A native worker could not be confirmed stopped."""
 
 
 def platform_name():
@@ -395,6 +399,17 @@ def open_regular(path):
         raise
 
 
+def read_score_bytes(path):
+    """Read score bytes through the held NTFS reader on Windows."""
+    if platform_name() == 'win32':
+        from .windows_private import read_stable
+        try:
+            return read_stable(path, limit=10 * 1024 * 1024)[0]
+        except ValueError as exc:
+            raise OSError(str(exc)) from exc
+    return path.read_bytes()
+
+
 @contextmanager
 def exclusive_lock(path):
     require_security('Exclusive setup locking')
@@ -495,7 +510,28 @@ def terminate_owned(process):
         pass
 
 
+def run_windows_json(command, payload, *, timeout, cancelled=None):
+    from . import windows_workers
+    try:
+        result = windows_workers.run_json_worker(
+            command, payload.encode('utf-8'), timeout=timeout, cancelled=cancelled)
+    except windows_workers.SetupProcessCleanupUnconfirmed as exc:
+        raise WorkerLifecycleUnconfirmed(str(exc)) from exc
+    except TimeoutError as exc:
+        raise subprocess.TimeoutExpired(command, timeout) from exc
+    except windows_workers.PipeLimitError as exc:
+        raise PipeLimitError(str(exc)) from exc
+    except OSError as exc:
+        raise UnsupportedPlatformOperation(f'Windows owned worker unavailable: {exc}') from exc
+    return subprocess.CompletedProcess(command, result.returncode,
+        result.stdout.decode('utf-8'), result.stderr.decode('utf-8', errors='replace'))
+
+
 def run_owned(command, *, input=None, timeout=None, capture_output=False, **kwargs):
+    if sys.platform == 'win32':
+        if not isinstance(input, str) or not capture_output or kwargs != {'text': True}:
+            raise UnsupportedPlatformOperation('Windows supports owned JSON workers only.')
+        return run_windows_json(command, input, timeout=timeout)
     if input is not None:
         kwargs['stdin'] = subprocess.PIPE
     if capture_output:

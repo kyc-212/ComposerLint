@@ -1,5 +1,7 @@
 """Temporary workspaces, revision guards, finite workers and owned cleanup."""
 from collections import OrderedDict
+from contextlib import ExitStack, contextmanager
+from functools import partial
 from pathlib import Path
 import atexit
 import hashlib
@@ -12,6 +14,7 @@ import sys
 import tempfile
 import threading
 import time
+from composerlint.platform_support import read_score_bytes
 from composerlint.review import canonical,digest
 from composerlint.viewer_source import fail,ViewerFailure
 from composerlint.editing_models import EditResult
@@ -27,6 +30,13 @@ def read_source(path,expected_identity=None):
     except ComposerLintError: fail('stale_source','Imported source changed; import the original again.')
     if p.suffix.lower() not in ('.xml','.musicxml') or p.is_symlink():fail('unsupported_edit','Use a regular uncompressed MusicXML file, not a symlink.')
     try:
+        if sys.platform == 'win32':
+            from composerlint.windows_private import read_stable
+            data, stamp=read_stable(p,limit=10*1024*1024)
+            identity=(str(p),stamp.volume,stamp.file_id)
+            if expected_identity is not None and identity!=expected_identity:
+                fail('stale_source','Source identity changed. Reopen the workspace.')
+            return p,data,identity
         with host.open_regular(p) as f:
             first=os.fstat(f.fileno())
             if not stat.S_ISREG(first.st_mode) or first.st_size>10*1024*1024:fail('unsupported_edit','Use a regular MusicXML file of at most 10 MiB.')
@@ -35,13 +45,27 @@ def read_source(path,expected_identity=None):
         if (first.st_size,first.st_mtime_ns)!=(last.st_size,last.st_mtime_ns) or len(data)>10*1024*1024 or expected_identity is not None and identity!=expected_identity:fail('stale_source','Source identity changed. Reopen the workspace.')
         return p,data,identity
     except host.UnsupportedPlatformOperation as exc:fail('unsupported_edit',str(exc))
-    except OSError:fail('stale_source','Original is unavailable or changed. Reopen the workspace.')
+    except (OSError,ValueError):fail('stale_source','Original is unavailable or changed. Reopen the workspace.')
 
 
 _active_workers=set()
 _worker_lock=threading.RLock()
 
-def worker(request,timeout=45):
+def worker(request,timeout=45,*,cancelled=None):
+    if sys.platform == 'win32':
+        from composerlint.windows_workers import WorkerCancelled
+
+        command=[sys.executable,'-I','-B',str(Path(__file__).with_name('editing_worker.py'))]
+        try:
+            result=host.run_windows_json(command,canonical(request),timeout=timeout,cancelled=cancelled)
+        except host.WorkerLifecycleUnconfirmed:
+            raise
+        except WorkerCancelled:
+            fail('unsupported_edit','Editing was cancelled during workspace shutdown.')
+        except host.UnsupportedPlatformOperation as exc:fail('unsupported_edit',str(exc))
+        except host.PipeLimitError as exc:fail('edit_limit',str(exc))
+        except subprocess.TimeoutExpired:fail('edit_timeout','Editing exceeded its bounded deadline.')
+        return worker_result(result.stdout,result.stderr,result.returncode)
     try:
         p=host.popen_owned([sys.executable,'-I','-B',str(Path(__file__).with_name('editing_worker.py'))],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
     except host.UnsupportedPlatformOperation as exc:fail('unsupported_edit',str(exc))
@@ -55,7 +79,11 @@ def worker(request,timeout=45):
         raise
     finally:
         with _worker_lock:_active_workers.discard(p)
-    if p.returncode:raise RuntimeError('Editing worker failure: '+stderr[-2500:])
+    return worker_result(stdout,stderr,p.returncode)
+
+
+def worker_result(stdout,stderr,returncode):
+    if returncode:raise RuntimeError('Editing worker failure: '+stderr[-2500:])
     if len(stdout.encode())>64*1024*1024:fail('edit_limit','Editing response exceeds 64 MiB.')
     payload=json.loads(stdout)
     if not payload['ok']:fail(payload['error']['code'],payload['error']['reason'])
@@ -66,8 +94,42 @@ class EditingRuntime:
     def __init__(self):
         self.lock=threading.RLock();self.workspaces=OrderedDict();self.root=None
         self.idle_ttl=1800;self.absolute_ttl=7200;self.max_workspaces=4;self.openings=0;self.reserved={};self.max_snapshot_bytes=80*1024*1024
+        self.windows_stage=None;self.windows_scope=ExitStack();self.windows_stage_unsafe=False
+        self.windows_operations={}
+        self.windows_closing=False
+        self.windows_shutdown_lock=threading.Lock()
+
+    @contextmanager
+    def _edit_operation(self):
+        if sys.platform != 'win32':
+            yield worker
+            return
+        cancelled,finished=threading.Event(),threading.Event()
+        with self.lock:
+            if self.windows_closing or self.windows_stage_unsafe:
+                fail('unsupported_edit','Windows workspace is closing or worker cleanup is unconfirmed.')
+            self.windows_operations[cancelled]=finished
+        try:
+            yield partial(worker,cancelled=cancelled)
+        finally:
+            # Report completion after open/prepare has recorded any unconfirmed
+            # termination and finished its workspace state transitions.
+            with self.lock:
+                self.windows_operations.pop(cancelled)
+                finished.set()
 
     def directory(self):
+        if sys.platform == 'win32':
+            if self.windows_stage_unsafe or self.windows_closing:
+                fail('unsupported_edit','Windows workspace is closing or worker cleanup is unconfirmed.')
+            from composerlint.windows_install_storage import private_workspace
+            try:
+                if self.windows_stage is None:
+                    self.windows_stage=self.windows_scope.enter_context(
+                        private_workspace(temporary_parent(),'composerlint-m5-'))
+                self.windows_stage.validate()
+                return self.windows_stage.path
+            except (OSError,ValueError) as exc:fail('unsupported_edit',f'Private Windows workspace unavailable: {exc}')
         try:host.require_security('Private editing workspaces')
         except host.UnsupportedPlatformOperation as exc:fail('unsupported_edit',str(exc))
         if self.root is None:
@@ -76,6 +138,29 @@ class EditingRuntime:
             Path(self.root.name).chmod(0o700)
             Path(self.root.name,'owner.json').write_text(canonical({'pid':os.getpid(),'uid':os.getuid(),'schema':1}))
         return Path(self.root.name)
+
+    def remove(self,path,*,directory=False):
+        if self.windows_stage_unsafe:
+            return
+        if self.windows_stage is not None:
+            self.windows_stage.remove(Path(path).relative_to(self.windows_stage.path).parts,
+                                      directory=directory)
+        elif directory:
+            path.rmdir()
+        else:
+            path.unlink(missing_ok=True)
+
+    def snapshot(self,data):
+        d=self.directory()/secrets.token_hex(16)
+        original=d/'original.musicxml'
+        if self.windows_stage is not None:
+            with self.windows_stage.create((d.name,original.name)) as stream:
+                stream.write(data)
+        else:
+            d.mkdir(mode=0o700)
+            with os.fdopen(os.open(original,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600),'wb') as stream:stream.write(data)
+            original.chmod(0o600)
+        return d,original
 
     def sweep_dead_roots(self):
         host.require_security('Owned workspace cleanup')
@@ -120,26 +205,29 @@ class EditingRuntime:
     def clear_candidate(self,w):
         candidate=w.get('candidate_path')
         if candidate:
-            Path(candidate).unlink(missing_ok=True);w['candidate_path']=None
+            self.remove(Path(candidate));w['candidate_path']=None
         if w.get('proposal_size'):
             w['entry']['size']-=w['proposal_size'];w['proposal_size']=0
 
     def prune(self):
+        if self.windows_stage_unsafe:return
         from composerlint.viewer_runtime import runtime
         for key,w in list(self.workspaces.items()):
             self.expire(w)
             if w['state']=='expired' or w['entry']['instance'] not in runtime.entries:
                 if not w['pending']:
                     self.clear_candidate(w)
-                    w['original'].unlink(missing_ok=True)
-                    w['directory'].rmdir();del self.workspaces[key]
+                    self.remove(w['original'])
+                    self.remove(w['directory'],directory=True);del self.workspaces[key]
 
     def find(self,ident,touch=False):
+        if self.windows_stage_unsafe:
+            fail('unsupported_edit','Worker cleanup is unconfirmed. Private workspace preserved.')
         w=self.workspaces.get(ident)
         if w is None:fail('workspace_expired','Workspace unavailable; open a new workspace.')
         if self.expire(w):
             if not w['pending']:
-                w['original'].unlink(missing_ok=True);w['directory'].rmdir();self.workspaces.pop(ident,None)
+                self.remove(w['original']);self.remove(w['directory'],directory=True);self.workspaces.pop(ident,None)
             fail('workspace_expired','Temporary workspace expired; recreate explicitly.')
         from composerlint.viewer_runtime import runtime
         if w['entry']['instance'] not in runtime.entries:fail('workspace_expired','Presentation evicted; reopen the workspace.')
@@ -166,7 +254,7 @@ class EditingRuntime:
                         or p['brief_context_revision']!=w['revision']
                         or saved.brief.code_identity!=code_identity()
                         or digest(p['verification'])!=p['verification_sha256']):raise ValueError()
-            actual=Path(w['candidate_path']).read_bytes()
+            actual=read_score_bytes(Path(w['candidate_path']))
             receipt=p['verification']['render_receipt']
             if hashlib.sha256(actual).hexdigest()!=p['candidate_sha256'] or receipt['candidate_sha256']!=p['candidate_sha256'] or digest(p['manifest'])!=receipt['manifest_sha256'] or [hashlib.sha256(s).hexdigest() for s in p['pages']]!=receipt['svg_sha256']:raise ValueError()
         except (OSError,ValueError,TypeError):
@@ -179,6 +267,7 @@ class EditingRuntime:
         return {'workspace_id':w['id'],'workspace_revision':w['revision'],'state':w['state'],'source_sha256':w['source_sha256'],'base_snapshot':w['snapshot'],'options_sha256':w['options_sha256'],'view_instance_id':w['entry']['instance'],'selection':runtime.selection_value(w['entry']),'target_choices':w['choices'],'proposal':({k:v for k,v in p.items() if k not in ('pages','manifest','verification','changes','target')}|{'target':{k:v for k,v in p['target'].items() if k!='notes'}}) if p else None,'last_error':w['error'],'csrf_nonce':w['csrf'],'expires_in_seconds':max(0,int(min(self.idle_ttl-(time.monotonic()-w['touched']),self.absolute_ttl-(time.monotonic()-w['created'])))),'supported_operations':['octave_transpose_up','octave_transpose_down','exact_pitch_batch','expressive_edit_batch'],'export_binding':self.export_binding(w),'export_receipt':w.get('export_receipt'),'notice':'Temporary preview until human approval and verified export. Original unchanged.'}
 
     def export_binding(self,w):
+        if sys.platform == 'win32':return None
         if not w.get('proposal') or w['proposal']['operation']['kind']!='expressive_edit_batch':return None
         from composerlint.editing_export import binding
         return binding(w)
@@ -190,6 +279,10 @@ class EditingRuntime:
         return EditResult(edit_policy_id=policy,workspace_id=w['id'],workspace_revision=w['revision'],state=w['state'],data=data or self.state(w))
 
     def open(self,args):
+        with self._edit_operation() as run_worker:
+            return self._open(args,run_worker)
+
+    def _open(self,args,run_worker):
         from composerlint.viewer_runtime import runtime
         started=time.monotonic()
         p,data,identity=read_source(args.path)
@@ -206,20 +299,23 @@ class EditingRuntime:
                     and set(e['manifest']['scope']['part_ids'])=={c['part_id'] for c in e['review_context']['target_choices']}),None)
                 if entry is not None:view_instance_id=entry['instance']
         with self.lock:
+            if self.windows_closing or self.windows_stage_unsafe:
+                fail('unsupported_edit','Windows workspace is closing or worker cleanup is unconfirmed.')
             self.prune()
             for existing in self.workspaces.values():
                 if existing['identity']==identity and existing['snapshot']==args.expected_snapshot and existing['options_request']==args.options and (view_instance_id is None or existing['entry']['instance']==view_instance_id):
                     self.current(existing);existing['touched']=time.monotonic();return self.result(existing,{**self.state(existing),'workspace_url':runtime.references(existing['entry'])['viewer_url']})
             if len(self.workspaces)+self.openings>=self.max_workspaces:fail('edit_limit','At most four editing workspaces. Close/expire an existing workspace first.')
-            self.snapshot_budget(len(data));self.openings+=1
-            d=self.directory()/secrets.token_hex(16);d.mkdir(mode=0o700);original=d/'original.musicxml'
-            with os.fdopen(os.open(original,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600),'wb') as f:f.write(data)
-            original.chmod(0o600)
+            self.snapshot_budget(len(data))
+            d,original=self.snapshot(data)
+            self.openings+=1
         try:
-            result=worker({'action':'open','original':str(original),'options':args.options,'expected_snapshot':args.expected_snapshot},max(1,45-(time.monotonic()-started)))
+            result=run_worker({'action':'open','original':str(original),'options':args.options,'expected_snapshot':args.expected_snapshot},max(1,45-(time.monotonic()-started)))
             _,current,_=read_source(p,identity)
             if current!=data:fail('stale_source','Original changed while opening workspace.')
             with self.lock,runtime.lock:
+                if self.windows_closing or self.windows_stage_unsafe:
+                    fail('unsupported_edit','Windows workspace is closing or worker cleanup is unconfirmed.')
                 if view_instance_id:
                     entry=runtime.find(view_instance_id)
                     if entry is None or entry.get('source_path')!=str(p.resolve()) or entry['manifest']['scope']!=result['manifest']['scope'] or entry['manifest']['mode']!='whole_score':fail('stale_snapshot','Existing view does not exactly match complete workspace source/options/layout.')
@@ -233,12 +329,22 @@ class EditingRuntime:
                 entry['review_context']={'base_snapshot':w['snapshot'],'source_sha256':w['source_sha256'],
                     'options_sha256':w['options_sha256'],'target_choices':w['choices']}
                 return self.result(w,{**self.state(w),'workspace_url':runtime.references(entry)['viewer_url'],'timing':result['timing']})
+        except host.WorkerLifecycleUnconfirmed:
+            with self.lock:
+                self.windows_stage_unsafe=True
+            fail('unsupported_edit','Worker cleanup is unconfirmed. Private workspace preserved.')
         except BaseException:
-            original.unlink(missing_ok=True);d.rmdir();raise
+            with self.lock:
+                self.remove(original);self.remove(d,directory=True)
+            raise
         finally:
             with self.lock:self.openings-=1
 
     def prepare(self,args):
+        with self._edit_operation() as run_worker:
+            return self._prepare(args,run_worker)
+
+    def _prepare(self,args,run_worker):
         from composerlint.viewer_runtime import runtime
         started=time.monotonic();fingerprint=digest(args.model_dump(mode='json'))
         with self.lock:
@@ -279,21 +385,23 @@ class EditingRuntime:
             request_id=secrets.token_hex(16);self.reserved[request_id]=w['original'].stat().st_size;w['pending']=request_id;w['state']='preparing';w['error']=None;w['touched']=time.monotonic()
             candidate=w['directory']/(request_id+'.musicxml')
         try:
-            r=worker({'action':'prepare','original':str(w['original']),'candidate':str(candidate),'options':w['options_request'],'expected_snapshot':w['snapshot'],'selection':scope,'target':args.target.model_dump(mode='json'),'operation':args.operation.model_dump(mode='json'),**({'brief':brief} if brief is not None else {})},max(1,45-(time.monotonic()-started)))
+            r=run_worker({'action':'prepare','original':str(w['original']),'candidate':str(candidate),'options':w['options_request'],'expected_snapshot':w['snapshot'],'selection':scope,'target':args.target.model_dump(mode='json'),'operation':args.operation.model_dump(mode='json'),**({'brief':brief} if brief is not None else {})},max(1,45-(time.monotonic()-started)))
             with self.lock,runtime.lock:
+                if self.windows_closing:
+                    fail('unsupported_edit','Windows workspace is closing.')
                 self.find(w['id']);self.current(w)
                 if w['pending']!=request_id or w['revision']!=args.expected_workspace_revision or entry['revision']!=selection_revision:fail('revision_conflict','Selection/workspace changed during preparation; candidate not published.')
                 if brief is not None:
                     self._current_brief(w,w['expressive_brief'],args,selection)
                     if w['expressive_brief'].brief_sha256!=args.operation.brief_sha256:
                         fail('stale_brief','Brief changed during candidate preparation.')
-                if hashlib.sha256(w['original'].read_bytes()).hexdigest()!=w['source_sha256']:
+                if hashlib.sha256(read_score_bytes(w['original'])).hexdigest()!=w['source_sha256']:
                     fail('stale_source','Owned Original snapshot changed during preparation.')
                 size=sum(len(s.encode()) for s in r['pages'])+len(canonical(r['manifest']).encode())+len(canonical(r['verification']).encode())
                 used=sum(e['size'] for e in runtime.entries.values())-w['proposal_size']
                 if used+size>runtime.max_bytes:fail('edit_limit','Original and proposed presentation exceed the shared 64 MiB pool.')
                 if time.monotonic()-started>=45:fail('edit_timeout','Whole preparation exceeded 45 seconds; candidate not published.')
-                verification=r['verification'];vhash=digest(verification);chash=hashlib.sha256(candidate.read_bytes()).hexdigest();pid=secrets.token_hex(16)
+                verification=r['verification'];vhash=digest(verification);chash=hashlib.sha256(read_score_bytes(candidate)).hexdigest();pid=secrets.token_hex(16)
                 if chash!=r['manifest']['scope']['source_sha256'] or chash!=verification['render_receipt']['candidate_sha256']:fail('verification_failed','Actual candidate differs from verified rendering receipt.')
                 self.clear_candidate(w);w['candidate_path']=str(candidate);w['proposal_size']=size;entry['size']+=size
                 w['proposal']=dict(proposal_id=pid,source_sha256=w['source_sha256'],candidate_sha256=chash,verification_sha256=vhash,verification_status='verified',preview_status='ready',target=r['target'],operation=args.operation.model_dump(mode='json'),manifest=r['manifest'],pages=[s.encode() for s in r['pages']],verification=verification,changes=verification['changes'],timing={**r['timing'],'end_to_end_seconds':time.monotonic()-started},created_at=time.time())
@@ -301,11 +409,15 @@ class EditingRuntime:
                 w['requests'][args.client_request_id]={'fingerprint':fingerprint,'proposal_id':pid};w['state']='verified';w['revision']+=1;w['touched']=time.monotonic();w['pending']=None
                 return self.result(w,self.proposal_summary(w))
         except BaseException as exc:
-            candidate.unlink(missing_ok=True)
             with self.lock:
+                if isinstance(exc,host.WorkerLifecycleUnconfirmed):
+                    self.windows_stage_unsafe=True
+                    exc=ViewerFailure('unsupported_edit','Worker cleanup is unconfirmed. Private workspace preserved.')
+                else:
+                    self.remove(candidate)
                 if w['pending']==request_id:
                     w['pending']=None;w['error']={'code':getattr(exc,'code','internal_error'),'reason':getattr(exc,'reason','Preparation failed; original unchanged.')};w['state']='stale' if getattr(exc,'code',None)=='stale_source' else 'verified' if w['proposal'] else 'unsupported' if isinstance(exc,ViewerFailure) else 'failed'
-            raise
+            raise exc
         finally:
             with self.lock:self.reserved.pop(request_id,None)
 
@@ -486,17 +598,44 @@ class EditingRuntime:
             w['discarded'].add(args.proposal_id);w['proposal']=None;self.clear_candidate(w);w['state']='discarded';w['revision']+=1
             return self.result(w,{'discarded_proposal_id':args.proposal_id})
 
+    def _close_windows(self):
+        from composerlint.windows_workers import SetupProcessCleanupUnconfirmed
+
+        with self.windows_shutdown_lock:
+            with self.lock:
+                self.windows_closing=True
+                operations=tuple(self.windows_operations.items())
+                for cancelled,_ in operations:cancelled.set()
+            deadline=time.monotonic()+7
+            for _,finished in operations:
+                if not finished.wait(max(0,deadline-time.monotonic())):
+                    with self.lock:
+                        self.windows_stage_unsafe=True
+                    raise OSError('Editing worker cleanup is unconfirmed; private workspace preserved.')
+            with self.lock:
+                if self.windows_stage_unsafe:
+                    error=SetupProcessCleanupUnconfirmed('Private workspace preserved.')
+                    self.windows_scope.__exit__(type(error),error,None)
+                else:
+                    self.windows_scope.close()
+                self.windows_stage=None
+                self.workspaces.clear()
+                self.windows_closing=False
+
     def close(self):
+        if sys.platform == 'win32':
+            self._close_windows()
+            return
         with _worker_lock:
             for p in list(_active_workers):
                 host.terminate_owned(p)
                 p.wait(timeout=2)
         with self.lock:
             for w in self.workspaces.values():
-                self.clear_candidate(w);w['original'].unlink(missing_ok=True)
+                self.clear_candidate(w);self.remove(w['original'])
                 for p in w['directory'].iterdir():
                     if p.is_file() and not p.is_symlink():p.unlink()
-                w['directory'].rmdir()
+                self.remove(w['directory'],directory=True)
             self.workspaces.clear()
             if self.root:self.root.cleanup();self.root=None
 

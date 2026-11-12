@@ -31,7 +31,10 @@ def fresh_owned(source):
     from composerlint.score_import import verify_import
     verify_import(source.path)
     try:
-        with source.path.open('rb') as stream:data=stream.read(LIMITS['source_bytes']+1)
+        if sys.platform=='win32':
+            data=host.read_score_bytes(source.path)
+        else:
+            with source.path.open('rb') as stream:data=stream.read(LIMITS['source_bytes']+1)
     except OSError as exc:raise AdvancedFailure('stale_snapshot','Owned source is no longer readable.') from exc
     if len(data)>LIMITS['source_bytes']:
         raise AdvancedFailure('analysis_limit_exceeded','Owned source exceeds the existing 10 MiB input limit.')
@@ -218,6 +221,9 @@ class Worker:
         with self.lock:
             p=self.process;self.process=None;self.code=None
             if p is None:return
+            if sys.platform=='win32':
+                p.close()
+                return
             host.terminate_owned(p)
             p.wait(timeout=2)
             for stream in (p.stdin,p.stdout,p.stderr):stream.close()
@@ -234,13 +240,19 @@ class Worker:
             from composerlint.report_reuse import code_identity
             code=code_identity()
             if self.process is not None and self.code!=code:self.close()
-            if self.process is None or self.process.poll() is not None:
+            windows=sys.platform=='win32'
+            if self.process is None or (self.process.exited() if windows else self.process.poll() is not None):
                 self.close()
-                self.process=host.popen_owned([sys.executable,'-I','-B',str(Path(__file__).with_name('advanced_worker.py')),'--passage-session'],
-                    stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,bufsize=0)
+                command=[sys.executable,'-I','-B',str(Path(__file__).with_name('advanced_worker.py')),'--passage-session']
+                if windows:
+                    from composerlint.windows_workers import PassageProcess
+                    self.process=PassageProcess(command)
+                else:
+                    self.process=host.popen_owned(command,stdin=subprocess.PIPE,stdout=subprocess.PIPE,
+                                                 stderr=subprocess.PIPE,bufsize=0)
                 self.code=code
             p=self.process
-            try: output=host.exchange_line(p,payload,end)
+            try: output=p.exchange(payload,end) if windows else host.exchange_line(p,payload,end)
             except host.PipeLimitError as exc:
                 self.close()
                 raise AdvancedFailure('analysis_limit_exceeded','Passage worker exceeded existing transport budget.') from exc
@@ -258,9 +270,14 @@ class Worker:
             return response['result']
         except host.UnsupportedPlatformOperation as exc:
             raise AdvancedFailure('unsupported_analysis_case',str(exc)) from exc
-        except subprocess.TimeoutExpired as exc:
+        except (subprocess.TimeoutExpired,TimeoutError) as exc:
             self.close()
             raise AdvancedFailure('analysis_timeout','Passage request exceeded its existing deadline; owned worker terminated and reaped.') from exc
+        except OSError as exc:
+            if sys.platform!='win32':
+                self.close();raise
+            self.close()
+            raise AdvancedFailure('unsupported_analysis_case',f'Windows passage worker unavailable: {exc}') from exc
         except (AdvancedFailure,):raise
         except BaseException:
             self.close();raise
@@ -285,7 +302,7 @@ def serve():
                     raise ValueError('Invalid private brief context envelope')
                 from composerlint.expressive_brief import context
                 result = context(store, request['arguments'], request['path'], request['options'])
-                sys.stdout.write(canonical({'ok':True,'result':result})+'\n');sys.stdout.flush()
+                sys.stdout.buffer.write((canonical({'ok':True,'result':result})+'\n').encode());sys.stdout.buffer.flush()
                 continue
             if set(request)-{'operation','arguments','response_overhead'} or request.get('operation')!='passage':
                 raise ValueError('Invalid private passage-worker operation')
@@ -295,4 +312,4 @@ def serve():
             response={'ok':True,'result':result.model_dump(mode='json')}
         except (AdvancedFailure,ComposerLintError) as exc:
             response={'ok':False,'error':{'code':exc.code,'reason':exc.reason,'record_ref':getattr(exc,'record_ref',None),'legacy':isinstance(exc,ComposerLintError)}}
-        sys.stdout.write(canonical(response)+'\n');sys.stdout.flush()
+        sys.stdout.buffer.write((canonical(response)+'\n').encode());sys.stdout.buffer.flush()

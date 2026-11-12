@@ -10,6 +10,7 @@ import hashlib
 import json
 import time
 
+from composerlint.platform_support import read_score_bytes
 from composerlint.models import NormalizedScore
 from composerlint.advanced_models import (PASSAGE_POLICY, FEATURES, AdvancedFailure,
     PassageArguments, PassageQuery, PassageScope, PassageSnapshot, PassagePage, AdvancedItem)
@@ -58,11 +59,14 @@ def prepare(path,options,timings):
         raise AdvancedFailure('unsupported_format','Source-bound Stage 1 supports uncompressed MusicXML; legacy MIDI review is unchanged.')
     if local.is_file() and local.stat().st_size>LIMITS['source_bytes']:
         raise AdvancedFailure('analysis_limit_exceeded','Source exceeds the existing 10 MiB limit.')
-    if local.is_file() and b'<!ENTITY' in local.read_bytes().upper():
-        raise AdvancedFailure('unsupported_analysis_case','XML entity declarations are not supported.')
+    try:
+        if local.is_file() and b'<!ENTITY' in read_score_bytes(local).upper():
+            raise AdvancedFailure('unsupported_analysis_case','XML entity declarations are not supported.')
+    except OSError as exc:
+        raise AdvancedFailure('parse_failed','Source is unreadable or unsafe.') from exc
     t=time.monotonic();score=load_score(local,options);preflight(score)
     timings['loading_normalization_seconds']=time.monotonic()-t
-    raw=local.read_bytes();t=time.monotonic();audit=audit_source(score,raw)
+    raw=read_score_bytes(local);t=time.monotonic();audit=audit_source(score,raw)
     context=read_source_context(local,score)
     timings['metadata_audit_seconds']=time.monotonic()-t
     payload=canonical(score.model_dump(mode='json')).encode();code=code_identity()
@@ -76,7 +80,7 @@ def prepare(path,options,timings):
 def fresh(source):
     from composerlint.score_import import verify_import
     verify_import(source.path)
-    if hashlib.sha256(source.path.read_bytes()).hexdigest()!=source.score.source_sha256:
+    if hashlib.sha256(read_score_bytes(source.path)).hexdigest()!=source.score.source_sha256:
         raise AdvancedFailure('stale_snapshot','Source changed during passage preparation/computation.')
 
 

@@ -1,5 +1,8 @@
 """Bounded local score import. Never extract archives or write the source."""
+import atexit
+from contextlib import ExitStack
 from pathlib import Path, PurePosixPath
+import threading
 from typing import Literal
 import hashlib
 import io
@@ -74,6 +77,9 @@ class MuseScoreFailure(ComposerLintError):
 
 def read_regular(path, limit=MAX_SOURCE):
     try:
+        if sys.platform == 'win32':
+            from composerlint.windows_private import read_stable
+            return read_stable(path, limit=limit)[0]
         with host.open_regular(path) as stream:
             before = os.fstat(stream.fileno())
             if not stat.S_ISREG(before.st_mode) or before.st_size > limit:
@@ -85,8 +91,8 @@ def read_regular(path, limit=MAX_SOURCE):
         return data
     except host.UnsupportedPlatformOperation as exc:
         fail(str(exc))
-    except OSError as exc:
-        fail('Import file is missing, unreadable or an unsafe link.')
+    except (OSError, ValueError):
+        fail('Import file is missing, oversized, unreadable or an unsafe link.')
 
 
 def sha(data):
@@ -262,6 +268,35 @@ def verify_import(path):
         fail('Import provenance is missing or invalid; import the original again.')
 
 
+_windows_imports = ExitStack()
+_windows_import_lock = threading.Lock()
+atexit.register(_windows_imports.close)
+
+
+def import_windows_mxl(source, original, data):
+    """Keep the returned working source in a held private NTFS tree for this session."""
+    from composerlint.windows_install_storage import private_workspace
+    from composerlint.engine.parser import load_score
+
+    validate_musicxml(data)
+    with ExitStack() as pending:
+        stage = pending.enter_context(private_workspace(temporary_parent(), PREFIX))
+        working = stage.path / 'score.musicxml'
+        receipt = stage.path / 'import.json'
+        result = ImportResult(original_path=str(source), source_format='mxl', original_sha256=sha(original),
+            working_path=str(working), musicxml_sha256=sha(data), conversion_method='musicxml_container_rootfile',
+            receipt_path=str(receipt), message='Imported compressed MusicXML. The original file remains unchanged.')
+        with stage.create((working.name,)) as stream:
+            stream.write(data)
+        with stage.create((receipt.name,)) as stream:
+            stream.write(result.model_dump_json(indent=2).encode('utf-8'))
+        load_score(working)
+        stage.audit()
+        with _windows_import_lock:
+            _windows_imports.enter_context(pending.pop_all())
+        return result
+
+
 def import_score(path):
     try:
         host.local_path_text(path)
@@ -279,6 +314,13 @@ def import_score(path):
         return ImportResult(original_path=str(source), source_format='musicxml', original_sha256=sha(original),
             working_path=str(source), musicxml_sha256=sha(original), conversion_method='existing_musicxml',
             message='Using your MusicXML score. The original file remains unchanged.')
+    if sys.platform == 'win32':
+        if suffix == '.mscz':
+            fail('MuseScore conversion is unavailable in the Windows pilot. Use MusicXML or MXL.')
+        try:
+            return import_windows_mxl(source, original, mxl_document(archive_entries(original)))
+        except (OSError, ValueError):
+            fail('Could not create a private NTFS MusicXML import workspace.')
     entries = archive_entries(original)
     directory = Path(tempfile.mkdtemp(prefix=PREFIX, dir=temporary_parent())).resolve()
     try:

@@ -11,6 +11,7 @@ def main():
         from composerlint.passage_session import serve
         serve()
         return
+    from composerlint.platform_support import read_score_bytes
     from composerlint.engine.advanced import compute
     from composerlint.advanced_models import AdvancedArguments,AdvancedFailure
     from composerlint.errors import ComposerLintError
@@ -32,7 +33,7 @@ def main():
             bundle=compute(request['path'],request['options'],request['query'])
             result={'report':bundle.report.model_dump(mode='json'),'snapshot':bundle.snapshot.model_dump(mode='json')}
         import hashlib
-        if hashlib.sha256(Path(args.path if request['operation']=='page' else request['path']).expanduser().read_bytes()).hexdigest()!=bundle.snapshot.source_sha256:
+        if hashlib.sha256(read_score_bytes(Path(args.path if request['operation']=='page' else request['path']).expanduser())).hexdigest()!=bundle.snapshot.source_sha256:
             raise AdvancedFailure('stale_snapshot','Source changed during evidence projection; restart with a fresh overview.')
         output={'ok':True,'result':result}
     except (AdvancedFailure,ComposerLintError) as exc:
