@@ -3,6 +3,7 @@
 from contextlib import ExitStack, contextmanager, nullcontext, redirect_stdout
 import ctypes
 import hashlib
+from importlib import util
 from importlib import import_module
 from importlib.machinery import ModuleSpec
 from importlib.util import module_from_spec
@@ -12,6 +13,7 @@ import os
 from pathlib import Path, PureWindowsPath
 import shutil
 import stat
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -41,6 +43,63 @@ def _remove_modules(name):
     for module in tuple(sys.modules):
         if module == name or module.startswith(f'{name}.'):
             del sys.modules[module]
+
+
+class WindowsCompilerProbeTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        spec = util.spec_from_file_location('build_windows_renderer', ROOT / 'tools' / 'build_windows_renderer.py')
+        cls.probe = util.module_from_spec(spec)
+        with patch.object(sys, 'dont_write_bytecode', True):
+            spec.loader.exec_module(cls.probe)
+        cls.addClassCleanup(_remove_modules, cls.probe.PACKAGE)
+
+    def test_abi_source_emits_cpp_escapes_instead_of_physical_newlines(self):
+        source = self.probe.PYTHON_ABI_PROBE
+        for line in (
+            br'    std::printf("CPython stable ABI loaded: %s\n", version);',
+            br'        std::fprintf(stderr, "Cannot identify loaded Python DLL (Windows error %lu)\n", GetLastError());',
+            br'        std::fwprintf(stderr, L"Unexpected loaded DLL: %ls (expected %ls)\n", actual, expected);',
+        ):
+            self.assertIn(line, source.splitlines())
+        compile(self.probe.ABI_LOADER, '<stable ABI loader>', 'exec')
+
+    def test_probe_failure_reports_both_streams_and_the_exit_status(self):
+        executable = PureWindowsPath(r'C:\Program Files\MSVC\cl.exe')
+        include = PureWindowsPath(r'C:\Python Tools\include')
+        cwd = PureWindowsPath(r'C:\Private Workspace')
+        env = {'SystemRoot': r'C:\Windows'}
+        result = subprocess.CompletedProcess([], 2, b'fatal compiler diagnostic', b'additional context')
+        with (patch.object(self.probe.workers, 'run_setup_command', return_value=result) as run,
+              self.assertRaises(RuntimeError) as raised):
+            self.probe.run_probe_command('Compile ABI', executable, '/I', include, cwd=cwd, env=env)
+        run.assert_called_once_with([str(executable), '/I', str(include)], cwd=str(cwd), env=env,
+                                    timeout=120, capture_result=True)
+        for expected in ('Compile ABI failed', '0x00000002', 'stdout: fatal compiler diagnostic',
+                         'stderr: additional context'):
+            self.assertIn(expected, str(raised.exception))
+
+    def test_incomplete_workspace_never_deletes_after_refused_audit(self):
+        disk = Mock()
+        disk.ancestors.return_value = [('parent', 'parent-identity')]
+        disk.open_component.return_value = 'scratch'
+        disk.identity.return_value = 'scratch-identity'
+        security = Mock()
+        security.private_descriptor.return_value = nullcontext()
+        stage = Mock()
+        stage.audit.side_effect = PermissionError('unexpected owner')
+        with (patch.object(storage, '_InstallDisk', return_value=disk),
+              patch.object(storage, '_SecurityAPI', return_value=security),
+              patch.object(storage, 'Stage', return_value=stage) as create_stage,
+              patch.object(storage, 'local_path_text'),
+              self.assertRaises(PermissionError) as raised):
+            with storage.private_workspace('fixture', 'probe-'):
+                raise RuntimeError('compiler diagnostic')
+        stage._scan.assert_not_called()
+        stage._delete_member.assert_not_called()
+        self.assertIn(str(create_stage.call_args.args[0]), raised.exception.__notes__[0])
+        self.assertIn('workspace is incomplete', raised.exception.__notes__[0])
+        self.assertEqual(str(raised.exception.__context__), 'compiler diagnostic')
 
 
 def tar(*members):
@@ -572,6 +631,49 @@ class WindowsReceiptTests(unittest.TestCase):
 
 @unittest.skipUnless(sys.platform == 'win32', 'requires native Windows')
 class WindowsNativeSetupTests(unittest.TestCase):
+    def test_probe_outputs_keep_protected_owner_and_capture_both_native_streams(self):
+        with tempfile.TemporaryDirectory(prefix='ComposerLint ABI ') as tmp:
+            with storage.private_workspace(Path(tmp), 'probe-') as stage:
+                with stage.create(('output.obj',)) as output:
+                    output.write(b'placeholder')
+                result = setup.run_setup_command(
+                    [sys.executable, '-I', '-S', '-B', '-c',
+                     'import sys; from pathlib import Path; '
+                     'Path("output.obj").write_bytes(b"compiler output"); '
+                     'print("compiler diagnostic"); print("tool detail", file=sys.stderr); sys.exit(2)'],
+                    cwd=str(stage.path), env={'SystemRoot': str(setup._system_root())}, timeout=15,
+                    capture_result=True)
+                self.assertEqual(result.returncode, 2)
+                self.assertEqual(result.stdout.strip(), b'compiler diagnostic')
+                self.assertEqual(result.stderr.strip(), b'tool detail')
+                member = stage._open(stage.handle, 'output.obj', directory=False)
+                try:
+                    stage.security.require_private(member, stage.sid)
+                finally:
+                    stage.disk.close(member)
+                self.assertEqual((stage.path / 'output.obj').read_bytes(), b'compiler output')
+                path = stage.path
+            self.assertFalse(path.exists())
+
+    def test_probe_cleanup_preserves_file_created_with_a_different_default_owner(self):
+        security = storage._SecurityAPI()
+        with security._token() as token:
+            default_owner = security._default_owner(token)
+        if default_owner == security.user_sid():
+            self.skipTest('the effective token already defaults to the user SID')
+        with tempfile.TemporaryDirectory(prefix='ComposerLint ABI owner ') as tmp:
+            with self.assertRaisesRegex(PermissionError, f'owner {default_owner},') as raised:
+                with storage.private_workspace(Path(tmp), 'probe-') as stage:
+                    with stage.create(('verified',)) as output:
+                        output.write(b'keep verified output')
+                    wrong_owner = stage.path / 'default-owner.tmp'
+                    wrong_owner.write_bytes(b'keep unverified output')
+                    verified = stage.path / 'verified'
+            self.assertEqual(wrong_owner.read_bytes(), b'keep unverified output')
+            self.assertEqual(verified.read_bytes(), b'keep verified output')
+            self.assertTrue(any(str(wrong_owner) in note for note in raised.exception.__notes__))
+            self.assertTrue(any('workspace is incomplete' in note for note in raised.exception.__notes__))
+
     def test_renderer_pins_hold_files_against_replacement_until_release(self):
         with tempfile.TemporaryDirectory(prefix='composerlint-renderer-pins-') as temporary:
             parent = Path(temporary)

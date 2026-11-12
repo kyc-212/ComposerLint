@@ -444,18 +444,20 @@ def run_json_worker(command, payload, *, timeout, cancelled=None):
                       max_stderr=256 * 1024, json_worker=True)
 
 
-def run_setup_command(command, *, cwd, env, timeout):
+def run_setup_command(command, *, cwd, env, timeout, capture_result=False):
     """One-shot installer tools only; EOF on stdin, bounded output, no ambient environment."""
     cwd = local_path_text(cwd, target='win32')
     if not env or any(not key or '=' in key or '\0' in key or '\0' in value
                       for key, value in env.items()) or len({key.upper() for key in env}) != len(env):
         raise ValueError('Invalid Windows setup command environment.')
     return _run_owned(command, None, timeout=timeout, cwd=cwd, env=env,
-                      max_stdout=1024 * 1024, max_stderr=1024 * 1024)
+                      max_stdout=1024 * 1024, max_stderr=1024 * 1024,
+                      capture_result=capture_result)
 
 
 def _run_owned(command, payload, *, timeout, cancelled=None, max_request=_LIMIT,
-               max_stdout, max_stderr, cwd=None, env=None, json_worker=False):
+               max_stdout, max_stderr, cwd=None, env=None, json_worker=False,
+               capture_result=False):
     if sys.platform != 'win32':
         raise UnsupportedPlatformOperation('Windows worker pilot requires native Windows.')
     import _winapi
@@ -523,7 +525,7 @@ def _run_owned(command, payload, *, timeout, cancelled=None, max_request=_LIMIT,
                         break
                 _check_deadline(deadline, cancelled)
                 exit_code = _winapi.GetExitCodeProcess(process)
-                if json_worker:
+                if json_worker or capture_result:
                     return subprocess.CompletedProcess(command, exit_code, stdout, stderr)
                 if exit_code:
                     raise RuntimeError('Windows worker failed: ' + stderr[-4000:].decode('utf-8', 'replace'))

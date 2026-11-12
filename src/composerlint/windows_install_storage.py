@@ -173,8 +173,12 @@ class Stage:
                     raise OSError('Setup tree exceeds the safe traversal entry limit.')
                 entries.append((_component(entry.name), entry.is_dir(follow_symlinks=False)))
         for name, directory in entries:
-            handle = self._open(parent, name, directory=directory,
-                                access=0 if directory else _READ_DATA)
+            try:
+                handle = self._open(parent, name, directory=directory,
+                                    access=0 if directory else _READ_DATA)
+            except OSError as error:
+                error.add_note(f'Could not verify Windows workspace member: {path / name}')
+                raise
             try:
                 identity = self.disk.identity(handle)
                 if directory:
@@ -393,14 +397,19 @@ def private_workspace(parent, prefix):
         stage.validate()
 
         def cleanup():
-            stage.audit()
-            stage._scan(handle, path, remove=True, budget=[100_000])
-            owned.close()
-            stage._delete_member(root, path.name, True, identity)
+            try:
+                stage.audit()
+                stage._scan(handle, path, remove=True, budget=[100_000])
+                owned.close()
+                stage._delete_member(root, path.name, True, identity)
+            except BaseException as error:
+                error.add_note(f'Safe cleanup could not finish; Windows workspace is incomplete: {path}')
+                raise
 
         try:
             yield stage
-        except SetupProcessCleanupUnconfirmed:
+        except SetupProcessCleanupUnconfirmed as error:
+            error.add_note(f'Process exit is unconfirmed; Windows workspace preserved at: {path}')
             raise
         except BaseException:
             cleanup()

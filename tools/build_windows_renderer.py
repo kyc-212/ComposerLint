@@ -19,6 +19,7 @@ recipe = import_module(f'{PACKAGE}.windows_renderer')
 paths = import_module(f'{PACKAGE}.runtime_paths')
 storage = import_module(f'{PACKAGE}.windows_install_storage')
 private = import_module(f'{PACKAGE}.windows_private')
+preflight = import_module(f'{PACKAGE}.windows_preflight')
 setup = import_module(f'{PACKAGE}.windows_setup')
 workers = import_module(f'{PACKAGE}.windows_workers')
 REQUIREMENTS = ROOT / 'requirements-renderer-build.txt'
@@ -41,16 +42,99 @@ int main() {
 '''
 
 
-PYTHON_ABI_PROBE = b"""#define Py_LIMITED_API 0x030A0000
+PYTHON_ABI_PROBE = br"""#define Py_LIMITED_API 0x030A0000
 #include <Python.h>
+#include <windows.h>
 #include <cstdio>
 #include <cstring>
+#include <cwchar>
+#ifndef _M_X64
+#error Native x64 MSVC is required
+#endif
 static_assert(PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION == 12);
-int main() {
+static_assert(_MSVC_LANG >= 202002L);
+
+#ifdef ABI_EXTENSION
+static PyObject* version(PyObject*, PyObject*) {
+    return PyUnicode_FromString(Py_GetVersion());
+}
+static PyMethodDef methods[] = {
+    {"version", version, METH_NOARGS, nullptr},
+    {nullptr, nullptr, 0, nullptr}
+};
+static PyModuleDef module = {
+    PyModuleDef_HEAD_INIT, "_composerlint_abi_probe", nullptr, -1, methods
+};
+PyMODINIT_FUNC PyInit__composerlint_abi_probe(void) {
+    return PyModule_Create(&module);
+}
+#else
+static bool check_dll(const wchar_t* name, const wchar_t* expected) {
+    wchar_t actual[32768];
+    auto module = GetModuleHandleW(name);
+    auto length = module ? GetModuleFileNameW(module, actual, ARRAYSIZE(actual)) : 0;
+    if (!length || length == ARRAYSIZE(actual)) {
+        std::fprintf(stderr, "Cannot identify loaded Python DLL (Windows error %lu)\n", GetLastError());
+        return false;
+    }
+    if (CompareStringOrdinal(actual, -1, expected, -1, TRUE) != CSTR_EQUAL) {
+        std::fwprintf(stderr, L"Unexpected loaded DLL: %ls (expected %ls)\n", actual, expected);
+        return false;
+    }
+    return true;
+}
+int wmain(int argc, wchar_t** argv) {
+    if (argc != 3 || !check_dll(L"python3.dll", argv[1]) || !check_dll(L"python312.dll", argv[2])) {
+        return 1;
+    }
     const char* version = Py_GetVersion();
     std::printf("CPython stable ABI loaded: %s\n", version);
     return std::strncmp(version, "3.12.", 5) != 0;
 }
+#endif
+"""
+
+ABI_MODULE = '_composerlint_abi_probe'
+ABI_LOADER = """\
+import ctypes
+import importlib.util
+import os
+from pathlib import Path
+import sys
+
+module_path, executable = map(Path, sys.argv[1:])
+if not Path(sys.executable).samefile(executable):
+    raise RuntimeError(f'Unexpected CPython executable: {sys.executable}')
+
+kernel = ctypes.WinDLL('kernel32.dll', winmode=0x0800, use_last_error=True)
+get_handle = kernel.GetModuleHandleW
+get_handle.argtypes = [ctypes.c_wchar_p]
+get_handle.restype = ctypes.c_void_p
+get_filename = kernel.GetModuleFileNameW
+get_filename.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_wchar), ctypes.c_uint]
+get_filename.restype = ctypes.c_uint
+
+with os.add_dll_directory(str(executable.parent)):
+    spec = importlib.util.spec_from_file_location('_composerlint_abi_probe', module_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f'No extension loader for {module_path}')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    version = module.version()
+    if version != sys.version:
+        raise RuntimeError(f'ABI extension reports {version!r}; expected {sys.version!r}')
+    for name in ('python3.dll', 'python312.dll'):
+        handle = get_handle(name)
+        if not handle:
+            raise ctypes.WinError(ctypes.get_last_error())
+        path = ctypes.create_unicode_buffer(32768)
+        length = get_filename(handle, path, len(path))
+        if not length or length == len(path):
+            raise ctypes.WinError(ctypes.get_last_error())
+        if not Path(path.value).samefile(executable.with_name(name)):
+            raise RuntimeError(f'Unexpected loaded Python DLL: {path.value}')
+        print(f'Loaded {name}: {path.value}')
+    print(f'CPython stable ABI extension loaded: {version}')
 """
 
 
@@ -74,8 +158,139 @@ def toolchain():
     return env, tools
 
 
+def verify_probe_tools(tools, env):
+    # Require the selected developer shell's installation and SDK, with no
+    # fallback to another cl, link, rc or mt elsewhere on PATH.
+    vc = Path(os.environ.get('VCToolsInstallDir', ''))
+    sdk = Path(os.environ.get('WindowsSdkDir', ''))
+    if not vc.is_absolute() or not sdk.is_absolute():
+        raise RuntimeError('The developer shell did not identify its MSVC and Windows SDK roots.')
+    vc_bin = vc / 'bin' / 'Hostx64' / 'x64'
+    sdk_bin = sdk / 'bin' / env['WindowsSDKVersion'].rstrip('\\') / 'x64'
+    for name, tool in tools.items():
+        directory = sdk_bin if name in ('rc', 'mt') else vc_bin
+        if tool != directory / (name + '.exe'):
+            raise RuntimeError(f'{tool} is outside the selected developer toolchain: {directory}')
+    return {name: recipe.sha(private.read_stable(tool, limit=64 * 1024**2)[0])
+            for name, tool in tools.items()}
+
+
+def run_probe_command(step, executable, *arguments, cwd, env):
+    command = [str(executable), *(str(arg) for arg in arguments)]
+    try:
+        result = workers.run_setup_command(command, cwd=str(cwd), env=env,
+                                           timeout=120, capture_result=True)
+    except workers.SetupProcessCleanupUnconfirmed:
+        raise
+    except (OSError, ValueError, RuntimeError) as error:
+        raise RuntimeError(f'{step} could not complete ({executable}): {error}') from error
+    if result.returncode:
+        stdout, stderr = (data[-4000:].decode('utf-8', 'backslashreplace').strip() or '(empty)'
+                          for data in (result.stdout, result.stderr))
+        raise RuntimeError(
+            f'{step} failed ({executable}), exit status 0x{result.returncode & 0xffffffff:08X}\n'
+            f'stdout: {stdout}\nstderr: {stderr}')
+    return result.stdout.decode('utf-8', 'backslashreplace').strip()
+
+
+def probe(env, tools):
+    if preflight._architecture() != (preflight._AMD64, 0):
+        raise RuntimeError('The compiler probe requires a native Windows x64 process and host.')
+    python = Path(sys.executable)
+    if (sys.implementation.name != 'cpython' or sys.version_info[:2] != (3, 12)
+            or python != Path(sys._base_executable) or not python.is_absolute()):
+        raise RuntimeError('Launch the probe directly with the intended native CPython 3.12 executable.')
+    include = python.parent / 'include'
+    library = python.parent / 'libs' / 'python3.lib'
+    dlls = (python.with_name('python3.dll'), python.with_name('python312.dll'))
+    print(json.dumps({
+        'vctools': env['VCToolsVersion'], 'windows_sdk': env['WindowsSDKVersion'].rstrip('\\'),
+        'tool_paths': {name: str(path) for name, path in tools.items()},
+        'tool_sha256': verify_probe_tools(tools, env), 'python': sys.version,
+    }, sort_keys=True), flush=True)
+    python_files = {}
+    for path in (python, include / 'Python.h', library, *dlls):
+        data, _ = private.read_stable(path, limit=32 * 1024**2)
+        print(f'{path} SHA-256 {recipe.sha(data)}', flush=True)
+        if path in dlls:
+            python_files[path.name] = data
+
+    with storage.private_workspace(paths.temporary_parent(), 'composerlint-probe-') as stage:
+        with stage.security._token() as token:
+            owner = stage.security._default_owner(token)
+        print(f'Probe workspace {stage.path}; TokenUser={stage.sid}; TokenOwner={owner}', flush=True)
+        stage.mkdir(('tmp',))
+        stage.mkdir(('abi-exe',))
+        temp = stage.path / 'tmp'
+        system_root = setup._system_root()
+        search = (tools['cl'].parent, tools['rc'].parent, system_root / 'System32')
+        env.update(SystemRoot=str(system_root), PATH=os.pathsep.join(map(str, search)),
+                   TEMP=str(temp), TMP=str(temp),
+                   LOCALAPPDATA=str(temp), USERPROFILE=str(temp))
+
+        def run(step, executable, *arguments):
+            print(f'{step}...', flush=True)
+            result = run_probe_command(step, executable, *arguments, cwd=stage.path, env=env)
+            try:
+                stage.audit()
+            except OSError as error:
+                error.add_note(f'Private workspace audit failed after: {step}')
+                raise
+            return result
+
+        def compile_source(source, output, *flags):
+            setup._write(stage, (output,), b'')
+            run(f'Compile {output}', tools['cl'], '/nologo', '/std:c++20', '/EHsc',
+                '/utf-8', '/c', *flags, '/Fo' + output, source)
+
+        def link_output(parts, obj, *flags):
+            setup._write(stage, parts, b'')
+            run(f'Link {parts[-1]}', tools['link'], '/nologo', '/machine:x64',
+                '/incremental:no', '/manifest:no', f'/out:{Path(*parts)}', obj, *flags)
+
+        setup._write(stage, ('probe.cpp',), PROBE)
+        compile_source('probe.cpp', 'probe.obj')
+        link_output(('probe.exe',), 'probe.obj', '/subsystem:console', 'kernel32.lib')
+        with stage.held_file(('probe.exe',)) as executable:
+            result = run('Execute native x64 C++20 probe', executable)
+        print(f'Native x64 C++20 compile/link/run passed. {result}', flush=True)
+
+        # Only the explicitly named stable import library may supply Python
+        # symbols. Suppress the default search directive from PC/pyconfig.h.
+        abi_link = ('/nodefaultlib:python3.lib', library)
+        setup._write(stage, ('python_abi.cpp',), PYTHON_ABI_PROBE)
+        compile_source('python_abi.cpp', 'abi-exe.obj', '/I', include)
+        link_output(('abi-exe', 'python_abi.exe'), 'abi-exe.obj',
+                    '/subsystem:console', *abi_link, 'kernel32.lib')
+        # Keep the verified DLL bytes alongside the native test executable.
+        # The executable checks what the Windows loader actually mapped.
+        for name, data in python_files.items():
+            setup._write(stage, ('abi-exe', name), data)
+        with (stage.held_file(('abi-exe', 'python_abi.exe')) as executable,
+              stage.held_file(('abi-exe', 'python3.dll')) as stable,
+              stage.held_file(('abi-exe', 'python312.dll')) as versioned):
+            result = run('Load CPython stable ABI in native x64 executable', executable, stable, versioned)
+        if result != f'CPython stable ABI loaded: {sys.version}':
+            raise RuntimeError(f'Native executable reported an unexpected CPython identity: {result!r}')
+        print(result, flush=True)
+
+        compile_source('python_abi.cpp', 'abi-extension.obj', '/I', include, '/DABI_EXTENSION')
+        for suffix in ('.lib', '.exp'):
+            setup._write(stage, (ABI_MODULE + suffix,), b'')
+        extension = (ABI_MODULE + '.pyd',)
+        link_output(extension, 'abi-extension.obj', '/dll', f'/implib:{ABI_MODULE}.lib', *abi_link)
+        with stage.held_file(extension) as module:
+            result = run('Import native x64 CPython stable ABI extension', python,
+                         '-I', '-S', '-B', '-X', 'utf8', '-c', ABI_LOADER, module, python)
+        print(result, flush=True)
+    print('Compiler and CPython ABI probes passed; private scratch cleanup verified.', flush=True)
+
+
 def build(args):
     env, tools = toolchain()
+    if args.probe_only:
+        probe(env, tools)
+        return
     print('Windows build tools:', *(f'{key}={value}' for key, value in tools.items()), sep='\n')
     with storage.private_workspace(paths.temporary_parent(), 'composerlint-verovio-') as stage:
         stage.mkdir(('tmp',))
@@ -102,19 +317,6 @@ def build(args):
         print(f'Native x64 C++20 compile/link/run passed. {compiler}', flush=True)
 
         python_root = Path(sys._base_executable).parent
-        if args.probe_only:
-            include = python_root / 'include'
-            library = python_root / 'libs' / 'python3.lib'
-            for path in (include / 'Python.h', library):
-                print(f'{path} SHA-256 {recipe.sha(private.read_stable(path, limit=16 * 1024**2)[0])}', flush=True)
-            setup._write(stage, ('python_abi.cpp',), PYTHON_ABI_PROBE)
-            run(tools['cl'], '/nologo', '/std:c++20', '/EHsc', '/c', f'/I{include}', 'python_abi.cpp')
-            run(tools['link'], '/nologo', '/machine:x64', '/subsystem:console', '/out:python_abi.exe',
-                'python_abi.obj', library)
-            env['PATH'] = str(python_root) + os.pathsep + env['PATH']
-            print(run(stage.path / 'python_abi.exe').decode('ascii').strip(), flush=True)
-            return
-
         if sys.version_info[:3] != (3, 12, 13) or not all(
                 (python_root / item).is_file() for item in ('include/Python.h', 'libs/python3.lib')):
             raise RuntimeError('The private CPython 3.12.13 headers and stable ABI import library are required.')
