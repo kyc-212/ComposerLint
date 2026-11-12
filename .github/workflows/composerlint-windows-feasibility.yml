@@ -17,12 +17,12 @@ concurrency:
 
 jobs:
   windows-ntfs:
-    # One approved real installation on run 11, with no rerun.
+    # One approved real installation on run 12, with no rerun.
     if: >-
       github.repository == 'kyc-212/ComposerLint' &&
       github.actor == github.repository_owner &&
       github.ref == 'refs/heads/codex/windows-ci-pilot' &&
-      github.run_number == '11' && github.run_attempt == '1' &&
+      github.run_number == '12' && github.run_attempt == '1' &&
       github.sha == inputs.expected_sha
     runs-on: windows-2025
     timeout-minutes: 20
@@ -61,7 +61,10 @@ jobs:
         shell: pwsh
         env:
           REVIEWED_COMMIT: ${{ inputs.expected_sha }}
-        run: ./tools/ci_windows_text_setup.ps1
+        run: |
+          python -I -S -B -X utf8 -m unittest discover -s tests -p test_windows_host_snapshot.py -v
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./tools/ci_windows_text_setup.ps1
       - name: Verify the checkout is clean
         if: ${{ !cancelled() && steps.reviewed-checkout.outcome == 'success' }}
         shell: pwsh

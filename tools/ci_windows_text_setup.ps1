@@ -4,7 +4,7 @@ if ($env:RUNNER_OS -cne 'Windows' -or $env:RUNNER_ARCH -cne 'X64' -or
     $env:GITHUB_REPOSITORY -cne 'kyc-212/ComposerLint' -or
     $env:GITHUB_ACTOR -cne 'kyc-212' -or
     $env:GITHUB_REF -cne 'refs/heads/codex/windows-ci-pilot' -or
-    $env:GITHUB_RUN_NUMBER -cne '11' -or $env:GITHUB_RUN_ATTEMPT -cne '1' -or
+    $env:GITHUB_RUN_NUMBER -cne '12' -or $env:GITHUB_RUN_ATTEMPT -cne '1' -or
     $env:REVIEWED_COMMIT -cnotmatch '^[0-9a-f]{40}$' -or $env:REVIEWED_COMMIT -cne $env:GITHUB_SHA) {
     throw 'This script requires the one approved Windows x64 dispatch.'
 }
@@ -34,6 +34,9 @@ if (Test-Path -LiteralPath $app) {
 }
 
 $hostPython = (Get-Command python.exe -CommandType Application).Source
+if ($hostPython -ilike "$local\Microsoft\WindowsApps\*") {
+    throw 'The runner Python must be a real executable outside WindowsApps.'
+}
 $reg = Join-Path $env:SystemRoot 'System32\reg.exe'
 $registryKeys = @(
     'HKEY_CURRENT_USER\Environment',
@@ -61,10 +64,10 @@ function Get-HostSnapshot {
         [Environment]::GetEnvironmentVariable('Path', $scope)
     }
     $commands = Get-Command python.exe, uv.exe -All -CommandType Application -ErrorAction SilentlyContinue
-    $hashes = foreach ($file in ($settingsFiles + $commands.Source | Sort-Object -Unique)) {
-        if ($file -and (Test-Path -LiteralPath $file)) {
-            @{ Path = $file; Sha256 = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash }
-        }
+    $executables = @($commands.Source)
+    $files = & $hostPython -I -S -B -X utf8 tools/ci_windows_host_files.py $local --settings @settingsFiles --executables @executables
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Could not verify the Windows host file inventory.'
     }
     $registry = foreach ($key in $registryKeys) {
         if (Test-Path -LiteralPath "Registry::$key") {
@@ -73,11 +76,18 @@ function Get-HostSnapshot {
             $values | Sort-Object
         }
     }
-    [ordered]@{ Path = @($paths); Files = @($hashes); Registry = @($registry) } |
+    [ordered]@{ Path = @($paths); Files = $files; Registry = @($registry) } |
         ConvertTo-Json -Depth 5 -Compress
 }
 
 $before = Get-HostSnapshot
+$beforeFiles = ($before | ConvertFrom-Json).Files | ConvertFrom-Json
+foreach ($entry in $beforeFiles) {
+    if ($entry.type -ceq 'app_execution_alias') {
+        Write-Output "Recorded Windows app execution alias without opening it: $($entry.path) (tag 0x$($entry.reparse_tag.ToString('X8')))."
+    }
+}
+Write-Output 'Captured baseline host snapshot before installation.'
 try {
     # The repository owner authorized this one invocation. Send the exact answer
     # to the normal consent prompt after the installer prepares its reviewed plan.
