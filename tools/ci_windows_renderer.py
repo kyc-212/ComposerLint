@@ -13,36 +13,7 @@ from build_windows_renderer import ROOT, paths, private, recipe, run_probe_comma
 ASSET_MANIFEST = ROOT / 'tools' / 'windows-renderer-assets.json'
 BUILD_REQUIREMENTS = ROOT / 'requirements-renderer-build.txt'
 CONTROLS = ROOT / 'tests' / 'test_renderer_packaging_equivalence.py'
-
-LOAD = r"""
-import ctypes
-from importlib.metadata import version
-from pathlib import Path
-import sys
-import verovio
-from verovio import _verovio
-
-expected, base = sys.argv[1:]
-base = Path(base)
-root = Path(sys.prefix) / 'Lib' / 'site-packages' / 'verovio'
-native = Path(_verovio.__file__)
-if (sys.version_info[:3] != (3, 12, 13) or not Path(sys._base_executable).samefile(base)
-        or not native.parent.samefile(root) or native.suffix.lower() != '.pyd'
-        or version('verovio') != expected or verovio.toolkit().getVersion().split('-')[0] != '6.3.0'):
-    raise RuntimeError(f'Unexpected renderer identity: {sys.version}, {native}, {version("verovio")}')
-kernel = ctypes.WinDLL('kernel32.dll', winmode=0x0800, use_last_error=True)
-kernel.GetModuleHandleW.argtypes = [ctypes.c_wchar_p]
-kernel.GetModuleHandleW.restype = ctypes.c_void_p
-kernel.GetModuleFileNameW.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_wchar), ctypes.c_uint]
-kernel.GetModuleFileNameW.restype = ctypes.c_uint
-for path in (native, base.with_name('python3.dll'), base.with_name('python312.dll')):
-    handle = kernel.GetModuleHandleW(path.name)
-    result = ctypes.create_unicode_buffer(32768)
-    length = kernel.GetModuleFileNameW(handle, result, len(result)) if handle else 0
-    if not 0 < length < len(result) or not Path(result.value).samefile(path):
-        raise RuntimeError(f'Expected native module is not mapped from {path}')
-    print(f'Loaded {expected}: {result.value}')
-"""
+IDENTITY_TESTS = ROOT / 'tests' / 'test_windows_renderer_identity.py'
 
 PYTEST = """
 from pathlib import Path
@@ -80,6 +51,12 @@ def reviewed_assets():
 
 def requirements(assets):
     return ''.join(f'{asset.name}=={asset.version} --hash=sha256:{asset.sha256}\n' for asset in assets).encode()
+
+
+def check_inventory(label, directory, expected):
+    actual = {path.name for path in directory.iterdir()}
+    if actual != expected:
+        raise ValueError(f'{label}: missing {sorted(expected - actual)!r}, unexpected {sorted(actual - expected)!r}')
 
 
 def checkpoint(stage, python_pin, uv_pin, inputs, controls):
@@ -137,13 +114,13 @@ def checkpoint(stage, python_pin, uv_pin, inputs, controls):
               '--inputs', root / 'inputs', '--wheelhouse', wheelhouse, '--uv', uv, '--output', bundle,
               '--build-requirements', cwd / 'build.txt', timeout=1800), flush=True)
     expected_artifacts = {source, official, recipe.PATCH, recipe.PATCHED_WHEEL, 'build-provenance.json'}
-    if {p.name for p in bundle.iterdir()} != expected_artifacts:
-        raise ValueError('Unexpected renderer build artifacts.')
+    check_inventory('Renderer build artifacts', bundle, expected_artifacts)
     provenance = json.loads(setup._read_source(bundle / 'build-provenance.json', 16384))
-    if any(provenance.get(key) != value for key, value in (
+    for key, expected in (
             ('source_sha256', recipe.SOURCE_SHA256), ('patch_sha256', recipe.PATCH_SHA256),
-            ('preimage_sha256', recipe.PREIMAGE), ('postimage_sha256', recipe.POSTIMAGE))):
-        raise ValueError('Renderer source or patch provenance differs from the reviewed pins.')
+            ('preimage_sha256', recipe.PREIMAGE), ('postimage_sha256', recipe.POSTIMAGE)):
+        if provenance.get(key) != expected:
+            raise ValueError(f'Renderer build provenance {key}: expected {expected!r}, got {provenance.get(key)!r}')
     for name, expected in ((source, recipe.SOURCE_SHA256), (official, recipe.OFFICIAL_SHA256),
                            (recipe.PATCH, recipe.PATCH_SHA256), (recipe.PATCHED_WHEEL, provenance['wheel_sha256'])):
         recipe.checked_bytes(bundle / name, expected, 32 * 1024**2)
@@ -151,15 +128,18 @@ def checkpoint(stage, python_pin, uv_pin, inputs, controls):
     pip_options = ('--no-index', '--no-build', '--link-mode', 'copy')
     runtime = root / 'runtime' / 'Scripts' / 'python.exe'
     renderer = root / 'renderer' / 'Scripts' / 'python.exe'
+    env['PYTEST_DISABLE_PLUGIN_AUTOLOAD'] = '1'
     for executable, wheel, version in ((runtime, official, '6.3.0'),
                                        (renderer, recipe.PATCHED_WHEEL, recipe.BUILD)):
         uv_run('venv', '--python', python, executable.parents[1])
         if executable == runtime:
             uv_run('pip', 'sync', '--python', executable, *pip_options, '--require-hashes',
                    '--find-links', wheelhouse, cwd / 'controls.txt')
+            print(run(runtime, '-I', '-B', '-c', PYTEST, ROOT, '-v', '-x', '-p', 'no:cacheprovider',
+                      '--basetemp=' + str(temp / 'identity-pytest'), IDENTITY_TESTS), flush=True)
         uv_run('pip', 'install', '--python', executable, *pip_options, '--no-deps', bundle / wheel)
         uv_run('pip', 'check', '--python', executable)
-        print(run(executable, '-I', '-B', '-c', LOAD, version, python), flush=True)
+        print(run(executable, '-I', '-B', '-c', recipe.IDENTITY_PROBE, version, executable, python), flush=True)
 
     installed = [p for p in (root / 'renderer' / 'Lib' / 'site-packages').rglob('*') if p.is_file()]
     retained = [renderer, renderer.parents[1] / 'pyvenv.cfg', python, *python.parent.glob('*.dll'),
@@ -173,14 +153,13 @@ def checkpoint(stage, python_pin, uv_pin, inputs, controls):
     setup._write(stage, (config.name,), json.dumps(dict(package_version=recipe.BUILD,
         python=renderer.relative_to(root).as_posix(), files_sha256=hashes), sort_keys=True).encode())
     env.update(COMPOSERLINT_RENDERER_CONFIG=str(config), COMPOSERLINT_RENDERER_EQUIVALENCE='1',
-               PYTEST_DISABLE_PLUGIN_AUTOLOAD='1', COMPOSERLINT_TEMP_DIR=str(temp))
+               COMPOSERLINT_TEMP_DIR=str(temp))
     report = cwd / 'renderer-controls.xml'
     print(run(runtime, '-I', '-B', '-c', PYTEST, ROOT, '-v', '-x', '-p', 'no:cacheprovider',
               '-k', 'not test_windows_render_holds_pins_through_worker_exit',
               '--basetemp=' + str(temp / 'pytest'), '--junitxml=' + str(report), CONTROLS, timeout=240), flush=True)
     print('Renderer controls:', setup.control_counts(ET.parse(report).getroot()), flush=True)
-    if {p.name for p in root.iterdir()} != expected_top:
-        raise ValueError('Unexpected top-level Windows renderer workspace member.')
+    check_inventory('Top-level Windows renderer workspace', root, expected_top)
 
 
 def main():

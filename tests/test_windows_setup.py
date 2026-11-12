@@ -189,6 +189,7 @@ class WindowsCompilerProbeTests(unittest.TestCase):
             runtime = root / 'runtime' / 'Scripts' / 'python.exe'
             renderer = root / 'renderer' / 'Scripts' / 'python.exe'
             uv_commands = []
+            identity_commands = []
             stop = RuntimeError('Reached patched renderer load')
 
             def command(_, executable, *args, **kwargs):
@@ -200,6 +201,8 @@ class WindowsCompilerProbeTests(unittest.TestCase):
                     for name in (pins.SOURCE_ARCHIVE, pins.OFFICIAL_WHEEL, pins.PATCH,
                                  pins.PATCHED_WHEEL, 'build-provenance.json'):
                         (bundle / name).touch()
+                if executable in (runtime, renderer):
+                    identity_commands.append((executable, *args))
                 if executable == renderer:
                     raise stop
                 return ''
@@ -228,6 +231,13 @@ class WindowsCompilerProbeTests(unittest.TestCase):
                 (*prefix, 'venv', '--python', python, renderer.parents[1]),
                 (*prefix, 'pip', 'install', '--python', renderer, *policy, '--no-deps', bundle / pins.PATCHED_WHEEL),
                 (*prefix, 'pip', 'check', '--python', renderer),
+            ])
+            self.assertEqual(identity_commands, [
+                (runtime, '-I', '-B', '-c', checkpoint.PYTEST, checkpoint.ROOT, '-v', '-x',
+                 '-p', 'no:cacheprovider', '--basetemp=' + str(root / 'tmp' / 'identity-pytest'),
+                 checkpoint.IDENTITY_TESTS),
+                (runtime, '-I', '-B', '-c', pins.IDENTITY_PROBE, '6.3.0', runtime, python),
+                (renderer, '-I', '-B', '-c', pins.IDENTITY_PROBE, pins.BUILD, renderer, python),
             ])
 
     def test_probe_environment_preserves_profile_and_limits_tool_settings(self):
@@ -551,6 +561,24 @@ class WindowsSetupTests(unittest.TestCase):
         self.assertEqual(renderer.sha(patch_bytes), renderer.PATCH_SHA256)
         with self.assertRaisesRegex(ValueError, 'preimage'):
             renderer.apply_reviewed_patch(b'wrong source', patch_bytes)
+
+    def test_full_setup_verifies_both_environments_before_renderer_controls(self):
+        recipe = import_module(f'{setup.__package__}.windows_renderer')
+        root = ROOT / 'private fixture'
+        base = root / 'python/python.exe'
+        stage = SimpleNamespace(path=root)
+        plan = SimpleNamespace(renderer=(), controls=())
+        uv_run = Mock()
+        error = RuntimeError('Patched renderer identity failed')
+        run = Mock(side_effect=[None, error])
+        with self.assertRaisesRegex(RuntimeError, str(error)):
+            setup.install_renderer(plan, stage, run, uv_run, ('pip',), base, {}, Mock())
+        official = ('runtime', 'Scripts', 'python.exe')
+        patched = ('renderer', 'Scripts', 'python.exe')
+        self.assertEqual(run.call_args_list, [
+            call(official, '-I', '-B', '-c', recipe.IDENTITY_PROBE, '6.3.0', root.joinpath(*official), base),
+            call(patched, '-I', '-B', '-c', recipe.IDENTITY_PROBE, recipe.BUILD, root.joinpath(*patched), base),
+        ])
 
     def test_exact_asset_pins_match_lock_and_preflight(self):
         manifest = (ROOT / 'tools/windows-setup-assets.json').read_bytes()

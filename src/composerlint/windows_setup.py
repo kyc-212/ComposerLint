@@ -410,10 +410,11 @@ def with_renderer(plan, root, bundle, candidate_sha256):
                   for name, expected in pins)
     provenance = _read_source(bundle / 'build-provenance.json', 16 * 1024)
     build = json.loads(provenance)
-    if any(build.get(key) != expected for key, expected in (
+    for key, expected in (
             ('source_sha256', renderer.SOURCE_SHA256), ('patch_sha256', renderer.PATCH_SHA256),
-            ('postimage_sha256', renderer.POSTIMAGE), ('wheel_sha256', candidate_sha256))):
-        raise SetupError('Renderer build provenance differs from the reviewed inputs or wheel.')
+            ('postimage_sha256', renderer.POSTIMAGE), ('wheel_sha256', candidate_sha256)):
+        if build.get(key) != expected:
+            raise SetupError(f'Renderer build provenance {key}: expected {expected!r}, got {build.get(key)!r}')
     files += (('build-provenance.json', provenance),)
     controls = tuple((tuple(name.split('/')), _read_source(root / name, 4 * 1024**2))
                      for name in _CONTROL_FILES)
@@ -438,10 +439,10 @@ def install_renderer(plan, stage, run, uv_run, pip, base_python, env, status):
     uv_run('venv', '--python', base_python, child)
     uv_run('pip', 'install', '--python', child_python, '--no-index', '--no-deps',
            '--link-mode', 'copy', '--no-build', artifacts / renderer.PATCHED_WHEEL)
-    run(('renderer', 'Scripts', 'python.exe'), '-I', '-B', '-c',
-        'from importlib.metadata import version; import verovio; '
-        'assert version("verovio")== "6.3.0+composerlint.tie1"; '
-        'assert verovio.toolkit().getVersion().split("-")[0] == "6.3.0"')
+    for parts, version in ((('runtime', 'Scripts', 'python.exe'), '6.3.0'),
+                           (('renderer', 'Scripts', 'python.exe'), renderer.BUILD)):
+        run(parts, '-I', '-B', '-c', renderer.IDENTITY_PROBE, version,
+            stage.path.joinpath(*parts), base_python)
 
     packages = child / 'Lib' / 'site-packages'
     retained = [base_python, child_python, child / 'pyvenv.cfg']
