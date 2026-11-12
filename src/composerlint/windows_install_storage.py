@@ -13,7 +13,7 @@ from .windows_preflight import _NTFS_FLAGS, _ReadOnlyDisk
 from .windows_private import (
     _DELETE, _FILE_CREATE, _FILE_DIRECTORY_FILE, _FILE_NON_DIRECTORY_FILE,
     _FILE_OPEN, _FileStandardInfo, _PrivateDirectory, _READ_CONTROL, _SecurityAPI,
-    _WRITE_DATA, private_directory,
+    _WRITE_DAC, _WRITE_DATA, private_directory,
 )
 from .windows_read import (
     _IoStatusBlock, _OPEN_REPARSE_POINT, _READ_ATTRIBUTES, _READ_DATA, _SHARE_READ,
@@ -158,6 +158,26 @@ class Stage:
             stack.callback(self.disk.close, handle)
             yield self.path.joinpath(*parts)
         self.validate()
+
+    def protect_generated_file(self, parts, identity):
+        """Verify an inventoried tool output and protect its DACL by handle."""
+        if self.workspace_members is None or self.workspace_members.get(parts) is not False:
+            raise PermissionError(f'Unexpected generated workspace file: {parts!r}')
+        path = self.path.joinpath(*parts)
+        self.validate()
+        with ExitStack() as stack:
+            parent = self._directories(parts[:-1], stack)
+            # _open checks the regular-file type, owner, private grants and
+            # single-link identity before we change any security metadata.
+            handle = self._open(parent, parts[-1], directory=False, access=_READ_DATA | _WRITE_DAC)
+            stack.callback(self.disk.close, handle)
+            if self.disk.identity(handle) != identity:
+                raise PermissionError(f'Generated workspace file changed after audit: {path}')
+            if not self.disk.query(handle, 1, _FileStandardInfo).size:
+                raise RuntimeError(f'Probe output was not written: {path}')
+            self.security.protect_file_dacl(handle, self.sid)
+            self.security.require_private(handle, self.sid)
+            self.validate()
 
     def remove(self, parts, *, directory=False):
         self.validate()

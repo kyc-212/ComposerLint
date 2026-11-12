@@ -8,6 +8,7 @@ from importlib.util import module_from_spec
 import json
 import os
 from pathlib import Path
+from subprocess import list2cmdline
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -96,12 +97,14 @@ int wmain(int argc, wchar_t** argv) {
 """
 
 ABI_MODULE = '_composerlint_abi_probe'
+ABI_IMPORT_LIBRARY = (ABI_MODULE + '.lib',)
+ABI_EXPORT_FILE = (ABI_MODULE + '.exp',)
 PROBE_DIRECTORIES = (('work',), ('tmp',), ('abi-exe',))
 PROBE_FILES = (
     ('probe.cpp',), ('probe.obj',), ('probe.exe',), ('python_abi.cpp',),
     ('abi-exe.obj',), ('abi-exe', 'python_abi.exe'), ('abi-exe', 'python3.dll'),
     ('abi-exe', 'python312.dll'), ('abi-extension.obj',), (ABI_MODULE + '.pyd',),
-    (ABI_MODULE + '.lib',), (ABI_MODULE + '.exp',),
+    ABI_IMPORT_LIBRARY, ABI_EXPORT_FILE,
 )
 PROFILE_VARIABLES = (
     'USERPROFILE', 'LOCALAPPDATA', 'APPDATA', 'HOMEDRIVE', 'HOMEPATH', 'HOMESHARE',
@@ -195,13 +198,16 @@ def run_probe_command(step, executable, *arguments, cwd, env):
     except workers.SetupProcessCleanupUnconfirmed:
         raise
     except (OSError, ValueError, RuntimeError) as error:
-        raise RuntimeError(f'{step} could not complete ({executable}): {error}') from error
+        raise RuntimeError(f'{step} could not complete: {error}\ncommand: {list2cmdline(command)}') from error
     if result.returncode:
-        stdout, stderr = (data[-4000:].decode('utf-8', 'backslashreplace').strip() or '(empty)'
+        stdout, stderr = (data.decode('utf-8', 'backslashreplace').strip() or '(empty)'
                           for data in (result.stdout, result.stderr))
         raise RuntimeError(
             f'{step} failed ({executable}), exit status 0x{result.returncode & 0xffffffff:08X}\n'
-            f'stdout: {stdout}\nstderr: {stderr}')
+            f'command: {list2cmdline(command)}\nstdout: {stdout}\nstderr: {stderr}')
+    if result.stderr:
+        sys.stderr.write(result.stderr.decode('utf-8', 'backslashreplace'))
+        sys.stderr.flush()
     return result.stdout.decode('utf-8', 'backslashreplace').strip()
 
 
@@ -239,16 +245,23 @@ def run_probe_steps(stage, developer, tools, python, python_files):
 
         def audit(when):
             try:
-                stage.audit()
+                return stage.audit()
             except OSError as error:
                 error.add_note(f'Private workspace audit failed {when}')
                 raise
 
-        def run(step, executable, *arguments):
+        def run(step, executable, *arguments, generated=()):
             print(f'{step}...', flush=True)
-            audit(f'before {step}')
+            before = audit(f'before {step}')
+            for parts in generated:
+                if parts in before:
+                    raise PermissionError(f'Probe output already exists before {step}: {stage.path.joinpath(*parts)}')
             result = run_probe_command(step, executable, *arguments, cwd=cwd, env=env)
-            audit(f'after {step}')
+            after = audit(f'after {step}')
+            for parts in generated:
+                if parts not in after:
+                    raise RuntimeError(f'{step} did not produce {stage.path.joinpath(*parts)}')
+                stage.protect_generated_file(parts, after[parts])
             return result
 
         def compile_source(source, output, *flags):
@@ -257,12 +270,12 @@ def run_probe_steps(stage, developer, tools, python, python_files):
                 run(f'Compile {output}', tools['cl'], '/nologo', '/std:c++20', '/EHsc',
                     '/utf-8', '/c', *flags, f'/Fo{stage.path / output}', source_path)
 
-        def link_output(parts, obj, *flags):
+        def link_output(parts, obj, *flags, generated=()):
             setup._write(stage, parts, b'')
             with probe_artifact(stage, (obj,)) as object_path:
                 run(f'Link {parts[-1]}', tools['link'], '/nologo', '/machine:x64',
                     '/incremental:no', '/manifest:no', '/debug:none',
-                    f'/out:{stage.path.joinpath(*parts)}', object_path, *flags)
+                    f'/out:{stage.path.joinpath(*parts)}', object_path, *flags, generated=generated)
 
         setup._write(stage, ('probe.cpp',), PROBE)
         compile_source('probe.cpp', 'probe.obj')
@@ -291,11 +304,12 @@ def run_probe_steps(stage, developer, tools, python, python_files):
         print(result, flush=True)
 
         compile_source('python_abi.cpp', 'abi-extension.obj', '/I', include, '/DABI_EXTENSION')
-        for suffix in ('.lib', '.exp'):
-            setup._write(stage, (ABI_MODULE + suffix,), b'')
         extension = (ABI_MODULE + '.pyd',)
+        # MSVC derives the .exp sibling from /IMPLIB. Both paths must be
+        # absent at launch so LINK can generate its own import/export files.
+        import_library = stage.path.joinpath(*ABI_IMPORT_LIBRARY)
         link_output(extension, 'abi-extension.obj', '/dll',
-                    f'/implib:{stage.path / (ABI_MODULE + ".lib")}', *abi_link)
+                    f'/implib:{import_library}', *abi_link, generated=(ABI_IMPORT_LIBRARY, ABI_EXPORT_FILE))
         with probe_artifact(stage, extension) as module:
             result = run('Import native x64 CPython stable ABI extension', python,
                          '-I', '-S', '-B', '-X', 'utf8', '-c', ABI_LOADER, module, python)

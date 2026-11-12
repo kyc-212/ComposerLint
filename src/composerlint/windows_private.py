@@ -17,6 +17,7 @@ from .windows_read import (
 
 
 _READ_CONTROL = 0x00020000
+_WRITE_DAC = 0x00040000
 _DELETE = 0x00010000
 _WRITE_DATA = 0x0002
 _FILE_ALL_ACCESS = 0x001F01FF
@@ -30,6 +31,8 @@ _ERROR_NO_TOKEN = 1008
 _TOKEN_QUERY = 0x0008
 _TOKEN_ADJUST_DEFAULT = 0x0080
 _TOKEN_USER, _TOKEN_OWNER, _TOKEN_STATISTICS = 1, 4, 10
+_DACL_SECURITY_INFORMATION = 0x00000004
+_PROTECTED_DACL_SECURITY_INFORMATION = 0x80000000
 
 
 class _FileIdInfo(ctypes.Structure):
@@ -91,6 +94,12 @@ class _SecurityAPI:
         self.get_security = _bind(advapi, 'GetSecurityInfo', win.DWORD, win.HANDLE,
                                   ctypes.c_int, win.DWORD, pointer, pointer, pointer,
                                   pointer, pointer)
+        self.get_descriptor_dacl = _bind(advapi, 'GetSecurityDescriptorDacl', win.BOOL,
+                                         ctypes.c_void_p, ctypes.POINTER(win.BOOL),
+                                         pointer, ctypes.POINTER(win.BOOL))
+        self.set_security = _bind(advapi, 'SetSecurityInfo', win.DWORD, win.HANDLE,
+                                  ctypes.c_int, win.DWORD, ctypes.c_void_p,
+                                  ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p)
         self.descriptor_control = _bind(advapi, 'GetSecurityDescriptorControl', win.BOOL,
                                         ctypes.c_void_p, ctypes.POINTER(win.WORD), win.LPDWORD)
         self.acl_info = _bind(advapi, 'GetAclInformation', win.BOOL, ctypes.c_void_p,
@@ -174,6 +183,20 @@ class _SecurityAPI:
         flags = 'OICI' if inheritable else ''
         grants = ''.join(f'(A;{flags};FA;;;{trustee})' for trustee in sorted({sid, _SYSTEM_SID}))
         return self.descriptor(f'O:{sid}D:P{grants}')
+
+    def protect_file_dacl(self, handle, sid):
+        """Apply the explicit private file DACL to an already verified handle."""
+        with self.private_descriptor(sid) as descriptor:
+            present, defaulted, acl = win.BOOL(), win.BOOL(), ctypes.c_void_p()
+            if not self.get_descriptor_dacl(descriptor, ctypes.byref(present), ctypes.byref(acl),
+                                            ctypes.byref(defaulted)):
+                raise ctypes.WinError(ctypes.get_last_error())
+            if not present.value or not acl.value:
+                raise PermissionError('The private file descriptor is missing its DACL.')
+            result = self.set_security(handle, 1, _DACL_SECURITY_INFORMATION |
+                                       _PROTECTED_DACL_SECURITY_INFORMATION, None, None, acl, None)
+            if result:
+                raise ctypes.WinError(result)
 
     def require_private(self, handle, sid, *, tree_root=False, allow_inherited=False):
         owner, acl, descriptor = (ctypes.c_void_p() for _ in range(3))

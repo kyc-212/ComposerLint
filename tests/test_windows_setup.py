@@ -1,6 +1,6 @@
 """Windows terminal setup tests. Default native tests use fixtures, not downloads."""
 
-from contextlib import ExitStack, contextmanager, nullcontext, redirect_stdout
+from contextlib import ExitStack, contextmanager, nullcontext, redirect_stderr, redirect_stdout
 import ctypes
 import hashlib
 from importlib import util
@@ -76,8 +76,17 @@ class WindowsCompilerProbeTests(unittest.TestCase):
         run.assert_called_once_with([str(executable), '/I', str(include)], cwd=str(cwd), env=env,
                                     timeout=120, capture_result=True)
         for expected in ('Compile ABI failed', '0x00000002', 'stdout: fatal compiler diagnostic',
-                         'stderr: additional context'):
+                         'stderr: additional context',
+                         'command: ' + subprocess.list2cmdline([str(executable), '/I', str(include)])):
             self.assertIn(expected, str(raised.exception))
+
+    def test_successful_link_keeps_stderr_separate_from_stdout(self):
+        result = subprocess.CompletedProcess([], 0, b'link output\r\n', b'link warning\r\n')
+        with (patch.object(self.probe.workers, 'run_setup_command', return_value=result),
+              redirect_stderr(io.StringIO()) as diagnostics):
+            output = self.probe.run_probe_command('Link ABI', 'link.exe', cwd='work', env={})
+        self.assertEqual(output, 'link output')
+        self.assertEqual(diagnostics.getvalue(), 'link warning\r\n')
 
     def test_probe_environment_preserves_profile_and_limits_tool_settings(self):
         system = PureWindowsPath(r'C:\Windows')
@@ -120,10 +129,16 @@ class WindowsCompilerProbeTests(unittest.TestCase):
             stage.create.side_effect = lambda parts: root.joinpath(*parts).open('xb')
             stage.held_file.side_effect = lambda parts: nullcontext(root.joinpath(*parts))
             stage.held_directory.side_effect = lambda parts: nullcontext(root.joinpath(*parts))
+            stage.audit.side_effect = lambda: {
+                path.relative_to(root).parts: path.stat().st_ino for path in root.rglob('*')
+            }
             tools = {name: base / 'tools' / (name + '.exe') for name in ('cl', 'link', 'rc')}
             python = base / 'Selected Python' / 'python.exe'
             library = python.parent / 'libs' / 'python3.lib'
             module = root / (self.probe.ABI_MODULE + '.pyd')
+            import_library = module.with_suffix('.lib')
+            export_file = module.with_suffix('.exp')
+            generated = (import_library, export_file)
             observed = []
 
             def command(step, executable, *args, cwd, env):
@@ -138,6 +153,18 @@ class WindowsCompilerProbeTests(unittest.TestCase):
                             self.assertTrue(output.is_relative_to(root))
                             self.assertEqual(output.read_bytes(), b'')
                             output.write_bytes(b'compiled fixture')
+                if '/dll' in args:
+                    self.assertEqual([arg for arg in args if str(arg).startswith('/implib:')],
+                                     [f'/implib:{import_library}'])
+                    for output in generated:
+                        self.assertEqual(output.parent, root)
+                        self.assertFalse(output.exists())
+                        with output.open('xb') as stream:
+                            stream.write(b'linker-generated fixture')
+                if executable == python:
+                    self.assertEqual(stage.protect_generated_file.call_args_list, [
+                        call((output.name,), output.stat().st_ino) for output in generated
+                    ])
                 if executable == root / 'abi-exe' / 'python_abi.exe':
                     return f'CPython stable ABI loaded: {sys.version}'
                 return ''
@@ -168,6 +195,25 @@ class WindowsCompilerProbeTests(unittest.TestCase):
             self.assertEqual(observed[8][1][-3:], (self.probe.ABI_LOADER, module, python))
             self.assertEqual({p.relative_to(root).parts for p in root.rglob('*') if p.is_file()},
                              set(self.probe.PROBE_FILES))
+
+    def test_generated_file_refuses_unlisted_replaced_or_empty_outputs_before_acl_change(self):
+        parts = ('approved.lib',)
+        disk, security = Mock(), Mock()
+        stage = storage.Stage(Path('workspace'), disk, security, 'sid', [('root', 'id')], [],
+                              workspace_members={parts: False})
+        with (patch.object(stage, 'validate'),
+              patch.object(stage, '_open', return_value='file') as open_member):
+            with self.assertRaisesRegex(PermissionError, 'Unexpected generated workspace file'):
+                stage.protect_generated_file(('unexpected.lib',), 'id')
+            open_member.assert_not_called()
+            disk.identity.return_value = 'replacement'
+            with self.assertRaisesRegex(PermissionError, 'changed after audit'):
+                stage.protect_generated_file(parts, 'original')
+            disk.identity.return_value = 'original'
+            disk.query.return_value = SimpleNamespace(size=0)
+            with self.assertRaisesRegex(RuntimeError, 'output was not written'):
+                stage.protect_generated_file(parts, 'original')
+        security.protect_file_dacl.assert_not_called()
 
     def test_strict_cleanup_refuses_unlisted_or_replaced_objects(self):
         path = Path('workspace')
@@ -744,6 +790,33 @@ class WindowsReceiptTests(unittest.TestCase):
 
 @unittest.skipUnless(sys.platform == 'win32', 'requires native Windows')
 class WindowsNativeSetupTests(unittest.TestCase):
+    def test_tool_created_file_gets_protected_dacl_without_changing_identity(self):
+        parts = ('generated.lib',)
+        with tempfile.TemporaryDirectory(prefix='ComposerLint linker ACL ') as tmp:
+            with storage.private_workspace(Path(tmp), 'probe-', members={parts: False}) as stage:
+                path = stage.path.joinpath(*parts)
+                self.assertNotIn(parts, stage.audit())
+                setup.run_setup_command(
+                    [sys.executable, '-I', '-S', '-B', '-c',
+                     'from pathlib import Path; Path("generated.lib").write_bytes(b"linker output")'],
+                    cwd=str(stage.path), env={'SystemRoot': str(setup._system_root())}, timeout=15)
+                identity = stage.audit()[parts]
+                member = stage._open(stage.handle, path.name, directory=False)
+                try:
+                    with self.assertRaisesRegex(PermissionError, 'private Windows DACL'):
+                        stage.security.require_private(member, stage.sid)
+                finally:
+                    stage.disk.close(member)
+                stage.protect_generated_file(parts, identity)
+                member = stage._open(stage.handle, path.name, directory=False)
+                try:
+                    stage.security.require_private(member, stage.sid)
+                    self.assertEqual(stage.disk.identity(member), identity)
+                finally:
+                    stage.disk.close(member)
+                self.assertEqual(path.read_bytes(), b'linker output')
+            self.assertFalse(path.parent.exists())
+
     def test_strict_probe_workspace_preserves_unknown_same_owner_object(self):
         with tempfile.TemporaryDirectory(prefix='ComposerLint probe inventory ') as tmp:
             with self.assertRaisesRegex(PermissionError, 'Unexpected Windows workspace member') as raised:
