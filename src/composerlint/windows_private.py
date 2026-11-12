@@ -231,10 +231,16 @@ class _SecurityAPI:
                     raise ctypes.WinError(ctypes.get_last_error())
                 ace = _AllowAce.from_address(address.value)
                 if ace.kind or ace.flags != flags or ace.mask != _FILE_ALL_ACCESS:
-                    raise PermissionError('Unexpected ACE in private Windows DACL.')
+                    raise PermissionError(
+                        f'Unexpected ACE in private Windows DACL at index {index}: '
+                        f'type=0x{ace.kind:02x}, flags=0x{ace.flags:02x}, mask=0x{ace.mask:08x}; '
+                        f'expected type=0x00, flags=0x{flags:02x}, mask=0x{_FILE_ALL_ACCESS:08x}.')
                 trustee = self.sid_text(address.value + _AllowAce.sid_start.offset)
                 if trustee not in remaining:
-                    raise PermissionError('Unexpected trustee in private Windows DACL.')
+                    raise PermissionError(
+                        f'Unexpected trustee in private Windows DACL at ACE index {index}: SID {trustee}, '
+                        f'flags=0x{ace.flags:02x}, mask=0x{ace.mask:08x}, protected={protected}; '
+                        'expected one grant each for the effective user and SYSTEM.')
                 remaining.remove(trustee)
             if remaining:
                 raise PermissionError('Required grants are missing from private Windows DACL.')

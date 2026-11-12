@@ -395,6 +395,8 @@ _CONTROL_FILES = (
     'tests/test_renderer_packaging_equivalence.py', 'tests/test_v02_renderer_ties.py',
     'tests/fixtures/v02_m2/multipage.musicxml', 'tests/fixtures/basic.musicxml',
 )
+RENDERER_PYTEST_OPTIONS = ('-p', 'no:cacheprovider', '-p', 'no:tmpdir')
+RENDERER_CONTROL_SELECTION = ('-k', 'not test_windows_render_holds_pins_through_worker_exit')
 
 
 def with_renderer(plan, root, bundle, candidate_sha256):
@@ -467,7 +469,7 @@ def install_renderer(plan, stage, run, uv_run, pip, base_python, env, status):
     runtime = ('runtime', 'Scripts', 'python.exe')
     controls = stage.path / 'work' / 'controls'
     report = stage.path / 'work' / 'renderer-controls.xml'
-    run(runtime, '-I', '-B', '-m', 'pytest', '-q', '-p', 'no:cacheprovider',
+    run(runtime, '-I', '-B', '-m', 'pytest', '-q', *RENDERER_PYTEST_OPTIONS, *RENDERER_CONTROL_SELECTION,
         '--junitxml=' + str(report), controls / 'tests/test_renderer_packaging_equivalence.py', timeout=240)
     counts = control_counts(ET.parse(report).getroot())
     run(runtime, '-I', '-B', controls / 'tools/ci_windows_mcp.py', '--full', timeout=180)

@@ -181,6 +181,7 @@ class WindowsCompilerProbeTests(unittest.TestCase):
             stage = Mock(path=root)
             stage.mkdir.side_effect = lambda parts: root.joinpath(*parts).mkdir()
             stage.held_file.side_effect = lambda parts: nullcontext(root.joinpath(*parts))
+            stage.held_directory.side_effect = lambda parts: nullcontext(root.joinpath(*parts))
             pins = checkpoint.recipe
             bundle = root / 'renderer-artifacts'
             provenance = dict(source_sha256=pins.SOURCE_SHA256, patch_sha256=pins.PATCH_SHA256,
@@ -203,6 +204,11 @@ class WindowsCompilerProbeTests(unittest.TestCase):
                         (bundle / name).touch()
                 if executable in (runtime, renderer):
                     identity_commands.append((executable, *args))
+                if checkpoint.IDENTITY_TESTS in args:
+                    scratch = root / 'tmp' / 'identity-pytest'
+                    self.assertTrue(scratch.is_dir())
+                    self.assertEqual(kwargs['env']['COMPOSERLINT_TEMP_DIR'], str(scratch))
+                    stage.held_directory.assert_called_once_with(('tmp', 'identity-pytest'))
                 if executable == renderer:
                     raise stop
                 return ''
@@ -234,7 +240,7 @@ class WindowsCompilerProbeTests(unittest.TestCase):
             ])
             self.assertEqual(identity_commands, [
                 (runtime, '-I', '-B', '-c', checkpoint.PYTEST, checkpoint.ROOT, '-v', '-x',
-                 '-p', 'no:cacheprovider', '--basetemp=' + str(root / 'tmp' / 'identity-pytest'),
+                 '-p', 'no:cacheprovider', '-p', 'no:tmpdir',
                  checkpoint.IDENTITY_TESTS),
                 (runtime, '-I', '-B', '-c', pins.IDENTITY_PROBE, '6.3.0', runtime, python),
                 (renderer, '-I', '-B', '-c', pins.IDENTITY_PROBE, pins.BUILD, renderer, python),
@@ -554,6 +560,50 @@ class WindowsSetupTests(unittest.TestCase):
                       'tests="10" errors="1"'):
             with self.subTest(attrs=attrs), self.assertRaisesRegex(setup.SetupError, 'All 10'):
                 setup.control_counts(ET.fromstring(f'<testsuite {attrs}/>'))
+
+    def test_private_dacl_reports_the_rejected_sid_and_grant_without_other_identity_details(self):
+        private = import_module(f'{setup.__package__}.windows_private')
+        security = object.__new__(private._SecurityAPI)
+        user = 'S-1-5-21-1-2-3-1001'
+        system = private._SYSTEM_SID
+        rejected = 'S-1-5-32-544'
+        aces = [private._AllowAce(kind=0, flags=3, mask=0x001f01ff) for _ in range(3)]
+
+        def get_security(handle, object_type, requested, owner, group, acl, sacl, descriptor):
+            owner._obj.value = 1
+            acl._obj.value = 2
+            descriptor._obj.value = 3
+            return 0
+
+        def descriptor_control(descriptor, control, revision):
+            control._obj.value = 0x1004
+            return True
+
+        def get_ace(acl, index, address):
+            address._obj.value = ctypes.addressof(aces[index])
+            return True
+
+        security.get_security = get_security
+        security.descriptor_control = descriptor_control
+        security.get_ace = get_ace
+        security.free = Mock()
+        for trustees in ((system, user), (system, rejected, user), (system, system, user)):
+            def acl_info(acl, info, size, kind):
+                info._obj.count = len(trustees)
+                return True
+
+            with self.subTest(trustees=trustees):
+                security.acl_info = acl_info
+                security.sid_text = Mock(side_effect=(user, *trustees))
+                if len(trustees) == 2:
+                    security.require_private('directory', user, tree_root=True)
+                    continue
+                with self.assertRaises(PermissionError) as raised:
+                    security.require_private('directory', user, tree_root=True)
+                message = str(raised.exception)
+                self.assertIn(f'ACE index 1: SID {trustees[1]}', message)
+                self.assertIn('flags=0x03, mask=0x001f01ff, protected=True', message)
+                self.assertNotIn(user, message)
 
     def test_renderer_rejects_nonmatching_source_or_patch(self):
         renderer = import_module(f'{setup.__package__}.windows_renderer')
@@ -960,6 +1010,42 @@ class WindowsReceiptTests(unittest.TestCase):
 
 @unittest.skipUnless(sys.platform == 'win32', 'requires native Windows')
 class WindowsNativeSetupTests(unittest.TestCase):
+    def test_private_identity_scratch_and_nested_fixture_cleanup(self):
+        with tempfile.TemporaryDirectory(prefix='ComposerLint identity scratch ') as parent:
+            parts = ('tmp', 'identity-pytest')
+            with storage.private_workspace(Path(parent), 'renderer-') as stage:
+                stage.mkdir(parts)
+                outer = stage.path
+                with stage.held_directory(parts) as scratch:
+                    with storage.private_workspace(scratch, 'identity-') as fixture:
+                        with fixture.create(('runtime', 'Scripts', 'python.exe')) as output:
+                            output.write(b'verified fixture')
+                        with fixture.held_directory(('runtime', 'Scripts')) as scripts:
+                            self.assertEqual((scripts / 'python.exe').read_bytes(), b'verified fixture')
+                        test_path = fixture.path
+                    self.assertFalse(test_path.exists())
+            self.assertFalse(outer.exists())
+
+    def test_pytest_mode_0700_trustee_is_reported_and_cleanup_refuses_deletion(self):
+        with tempfile.TemporaryDirectory(prefix='ComposerLint pytest DACL ') as parent:
+            with self.assertRaisesRegex(
+                    PermissionError, r'Unexpected trustee .*SID S-1-5-32-544, '
+                                     r'flags=0x03, mask=0x001f01ff, protected=True') as raised:
+                with storage.private_workspace(Path(parent), 'renderer-') as stage:
+                    stage.mkdir(('tmp',))
+                    with stage.create(('verified',)) as output:
+                        output.write(b'keep verified file')
+                    verified = stage.path / 'verified'
+                    scratch = stage.path / 'tmp' / 'identity-pytest'
+                    setup.run_setup_command(
+                        [sys.executable, '-I', '-S', '-B', '-c',
+                         'from pathlib import Path; import sys; Path(sys.argv[1]).mkdir(mode=0o700)',
+                         str(scratch)],
+                        cwd=str(stage.path), env={'SystemRoot': str(setup._system_root())}, timeout=15)
+            self.assertTrue(scratch.is_dir())
+            self.assertEqual(verified.read_bytes(), b'keep verified file')
+            self.assertTrue(any(str(scratch) in note for note in raised.exception.__notes__))
+
     def test_tool_created_file_gets_protected_dacl_without_changing_identity(self):
         parts = ('generated.lib',)
         with tempfile.TemporaryDirectory(prefix='ComposerLint linker ACL ') as tmp:

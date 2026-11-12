@@ -98,8 +98,9 @@ def checkpoint(stage, python_pin, uv_pin, inputs, controls):
     python = root / 'python' / 'python.exe'
     uv = root / 'uv' / 'uv.exe'
 
-    def run(executable, *args, timeout=120):
-        return run_probe_command(executable.name, executable, *args, cwd=cwd, env=env, timeout=timeout)
+    def run(executable, *args, timeout=120, extra_env=None):
+        command_env = env if extra_env is None else env | extra_env
+        return run_probe_command(executable.name, executable, *args, cwd=cwd, env=command_env, timeout=timeout)
 
     def uv_run(*args):
         return run(uv, '--offline', '--no-config', '--no-progress', '--no-python-downloads', *args)
@@ -135,8 +136,12 @@ def checkpoint(stage, python_pin, uv_pin, inputs, controls):
         if executable == runtime:
             uv_run('pip', 'sync', '--python', executable, *pip_options, '--require-hashes',
                    '--find-links', wheelhouse, cwd / 'controls.txt')
-            print(run(runtime, '-I', '-B', '-c', PYTEST, ROOT, '-v', '-x', '-p', 'no:cacheprovider',
-                      '--basetemp=' + str(temp / 'identity-pytest'), IDENTITY_TESTS), flush=True)
+            identity_scratch = ('tmp', 'identity-pytest')
+            stage.mkdir(identity_scratch)
+            with stage.held_directory(identity_scratch) as scratch:
+                print(run(runtime, '-I', '-B', '-c', PYTEST, ROOT, '-v', '-x',
+                          *setup.RENDERER_PYTEST_OPTIONS, IDENTITY_TESTS,
+                          extra_env={'COMPOSERLINT_TEMP_DIR': str(scratch)}), flush=True)
         uv_run('pip', 'install', '--python', executable, *pip_options, '--no-deps', bundle / wheel)
         uv_run('pip', 'check', '--python', executable)
         print(run(executable, '-I', '-B', '-c', recipe.IDENTITY_PROBE, version, executable, python), flush=True)
@@ -155,9 +160,8 @@ def checkpoint(stage, python_pin, uv_pin, inputs, controls):
     env.update(COMPOSERLINT_RENDERER_CONFIG=str(config), COMPOSERLINT_RENDERER_EQUIVALENCE='1',
                COMPOSERLINT_TEMP_DIR=str(temp))
     report = cwd / 'renderer-controls.xml'
-    print(run(runtime, '-I', '-B', '-c', PYTEST, ROOT, '-v', '-x', '-p', 'no:cacheprovider',
-              '-k', 'not test_windows_render_holds_pins_through_worker_exit',
-              '--basetemp=' + str(temp / 'pytest'), '--junitxml=' + str(report), CONTROLS, timeout=240), flush=True)
+    print(run(runtime, '-I', '-B', '-c', PYTEST, ROOT, '-v', '-x', *setup.RENDERER_PYTEST_OPTIONS,
+              *setup.RENDERER_CONTROL_SELECTION, '--junitxml=' + str(report), CONTROLS, timeout=240), flush=True)
     print('Renderer controls:', setup.control_counts(ET.parse(report).getroot()), flush=True)
     check_inventory('Top-level Windows renderer workspace', root, expected_top)
 

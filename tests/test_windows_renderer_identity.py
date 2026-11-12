@@ -4,6 +4,7 @@ import ctypes
 from importlib import metadata
 from pathlib import Path
 import sys
+import tempfile
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -13,12 +14,34 @@ from composerlint.windows_renderer import BUILD, IDENTITY_PROBE
 
 
 @pytest.fixture
-def probe(tmp_path, monkeypatch):
-    def file(relative):
-        path = tmp_path / relative
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.touch()
-        return path
+def scratch_file():
+    if sys.platform == 'win32':
+        from composerlint.runtime_paths import temporary_parent
+        from composerlint.windows_install_storage import private_workspace
+
+        with private_workspace(temporary_parent(), 'identity-') as stage:
+            def file(relative):
+                parts = Path(relative).parts
+                with stage.create(parts):
+                    pass
+                return stage.path.joinpath(*parts)
+
+            yield file
+        return
+
+    with tempfile.TemporaryDirectory(prefix='composerlint-renderer-identity-') as directory:
+        def file(relative):
+            path = Path(directory) / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.touch()
+            return path
+
+        yield file
+
+
+@pytest.fixture
+def probe(scratch_file, monkeypatch):
+    file = scratch_file
 
     base = file('python/python.exe')
     executable = file('runtime/Scripts/python.exe')
@@ -151,7 +174,7 @@ def test_rejects_native_extension_import_from_sibling_environment(probe):
 
 
 def test_reports_unavailable_identity_path(probe):
-    Path(probe.extension.__file__).unlink()
+    probe.extension.__file__ = str(probe.sibling.parent / 'missing' / probe.sibling.name)
     with pytest.raises(RuntimeError, match=r'Verovio native extension location: cannot compare .*_verovio\.pyd'):
         probe.run()
 
