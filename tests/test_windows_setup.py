@@ -360,7 +360,8 @@ class WindowsSetupTests(unittest.TestCase):
                 self.assertFalse((stage.path / 'complete.json').exists())
 
     def test_rollback_runs_on_failure_but_preserves_staging_if_process_exit_unknown(self):
-        stage = Mock(path=Path('staging'), committed=False)
+        stage = Mock(path=Path('staging'), committed=False, work_cleanup_incomplete=False,
+                     receipt_started=False)
         rollback = Mock()
         for failure in (PermissionError('denied'), KeyboardInterrupt()):
             with self.assertRaises(type(failure)):
@@ -392,6 +393,165 @@ class WindowsSetupTests(unittest.TestCase):
             for args in download_free:
                 self.assertTrue({'--offline', '--no-index', '--no-build', '--no-deps'} <= set(args))
             self.assertIn('--require-hashes', download_free[0])
+
+
+class WindowsReceiptTests(unittest.TestCase):
+    def setUp(self):
+        self.disk = Mock()
+        self.disk.open_component.side_effect = ['pending handle', 'published handle']
+        self.disk.query.return_value = SimpleNamespace(links=1)
+        self.data = b'{"fixture": true}\n'
+        self.stamp = SimpleNamespace(volume=1, file_id=b'file ID', links=1, size=len(self.data))
+        self.disk.stamp.return_value = self.stamp
+        security = Mock()
+        security.private_descriptor.return_value = nullcontext('private descriptor')
+        self.stage = storage.Stage(PureWindowsPath(r'C:\fixture\stage'), self.disk, security,
+                                   'user SID', [('root handle', 'root ID')], [])
+        self.stage.audit = Mock()
+        self.stage.validate = Mock()
+        self.rollback = Mock()
+        self.pending = io.BytesIO()
+        self.pending.fileno = lambda: 42
+        self.complete = io.BytesIO(self.data)
+        self.fsync = Mock()
+        self.enterContext(patch.object(storage, 'os', SimpleNamespace(fsync=self.fsync)))
+        streams = {'pending handle': self.pending, 'published handle': self.complete}
+        self.enterContext(patch.object(storage, '_stream', side_effect=lambda disk, handle, mode:
+                                       nullcontext(streams[handle])))
+
+    def test_native_request_is_fixed_same_directory_and_no_replace(self):
+        disk = object.__new__(storage._InstallDisk)
+        disk.set_native_info = Mock(return_value=0)
+        disk.status_to_error = Mock()
+        disk.publish(42)
+        handle, _, buffer, size, info_class = disk.set_native_info.call_args.args
+        info = storage._RenameInfo.from_buffer(buffer)
+        self.assertEqual((handle, info_class, info.parent, info.flags), (42, 10, None, 0))
+        encoded = 'complete.json'.encode('utf-16-le')
+        self.assertEqual(info.length, len(encoded))
+        self.assertEqual(size, ctypes.sizeof(info) + len(encoded))
+        self.assertEqual(ctypes.string_at(ctypes.addressof(buffer) + storage._RenameInfo.filename.offset,
+                                          info.length), encoded)
+        for code in (32, 5):  # Sharing violation and access denied.
+            with self.subTest(code=code):
+                disk.set_native_info.return_value = -1
+                disk.status_to_error.return_value = code
+                with (patch.object(storage.ctypes, 'WinError', OSError, create=True),
+                      self.assertRaises(OSError) as raised):
+                    disk.publish(42)
+                self.assertEqual(raised.exception.args, (code,))
+                disk.status_to_error.assert_called_with(-1)
+
+    def test_verified_publication_reopens_only_relative_to_the_held_directory(self):
+        with storage._verified_stage(self.stage, self.rollback):
+            self.stage.commit({'fixture': True})
+        self.assertTrue(self.stage.committed)
+        self.assertEqual(self.pending.getvalue(), self.data)
+        self.fsync.assert_called_once_with(42)
+        self.disk.publish.assert_called_once_with('pending handle')
+        self.rollback.assert_not_called()
+        pending, complete = self.disk.open_component.call_args_list
+        self.assertEqual(pending.args, ('root handle', 'receipt.pending'))
+        self.assertEqual(complete.args, ('root handle', 'complete.json'))
+        self.assertEqual((pending.kwargs['disposition'], pending.kwargs['share']), (storage._FILE_CREATE, 0))
+        self.assertEqual((complete.kwargs['disposition'], complete.kwargs['share']),
+                         (storage._FILE_OPEN, storage._SHARE_READ))
+        for opened in (pending, complete):
+            self.assertTrue(opened.kwargs['refuse_reparse'])
+        self.stage.security.require_private.assert_any_call('pending handle', 'user SID')
+        self.stage.security.require_private.assert_any_call('published handle', 'user SID')
+
+    def test_missing_pending_receipt_is_preserved_without_publishing(self):
+        self.disk.stamp.side_effect = FileNotFoundError('pending receipt has no stable link')
+        with self.assertRaisesRegex(RuntimeError, 'incomplete setup preserved.*no stable link'):
+            with storage._verified_stage(self.stage, self.rollback):
+                self.stage.commit({'fixture': True})
+        self.disk.publish.assert_not_called()
+        self.rollback.assert_not_called()
+        self.assertFalse(self.stage.committed)
+
+    def test_changed_pending_bytes_are_preserved_without_publishing(self):
+        def corrupt_pending(fd):
+            self.pending.seek(0)
+            self.pending.write(b'X')
+
+        self.fsync.side_effect = corrupt_pending
+        with self.assertRaisesRegex(RuntimeError, 'incomplete setup preserved.*bytes or link count changed'):
+            with storage._verified_stage(self.stage, self.rollback):
+                self.stage.commit({'fixture': True})
+        self.disk.publish.assert_not_called()
+        self.rollback.assert_not_called()
+        self.assertFalse(self.stage.committed)
+
+    def assert_final_verification_refused(self, message):
+        with self.assertRaisesRegex(RuntimeError, 'incomplete setup preserved.*' + message):
+            with storage._verified_stage(self.stage, self.rollback):
+                self.stage.commit({'fixture': True})
+        self.disk.publish.assert_called_once_with('pending handle')
+        self.assertFalse(self.stage.committed)
+        self.rollback.assert_not_called()
+
+    def test_missing_final_receipt_leaves_setup_incomplete(self):
+        self.disk.open_component.side_effect = ['pending handle', FileNotFoundError('missing final receipt')]
+        self.assert_final_verification_refused('missing final receipt')
+
+    def test_redirected_final_receipt_leaves_setup_incomplete(self):
+        self.disk.open_component.side_effect = ['pending handle', PermissionError('reparse point')]
+        self.assert_final_verification_refused('reparse point')
+
+    def test_replaced_final_receipt_with_same_bytes_leaves_setup_incomplete(self):
+        foreign = SimpleNamespace(**(vars(self.stamp) | {'file_id': b'other ID'}))
+        self.disk.stamp.side_effect = [self.stamp, self.stamp, foreign, foreign]
+        self.assert_final_verification_refused('different file identity')
+
+    def test_corrupted_final_receipt_leaves_setup_incomplete(self):
+        self.complete.write(b'X')
+        self.assert_final_verification_refused('bytes or link count changed')
+
+    def test_final_receipt_changed_during_verification_leaves_setup_incomplete(self):
+        changed = SimpleNamespace(**(vars(self.stamp) | {'change_time': 2}))
+        self.disk.stamp.side_effect = [self.stamp, self.stamp, self.stamp, changed]
+        self.assert_final_verification_refused('changed during verification')
+
+    def test_installer_reports_no_success_after_rename_error(self):
+        plan, _ = make_plan(self.stage.path)
+        report = SimpleNamespace(compatible=True, destination=plan.destination)
+        failure = OSError('sharing violation')
+        self.disk.publish.side_effect = failure
+
+        def build(plan, stage, status):
+            stage.commit({'fixture': True})
+
+        with (redirect_stdout(io.StringIO()) as output,
+              self.assertRaisesRegex(RuntimeError, 'incomplete setup preserved.*sharing violation') as raised):
+            setup.install(ROOT, status=Mock(), confirm=lambda _: 'INSTALL', inspect=lambda: report,
+                          make_plan=Mock(return_value=plan),
+                          storage=lambda _: storage._verified_stage(self.stage, self.rollback), build=build)
+        self.assertIs(raised.exception.__cause__, failure)
+        self.assertNotIn('environment verified:', output.getvalue())
+        self.assertFalse(self.stage.committed)
+        self.rollback.assert_not_called()
+
+    def test_partial_work_cleanup_preserves_stage_and_blocks_receipt(self):
+        self.disk.open_component.side_effect = lambda parent, name, **kwargs: name
+        self.disk.identity.side_effect = lambda handle: (1, handle)
+        denied = PermissionError('work member is in use')
+        self.disk.remove.side_effect = [None, denied]
+        entries = [SimpleNamespace(name=name, is_dir=lambda **_: False)
+                   for name in ('removed.tmp', 'blocked.tmp')]
+
+        with (patch.object(storage.os, 'scandir', create=True, return_value=nullcontext(iter(entries))),
+              self.assertRaisesRegex(RuntimeError, 'cleanup could not finish.*incomplete setup preserved') as raised):
+            with storage._verified_stage(self.stage, self.rollback):
+                self.stage.clear_work()
+
+        self.assertIs(raised.exception.__cause__, denied)
+        self.assertEqual(self.disk.remove.call_args_list, [call('removed.tmp'), call('blocked.tmp')])
+        with self.assertRaisesRegex(RuntimeError, 'cleanup is incomplete'):
+            self.stage.commit({'fixture': True})
+        self.disk.publish.assert_not_called()
+        self.rollback.assert_not_called()
+        self.assertFalse(self.stage.committed)
 
 
 @unittest.skipUnless(sys.platform == 'win32', 'requires native Windows')
@@ -475,6 +635,33 @@ class WindowsNativeSetupTests(unittest.TestCase):
                         held.callback(stage.disk.close, handle)
                         stage.security.require_private(handle, stage.sid)
 
+    def test_same_directory_receipt_rename_avoids_verified_parent_share_conflict(self):
+        with tempfile.TemporaryDirectory(prefix='ComposerLint receipt ') as tmp:
+            destination = Path(tmp) / 'ComposerLint' / 'setup'
+            with storage.transaction(destination) as stage:
+                native = stage.disk.set_native_info
+                source_ids = []
+
+                def compare_rename_requests(handle, io_status, buffer, size, info_class):
+                    legacy = ctypes.create_string_buffer(bytes(buffer), size)
+                    storage._RenameInfo.from_buffer(legacy).parent = stage.handle
+                    status = native(handle, io_status, legacy, size, info_class)
+                    self.assertLess(status, 0)
+                    self.assertEqual(stage.disk.status_to_error(status), 32)
+                    source_ids.append(stage.disk.identity(handle))
+                    return native(handle, io_status, buffer, size, info_class)
+
+                with patch.object(stage.disk, 'set_native_info', side_effect=compare_rename_requests):
+                    stage.commit({'fixture': True})
+                final = stage._open(stage.handle, 'complete.json', directory=False)
+                try:
+                    self.assertEqual(source_ids, [stage.disk.identity(final)])
+                finally:
+                    stage.disk.close(final)
+            self.assertEqual((stage.path / 'complete.json').read_bytes(), b'{"fixture": true}\n')
+            self.assertFalse((stage.path / 'receipt.pending').exists())
+            self.assertFalse((destination / 'complete.json').exists())
+
     def test_uncommitted_stage_and_no_replace_receipt(self):
         with tempfile.TemporaryDirectory(prefix='ComposerLint receipt ') as tmp:
             destination = Path(tmp) / 'ComposerLint' / 'setup'
@@ -482,18 +669,43 @@ class WindowsNativeSetupTests(unittest.TestCase):
                 with storage.transaction(destination) as stage:
                     abandoned = stage.path
             self.assertFalse(abandoned.exists())
-            with self.assertRaises(OSError):
+            with self.assertRaisesRegex(RuntimeError, 'incomplete setup preserved') as raised:
                 with storage.transaction(destination) as stage:
                     collision = stage.path
                     complete = collision / 'complete.json'
                     with stage.create(('complete.json',)) as stream:
                         stream.write(b'keep existing')
-                    try:
+                    stage.commit({'fixture': True})
+            self.assertIn(raised.exception.__cause__.winerror, (80, 183))
+            self.assertFalse(stage.committed)
+            self.assertEqual(complete.read_bytes(), b'keep existing')
+            self.assertEqual((collision / 'receipt.pending').read_bytes(), b'{"fixture": true}\n')
+
+    def test_receipt_cannot_follow_a_destination_junction_created_after_audit(self):
+        import _winapi
+
+        with tempfile.TemporaryDirectory(prefix='ComposerLint receipt redirect ') as tmp:
+            base = Path(tmp)
+            outside = base / 'outside'
+            outside.mkdir()
+            sentinel = outside / 'complete.json'
+            sentinel.write_bytes(b'keep outside')
+            with self.assertRaisesRegex(RuntimeError, 'incomplete setup preserved'):
+                with storage.transaction(base / 'ComposerLint' / 'setup') as stage:
+                    junction = stage.path / 'complete.json'
+                    publish = stage.disk.publish
+
+                    def redirect_then_publish(handle):
+                        _winapi.CreateJunction(str(outside), str(junction))
+                        return publish(handle)
+
+                    with patch.object(stage.disk, 'publish', side_effect=redirect_then_publish):
                         stage.commit({'fixture': True})
-                    except OSError:
-                        self.assertEqual(complete.read_bytes(), b'keep existing')
-                        raise
-            self.assertFalse(collision.exists())
+            self.assertFalse(stage.committed)
+            self.assertTrue(junction.is_junction())
+            self.assertEqual(sentinel.read_bytes(), b'keep outside')
+            self.assertEqual((stage.path / 'receipt.pending').read_bytes(), b'{"fixture": true}\n')
+            junction.rmdir()
 
     def test_rollback_refuses_junction_and_preserves_original(self):
         import _winapi

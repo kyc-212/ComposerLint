@@ -22,6 +22,10 @@ from .windows_read import (
 from .windows_workers import SetupProcessCleanupUnconfirmed
 
 
+_PENDING_RECEIPT = 'receipt.pending'
+_COMPLETE_RECEIPT = 'complete.json'
+
+
 class _RenameInfo(ctypes.Structure):
     _fields_ = [('flags', win.ULONG), ('parent', win.HANDLE), ('length', win.ULONG),
                 ('filename', win.WCHAR * 1)]
@@ -43,12 +47,14 @@ class _InstallDisk(_ReadOnlyDisk):
         if not self.set_info(handle, 4, ctypes.byref(delete), ctypes.sizeof(delete)):
             raise ctypes.WinError(ctypes.get_last_error())
 
-    def publish(self, handle, parent, name):
-        encoded = name.encode('utf-16-le')
-        size = max(ctypes.sizeof(_RenameInfo), _RenameInfo.filename.offset + len(encoded))
+    def publish(self, handle):
+        encoded = _COMPLETE_RECEIPT.encode('utf-16-le')
+        size = ctypes.sizeof(_RenameInfo) + len(encoded)
         buffer = ctypes.create_string_buffer(size)
         info = _RenameInfo.from_buffer(buffer)
-        info.parent, info.length = parent, len(encoded)  # ReplaceIfExists is false.
+        # A bare name and null RootDirectory rename within the source's
+        # directory without reopening it for FILE_ADD_FILE. Keep no-replace.
+        info.length = len(encoded)
         ctypes.memmove(ctypes.addressof(buffer) + _RenameInfo.filename.offset, encoded, len(encoded))
         status = self.set_native_info(handle, ctypes.byref(_IoStatusBlock()), buffer, size, 10)
         if status < 0:
@@ -68,6 +74,8 @@ class Stage:
         self.chain, self.private = chain, private
         self.handle, self.identity = chain[-1]
         self.committed = False
+        self.work_cleanup_incomplete = False
+        self.receipt_started = False
 
     def validate(self):
         self.disk.verify_chain(self.chain)
@@ -180,6 +188,9 @@ class Stage:
         self.validate()
 
     def clear_work(self):
+        if self.work_cleanup_incomplete:
+            raise RuntimeError('Setup work-directory cleanup has already failed.')
+        self.work_cleanup_incomplete = True
         self.validate()
         handle = self._open(self.handle, 'work', directory=True)
         try:
@@ -188,20 +199,44 @@ class Stage:
         finally:
             self.disk.close(handle)
         self._delete_member(self.handle, 'work', True, identity)
+        self.work_cleanup_incomplete = False
+
+    def _verify_receipt(self, handle, stream, expected):
+        stamp = self.disk.stamp(handle)
+        stream.seek(0)
+        if stamp.links != 1 or stamp.size != len(expected) or stream.read(len(expected) + 1) != expected:
+            raise OSError('Setup receipt bytes or link count changed.')
+        self.security.require_private(handle, self.sid)
+        if self.disk.stamp(handle) != stamp:
+            raise OSError('Setup receipt changed during verification.')
+        return stamp.volume, stamp.file_id
 
     def commit(self, receipt):
+        if self.work_cleanup_incomplete:
+            raise RuntimeError('Setup work-directory cleanup is incomplete.')
+        if self.receipt_started:
+            raise RuntimeError('Setup receipt publication has already been attempted.')
+        self.receipt_started = True
         self.audit()
         data = (json.dumps(receipt, sort_keys=True) + '\n').encode('utf-8')
-        # Hold DELETE on the exact freshly created file and publish a flushed
-        # receipt relative to its verified parent, without replacing any name.
-        handle = self._open(self.handle, 'receipt.pending', directory=False, create=True,
+        # The exclusive handle pins the newly created file through the rename.
+        handle = self._open(self.handle, _PENDING_RECEIPT, directory=False, create=True,
                             access=_READ_DATA | _WRITE_DATA | _DELETE, share=0)
         with _stream(self.disk, handle, 'w+b') as stream:
             stream.write(data)
             stream.flush()
             os.fsync(stream.fileno())
-            self.disk.publish(handle, self.handle, 'complete.json')
-            self.committed = True
+            identity = self._verify_receipt(handle, stream, data)
+            self.validate()
+            self.disk.publish(handle)
+        # Reopen by the final name through the still-held staging directory.
+        # The old handle must close first because it denies all sharing.
+        handle = self._open(self.handle, _COMPLETE_RECEIPT, directory=False, access=_READ_DATA)
+        with _stream(self.disk, handle, 'rb') as stream:
+            if self._verify_receipt(handle, stream, data) != identity:
+                raise OSError('Published setup receipt has a different file identity.')
+            self.validate()
+        self.committed = True
 
 
 @contextmanager
@@ -215,6 +250,14 @@ def _verified_stage(stage, rollback):
         raise RuntimeError(f'Process exit is unconfirmed; incomplete setup preserved at {stage.path}: {error}') from error
     except BaseException as error:
         if not stage.committed:
+            if stage.work_cleanup_incomplete:
+                raise RuntimeError(
+                    f'Work-directory cleanup could not finish; incomplete setup preserved at {stage.path}: {error}'
+                ) from error
+            if stage.receipt_started:
+                raise RuntimeError(
+                    f'Receipt publication could not be verified; incomplete setup preserved at {stage.path}: {error}'
+                ) from error
             try:
                 rollback()
             except (OSError, ValueError) as cleanup:
