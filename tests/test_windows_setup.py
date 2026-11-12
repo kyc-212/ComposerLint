@@ -79,6 +79,119 @@ class WindowsCompilerProbeTests(unittest.TestCase):
                          'stderr: additional context'):
             self.assertIn(expected, str(raised.exception))
 
+    def test_probe_environment_preserves_profile_and_limits_tool_settings(self):
+        system = PureWindowsPath(r'C:\Windows')
+        temp = PureWindowsPath(r'C:\Private Workspace\tmp')
+        vc = PureWindowsPath(r'C:\Developer Tools\MSVC')
+        sdk = PureWindowsPath(r'C:\Developer Tools\SDK')
+        profile = {'USERPROFILE': r'C:\Users\fixture', 'LOCALAPPDATA': r'D:\Fixture Local',
+                   'APPDATA': r'D:\Fixture Roaming', 'HOMEDRIVE': 'C:',
+                   'HOMEPATH': r'\Users\fixture', 'HOMESHARE': r'\\host\home',
+                   'PROGRAMDATA': r'C:\ProgramData', 'PUBLIC': r'C:\Users\Public',
+                   'ALLUSERSPROFILE': r'C:\ProgramData', 'TEMP': r'C:\Original Temp',
+                   'CL': '/Fooutside', '_CL_': '/Zi', 'LINK': '/OUT:outside',
+                   '_LINK_': '/DEBUG', 'PYTHONPATH': r'C:\Unreviewed Python'}
+        developer = {'INCLUDE': str(vc / 'include'), 'LIB': str(vc / 'lib'),
+                     'PATH': r'C:\Unreviewed', 'LIBPATH': r'C:\Metadata'}
+        env = self.probe.probe_environment(developer, {'cl': vc / 'cl.exe', 'rc': sdk / 'rc.exe'},
+                                           system, temp, profile)
+        for key in ('USERPROFILE', 'LOCALAPPDATA', 'APPDATA', 'HOMEDRIVE', 'HOMEPATH',
+                    'HOMESHARE', 'PROGRAMDATA', 'PUBLIC', 'ALLUSERSPROFILE'):
+            self.assertEqual(env[key], profile[key])
+        self.assertEqual(env['TMP'], str(temp))
+        self.assertEqual(env['TEMP'], str(temp))
+        self.assertEqual(env['PATH'], os.pathsep.join(map(str, (vc, sdk, system / 'System32'))))
+        self.assertEqual(env['SystemRoot'], str(system))
+        self.assertEqual(env['INCLUDE'], developer['INCLUDE'])
+        self.assertEqual(env['LIB'], developer['LIB'])
+        self.assertTrue({'CL', '_CL_', 'LINK', '_LINK_', 'PYTHONPATH', 'LIBPATH'}.isdisjoint(env))
+        self.assertEqual(profile['TEMP'], r'C:\Original Temp')
+        missing = self.probe.probe_environment(developer, {'cl': vc / 'cl.exe', 'rc': sdk / 'rc.exe'},
+                                               system, temp, {})
+        self.assertTrue(set(self.probe.PROFILE_VARIABLES).isdisjoint(missing))
+
+    def test_probe_steps_keep_outputs_private_and_compile_link_and_load_both_abi_modes(self):
+        with tempfile.TemporaryDirectory(prefix='ComposerLint probe ') as temporary:
+            base = Path(temporary)
+            root = base / 'private workspace'
+            root.mkdir()
+            stage = Mock(path=root)
+            stage.mkdir.side_effect = lambda parts: root.joinpath(*parts).mkdir()
+            stage.create.side_effect = lambda parts: root.joinpath(*parts).open('xb')
+            stage.held_file.side_effect = lambda parts: nullcontext(root.joinpath(*parts))
+            stage.held_directory.side_effect = lambda parts: nullcontext(root.joinpath(*parts))
+            tools = {name: base / 'tools' / (name + '.exe') for name in ('cl', 'link', 'rc')}
+            python = base / 'Selected Python' / 'python.exe'
+            library = python.parent / 'libs' / 'python3.lib'
+            module = root / (self.probe.ABI_MODULE + '.pyd')
+            observed = []
+
+            def command(step, executable, *args, cwd, env):
+                self.assertEqual(cwd, root / 'work')
+                self.assertEqual(env['TEMP'], str(root / 'tmp'))
+                self.assertEqual(env['TMP'], str(root / 'tmp'))
+                observed.append((executable, args))
+                for prefix in ('/Fo', '/out:'):
+                    for arg in args:
+                        if str(arg).startswith(prefix):
+                            output = Path(str(arg).removeprefix(prefix))
+                            self.assertTrue(output.is_relative_to(root))
+                            self.assertEqual(output.read_bytes(), b'')
+                            output.write_bytes(b'compiled fixture')
+                if executable == root / 'abi-exe' / 'python_abi.exe':
+                    return f'CPython stable ABI loaded: {sys.version}'
+                return ''
+
+            with (patch.object(self.probe, 'run_probe_command', side_effect=command),
+                  patch.object(self.probe.setup, '_system_root', return_value=base / 'Windows'),
+                  redirect_stdout(io.StringIO())):
+                self.probe.run_probe_steps(stage, {'INCLUDE': 'headers', 'LIB': 'libs'}, tools, python,
+                                           {'python3.dll': b'stable', 'python312.dll': b'versioned'})
+
+            self.assertEqual([exe for exe, _ in observed], [
+                tools['cl'], tools['link'], root / 'probe.exe',
+                tools['cl'], tools['link'], root / 'abi-exe' / 'python_abi.exe',
+                tools['cl'], tools['link'], python,
+            ])
+            for index in (3, 6):
+                self.assertIn('/std:c++20', observed[index][1])
+                self.assertIn(python.parent / 'include', observed[index][1])
+                self.assertIn(root / 'python_abi.cpp', observed[index][1])
+            self.assertIn('/DABI_EXTENSION', observed[6][1])
+            for index in (4, 7):
+                self.assertIn(library, observed[index][1])
+                self.assertIn('/nodefaultlib:python3.lib', observed[index][1])
+                self.assertIn('/machine:x64', observed[index][1])
+            self.assertIn(f'/implib:{root / (self.probe.ABI_MODULE + ".lib")}', observed[7][1])
+            self.assertEqual(observed[5][1], (root / 'abi-exe' / 'python3.dll',
+                                              root / 'abi-exe' / 'python312.dll'))
+            self.assertEqual(observed[8][1][-3:], (self.probe.ABI_LOADER, module, python))
+            self.assertEqual({p.relative_to(root).parts for p in root.rglob('*') if p.is_file()},
+                             set(self.probe.PROBE_FILES))
+
+    def test_strict_cleanup_refuses_unlisted_or_replaced_objects(self):
+        path = Path('workspace')
+        disk = Mock()
+        stage = storage.Stage(path, disk, Mock(), 'sid', [('root', 'id')], [],
+                              workspace_members={('expected',): False})
+        for name, expected, opened in (
+            ('unexpected', 'Unexpected Windows workspace member', False),
+            ('expected', 'changed after audit', True),
+        ):
+            with self.subTest(name=name):
+                entry = Mock()
+                entry.name = name
+                entry.is_dir.return_value = False
+                disk.identity.return_value = 'replacement-id'
+                with (patch.object(storage.os, 'scandir', return_value=nullcontext([entry])),
+                      patch.object(stage, '_open', return_value='file') as open_member,
+                      patch.object(stage, '_delete_member') as delete,
+                      self.assertRaisesRegex(PermissionError, expected) as raised):
+                    stage._scan('root', path, remove=True, budget=[100], verified={('expected',): 'original-id'})
+                self.assertIn(str(path / name), str(raised.exception))
+                self.assertEqual(open_member.called, opened)
+                delete.assert_not_called()
+
     def test_incomplete_workspace_never_deletes_after_refused_audit(self):
         disk = Mock()
         disk.ancestors.return_value = [('parent', 'parent-identity')]
@@ -631,6 +744,19 @@ class WindowsReceiptTests(unittest.TestCase):
 
 @unittest.skipUnless(sys.platform == 'win32', 'requires native Windows')
 class WindowsNativeSetupTests(unittest.TestCase):
+    def test_strict_probe_workspace_preserves_unknown_same_owner_object(self):
+        with tempfile.TemporaryDirectory(prefix='ComposerLint probe inventory ') as tmp:
+            with self.assertRaisesRegex(PermissionError, 'Unexpected Windows workspace member') as raised:
+                with storage.private_workspace(Path(tmp), 'probe-', members={('planned',): False}) as stage:
+                    for name in ('planned', 'unexpected'):
+                        with stage.create((name,)) as output:
+                            output.write(name.encode())
+                    path = stage.path
+            self.assertIn(str(path / 'unexpected'), str(raised.exception))
+            self.assertTrue(any('workspace is incomplete' in note for note in raised.exception.__notes__))
+            for name in ('planned', 'unexpected'):
+                self.assertEqual((path / name).read_bytes(), name.encode())
+
     def test_probe_outputs_keep_protected_owner_and_capture_both_native_streams(self):
         with tempfile.TemporaryDirectory(prefix='ComposerLint ABI ') as tmp:
             with storage.private_workspace(Path(tmp), 'probe-') as stage:

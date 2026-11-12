@@ -69,13 +69,14 @@ def _component(name):
 
 
 class Stage:
-    def __init__(self, path, disk, security, sid, chain, private):
+    def __init__(self, path, disk, security, sid, chain, private, *, workspace_members=None):
         self.path, self.disk, self.security, self.sid = path, disk, security, sid
         self.chain, self.private = chain, private
         self.handle, self.identity = chain[-1]
         self.committed = False
         self.work_cleanup_incomplete = False
         self.receipt_started = False
+        self.workspace_members = workspace_members
 
     def validate(self):
         self.disk.verify_chain(self.chain)
@@ -131,6 +132,15 @@ class Stage:
             self._directories(parts, stack, create=True)
 
     @contextmanager
+    def held_directory(self, parts):
+        self.validate()
+        with ExitStack() as stack:
+            handle = self._directories(parts, stack)
+            self.security.require_private(handle, self.sid, tree_root=True)
+            yield self.path.joinpath(*parts)
+        self.validate()
+
+    @contextmanager
     def create(self, parts):
         with ExitStack() as stack:
             parent = self._directories(parts[:-1], stack, create=True)
@@ -160,7 +170,7 @@ class Stage:
             stack.callback(self.disk.close, handle)
             self.disk.remove(handle)
 
-    def _scan(self, parent, path, *, remove, depth=0, budget):
+    def _scan(self, parent, path, *, remove, depth=0, budget, verified=None):
         if depth > 64:
             raise OSError('Setup tree exceeds the safe traversal depth.')
         # Windows FindFirstFile supplies names; only held, relative NT opens
@@ -171,8 +181,12 @@ class Stage:
                 budget[0] -= 1
                 if budget[0] < 0:
                     raise OSError('Setup tree exceeds the safe traversal entry limit.')
-                entries.append((_component(entry.name), entry.is_dir(follow_symlinks=False)))
-        for name, directory in entries:
+                name, directory = _component(entry.name), entry.is_dir(follow_symlinks=False)
+                parts = (path / name).relative_to(self.path).parts if verified is not None else None
+                if parts is not None and self.workspace_members.get(parts) is not directory:
+                    raise PermissionError(f'Unexpected Windows workspace member: {path / name}')
+                entries.append((name, directory, parts))
+        for name, directory, parts in entries:
             try:
                 handle = self._open(parent, name, directory=directory,
                                     access=0 if directory else _READ_DATA)
@@ -181,8 +195,14 @@ class Stage:
                 raise
             try:
                 identity = self.disk.identity(handle)
+                if parts is not None:
+                    if remove and verified.get(parts) != identity:
+                        raise PermissionError(f'Windows workspace member changed after audit: {path / name}')
+                    if not remove:
+                        verified[parts] = identity
                 if directory:
-                    self._scan(handle, path / name, remove=remove, depth=depth + 1, budget=budget)
+                    self._scan(handle, path / name, remove=remove, depth=depth + 1,
+                               budget=budget, verified=verified)
             finally:
                 self.disk.close(handle)
             if remove:
@@ -199,8 +219,10 @@ class Stage:
 
     def audit(self):
         self.validate()
-        self._scan(self.handle, self.path, remove=False, budget=[100_000])
+        verified = {} if self.workspace_members is not None else None
+        self._scan(self.handle, self.path, remove=False, budget=[100_000], verified=verified)
         self.validate()
+        return verified
 
     def clear_work(self):
         if self.work_cleanup_incomplete:
@@ -377,14 +399,18 @@ def pinned_install_files(root):
 
 
 @contextmanager
-def private_workspace(parent, prefix):
-    """Own one newly created scratch tree and clean it by held NTFS identity."""
+def private_workspace(parent, prefix, *, members=None):
+    """Own a new scratch tree, optionally requiring a fixed inventory for cleanup."""
     path = Path(parent) / (prefix + secrets.token_hex(16))
     local_path_text(path, target='win32')
     disk, security = _InstallDisk(), _SecurityAPI()
     sid = security.user_sid()
     with ExitStack() as parents, ExitStack() as owned:
         chain = disk.ancestors(path, parents)
+        if members is not None:
+            fs, flags = disk.volume_capabilities(chain[0][0])
+            if fs.upper() != 'NTFS' or flags & _NTFS_FLAGS != _NTFS_FLAGS:
+                raise OSError('The Windows probe workspace requires local NTFS with persistent ACLs and reparse checks.')
         root = chain[-1][0]
         with security.private_descriptor(sid, inheritable=True) as descriptor:
             handle = disk.open_component(
@@ -393,13 +419,14 @@ def private_workspace(parent, prefix):
                 options=_FILE_DIRECTORY_FILE, descriptor=descriptor, refuse_reparse=True)
         owned.callback(disk.close, handle)
         identity = disk.identity(handle)
-        stage = Stage(path, disk, security, sid, chain + [(handle, identity)], [])
+        stage = Stage(path, disk, security, sid, chain + [(handle, identity)], [],
+                      workspace_members=None if members is None else dict(members))
         stage.validate()
 
         def cleanup():
             try:
-                stage.audit()
-                stage._scan(handle, path, remove=True, budget=[100_000])
+                verified = stage.audit()
+                stage._scan(handle, path, remove=True, budget=[100_000], verified=verified)
                 owned.close()
                 stage._delete_member(root, path.name, True, identity)
             except BaseException as error:

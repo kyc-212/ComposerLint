@@ -1,6 +1,7 @@
 """Build the exact Windows Verovio candidate from already acquired inputs."""
 
 import argparse
+from contextlib import contextmanager
 from importlib import import_module
 from importlib.machinery import ModuleSpec
 from importlib.util import module_from_spec
@@ -95,6 +96,17 @@ int wmain(int argc, wchar_t** argv) {
 """
 
 ABI_MODULE = '_composerlint_abi_probe'
+PROBE_DIRECTORIES = (('work',), ('tmp',), ('abi-exe',))
+PROBE_FILES = (
+    ('probe.cpp',), ('probe.obj',), ('probe.exe',), ('python_abi.cpp',),
+    ('abi-exe.obj',), ('abi-exe', 'python_abi.exe'), ('abi-exe', 'python3.dll'),
+    ('abi-exe', 'python312.dll'), ('abi-extension.obj',), (ABI_MODULE + '.pyd',),
+    (ABI_MODULE + '.lib',), (ABI_MODULE + '.exp',),
+)
+PROFILE_VARIABLES = (
+    'USERPROFILE', 'LOCALAPPDATA', 'APPDATA', 'HOMEDRIVE', 'HOMEPATH', 'HOMESHARE',
+    'ALLUSERSPROFILE', 'PROGRAMDATA', 'PUBLIC',
+)
 ABI_LOADER = """\
 import ctypes
 import importlib.util
@@ -193,6 +205,103 @@ def run_probe_command(step, executable, *arguments, cwd, env):
     return result.stdout.decode('utf-8', 'backslashreplace').strip()
 
 
+def probe_environment(developer, tools, system_root, temp, profile):
+    # Preserve defined Windows profile paths, while excluding ambient compiler
+    # switches (CL, _CL_, LINK, _LINK_), Python settings and unreviewed PATH entries.
+    env = {name: profile[name] for name in PROFILE_VARIABLES if name in profile}
+    env.update(INCLUDE=developer['INCLUDE'], LIB=developer['LIB'],
+               SystemRoot=str(system_root), TEMP=str(temp), TMP=str(temp),
+               PATH=os.pathsep.join(map(str, (tools['cl'].parent, tools['rc'].parent,
+                                              system_root / 'System32'))))
+    return env
+
+
+@contextmanager
+def probe_artifact(stage, parts):
+    with stage.held_file(parts) as path:
+        if not path.stat().st_size:
+            raise RuntimeError(f'Probe output was not written: {path}')
+        yield path
+
+
+def run_probe_steps(stage, developer, tools, python, python_files):
+    include = python.parent / 'include'
+    library = python.parent / 'libs' / 'python3.lib'
+    for parts in PROBE_DIRECTORIES:
+        stage.mkdir(parts)
+
+    # Keep both directories pinned until the job and its descendants have
+    # exited. Temp files may exist during a command but must be gone at audit.
+    with (stage.held_directory(('work',)) as cwd,
+          stage.held_directory(('tmp',)) as temp,
+          stage.held_directory(('abi-exe',))):
+        env = probe_environment(developer, tools, setup._system_root(), temp, os.environ)
+
+        def audit(when):
+            try:
+                stage.audit()
+            except OSError as error:
+                error.add_note(f'Private workspace audit failed {when}')
+                raise
+
+        def run(step, executable, *arguments):
+            print(f'{step}...', flush=True)
+            audit(f'before {step}')
+            result = run_probe_command(step, executable, *arguments, cwd=cwd, env=env)
+            audit(f'after {step}')
+            return result
+
+        def compile_source(source, output, *flags):
+            setup._write(stage, (output,), b'')
+            with probe_artifact(stage, (source,)) as source_path:
+                run(f'Compile {output}', tools['cl'], '/nologo', '/std:c++20', '/EHsc',
+                    '/utf-8', '/c', *flags, f'/Fo{stage.path / output}', source_path)
+
+        def link_output(parts, obj, *flags):
+            setup._write(stage, parts, b'')
+            with probe_artifact(stage, (obj,)) as object_path:
+                run(f'Link {parts[-1]}', tools['link'], '/nologo', '/machine:x64',
+                    '/incremental:no', '/manifest:no', '/debug:none',
+                    f'/out:{stage.path.joinpath(*parts)}', object_path, *flags)
+
+        setup._write(stage, ('probe.cpp',), PROBE)
+        compile_source('probe.cpp', 'probe.obj')
+        link_output(('probe.exe',), 'probe.obj', '/subsystem:console', 'kernel32.lib')
+        with probe_artifact(stage, ('probe.exe',)) as executable:
+            result = run('Execute native x64 C++20 probe', executable)
+        print(f'Native x64 C++20 compile/link/run passed. {result}', flush=True)
+
+        # Suppress PC/pyconfig.h's default search directive. The absolute
+        # stable import library is the only source of Python symbols.
+        abi_link = ('/nodefaultlib:python3.lib', library)
+        setup._write(stage, ('python_abi.cpp',), PYTHON_ABI_PROBE)
+        compile_source('python_abi.cpp', 'abi-exe.obj', '/I', include)
+        link_output(('abi-exe', 'python_abi.exe'), 'abi-exe.obj',
+                    '/subsystem:console', *abi_link, 'kernel32.lib')
+        # Load the verified DLL copies alongside the executable, then check
+        # which images Windows mapped and the exact runtime version.
+        for name, data in python_files.items():
+            setup._write(stage, ('abi-exe', name), data)
+        with (probe_artifact(stage, ('abi-exe', 'python_abi.exe')) as executable,
+              probe_artifact(stage, ('abi-exe', 'python3.dll')) as stable,
+              probe_artifact(stage, ('abi-exe', 'python312.dll')) as versioned):
+            result = run('Load CPython stable ABI in native x64 executable', executable, stable, versioned)
+        if result != f'CPython stable ABI loaded: {sys.version}':
+            raise RuntimeError(f'Native executable reported an unexpected CPython identity: {result!r}')
+        print(result, flush=True)
+
+        compile_source('python_abi.cpp', 'abi-extension.obj', '/I', include, '/DABI_EXTENSION')
+        for suffix in ('.lib', '.exp'):
+            setup._write(stage, (ABI_MODULE + suffix,), b'')
+        extension = (ABI_MODULE + '.pyd',)
+        link_output(extension, 'abi-extension.obj', '/dll',
+                    f'/implib:{stage.path / (ABI_MODULE + ".lib")}', *abi_link)
+        with probe_artifact(stage, extension) as module:
+            result = run('Import native x64 CPython stable ABI extension', python,
+                         '-I', '-S', '-B', '-X', 'utf8', '-c', ABI_LOADER, module, python)
+        print(result, flush=True)
+
+
 def probe(env, tools):
     if preflight._architecture() != (preflight._AMD64, 0):
         raise RuntimeError('The compiler probe requires a native Windows x64 process and host.')
@@ -215,74 +324,12 @@ def probe(env, tools):
         if path in dlls:
             python_files[path.name] = data
 
-    with storage.private_workspace(paths.temporary_parent(), 'composerlint-probe-') as stage:
+    members = {**dict.fromkeys(PROBE_DIRECTORIES, True), **dict.fromkeys(PROBE_FILES, False)}
+    with storage.private_workspace(paths.temporary_parent(), 'composerlint-probe-', members=members) as stage:
         with stage.security._token() as token:
             owner = stage.security._default_owner(token)
         print(f'Probe workspace {stage.path}; TokenUser={stage.sid}; TokenOwner={owner}', flush=True)
-        stage.mkdir(('tmp',))
-        stage.mkdir(('abi-exe',))
-        temp = stage.path / 'tmp'
-        system_root = setup._system_root()
-        search = (tools['cl'].parent, tools['rc'].parent, system_root / 'System32')
-        env.update(SystemRoot=str(system_root), PATH=os.pathsep.join(map(str, search)),
-                   TEMP=str(temp), TMP=str(temp),
-                   LOCALAPPDATA=str(temp), USERPROFILE=str(temp))
-
-        def run(step, executable, *arguments):
-            print(f'{step}...', flush=True)
-            result = run_probe_command(step, executable, *arguments, cwd=stage.path, env=env)
-            try:
-                stage.audit()
-            except OSError as error:
-                error.add_note(f'Private workspace audit failed after: {step}')
-                raise
-            return result
-
-        def compile_source(source, output, *flags):
-            setup._write(stage, (output,), b'')
-            run(f'Compile {output}', tools['cl'], '/nologo', '/std:c++20', '/EHsc',
-                '/utf-8', '/c', *flags, '/Fo' + output, source)
-
-        def link_output(parts, obj, *flags):
-            setup._write(stage, parts, b'')
-            run(f'Link {parts[-1]}', tools['link'], '/nologo', '/machine:x64',
-                '/incremental:no', '/manifest:no', f'/out:{Path(*parts)}', obj, *flags)
-
-        setup._write(stage, ('probe.cpp',), PROBE)
-        compile_source('probe.cpp', 'probe.obj')
-        link_output(('probe.exe',), 'probe.obj', '/subsystem:console', 'kernel32.lib')
-        with stage.held_file(('probe.exe',)) as executable:
-            result = run('Execute native x64 C++20 probe', executable)
-        print(f'Native x64 C++20 compile/link/run passed. {result}', flush=True)
-
-        # Only the explicitly named stable import library may supply Python
-        # symbols. Suppress the default search directive from PC/pyconfig.h.
-        abi_link = ('/nodefaultlib:python3.lib', library)
-        setup._write(stage, ('python_abi.cpp',), PYTHON_ABI_PROBE)
-        compile_source('python_abi.cpp', 'abi-exe.obj', '/I', include)
-        link_output(('abi-exe', 'python_abi.exe'), 'abi-exe.obj',
-                    '/subsystem:console', *abi_link, 'kernel32.lib')
-        # Keep the verified DLL bytes alongside the native test executable.
-        # The executable checks what the Windows loader actually mapped.
-        for name, data in python_files.items():
-            setup._write(stage, ('abi-exe', name), data)
-        with (stage.held_file(('abi-exe', 'python_abi.exe')) as executable,
-              stage.held_file(('abi-exe', 'python3.dll')) as stable,
-              stage.held_file(('abi-exe', 'python312.dll')) as versioned):
-            result = run('Load CPython stable ABI in native x64 executable', executable, stable, versioned)
-        if result != f'CPython stable ABI loaded: {sys.version}':
-            raise RuntimeError(f'Native executable reported an unexpected CPython identity: {result!r}')
-        print(result, flush=True)
-
-        compile_source('python_abi.cpp', 'abi-extension.obj', '/I', include, '/DABI_EXTENSION')
-        for suffix in ('.lib', '.exp'):
-            setup._write(stage, (ABI_MODULE + suffix,), b'')
-        extension = (ABI_MODULE + '.pyd',)
-        link_output(extension, 'abi-extension.obj', '/dll', f'/implib:{ABI_MODULE}.lib', *abi_link)
-        with stage.held_file(extension) as module:
-            result = run('Import native x64 CPython stable ABI extension', python,
-                         '-I', '-S', '-B', '-X', 'utf8', '-c', ABI_LOADER, module, python)
-        print(result, flush=True)
+        run_probe_steps(stage, env, tools, python, python_files)
     print('Compiler and CPython ABI probes passed; private scratch cleanup verified.', flush=True)
 
 
