@@ -1,6 +1,6 @@
 """NTFS staging for the Windows setup pilot; no runtime or export callers."""
 
-from contextlib import ExitStack, contextmanager
+from contextlib import ExitStack, contextmanager, nullcontext
 import ctypes
 from ctypes import wintypes as win
 import json
@@ -84,16 +84,20 @@ class Stage:
                 raise OSError('The setup volume mapping changed.')
 
     def _open(self, parent, name, *, directory, create=False, access=0, share=None):
-        handle = self.disk.open_component(
-            parent, _component(name), access=access | _READ_ATTRIBUTES | _READ_CONTROL |
-            (_TRAVERSE if directory else 0),
-            share=_SHARE_READ if share is None else share,
-            disposition=_FILE_CREATE if create else _FILE_OPEN,
-            options=_FILE_DIRECTORY_FILE if directory else _FILE_NON_DIRECTORY_FILE | _OPEN_REPARSE_POINT,
-            refuse_reparse=True)
+        descriptor_scope = (self.security.private_descriptor(self.sid, inheritable=directory)
+                            if create else nullcontext())
+        with descriptor_scope as descriptor:
+            handle = self.disk.open_component(
+                parent, _component(name), access=access | _READ_ATTRIBUTES | _READ_CONTROL |
+                (_TRAVERSE if directory else 0),
+                share=_SHARE_READ if share is None else share,
+                disposition=_FILE_CREATE if create else _FILE_OPEN,
+                options=_FILE_DIRECTORY_FILE if directory else _FILE_NON_DIRECTORY_FILE | _OPEN_REPARSE_POINT,
+                descriptor=descriptor, refuse_reparse=True)
         try:
             self.disk.check_type(handle, directory=directory)
-            self.security.require_private(handle, self.sid, inherited_directory=directory)
+            self.security.require_private(handle, self.sid, tree_root=directory,
+                                          allow_inherited=not create)
             if not directory and self.disk.query(handle, 1, _FileStandardInfo).links != 1:
                 raise PermissionError('A setup file must have exactly one NTFS link.')
         except BaseException:

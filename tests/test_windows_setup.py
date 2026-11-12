@@ -1,6 +1,7 @@
 """Windows terminal setup tests. Default native tests use fixtures, not downloads."""
 
-from contextlib import contextmanager, nullcontext, redirect_stdout
+from contextlib import ExitStack, contextmanager, nullcontext, redirect_stdout
+import ctypes
 import hashlib
 from importlib import import_module
 from importlib.machinery import ModuleSpec
@@ -8,7 +9,7 @@ from importlib.util import module_from_spec
 import io
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import shutil
 import stat
 import sys
@@ -16,7 +17,7 @@ import tarfile
 import tempfile
 from types import SimpleNamespace
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 import urllib.error
 import zipfile
 
@@ -178,6 +179,9 @@ class WindowsSetupTests(unittest.TestCase):
     def test_exact_asset_pins_match_lock_and_preflight(self):
         manifest = (ROOT / 'tools/windows-setup-assets.json').read_bytes()
         lock = (ROOT / 'uv.lock').read_bytes()
+        crlf_count = lock.count(b'\r\n')
+        self.assertEqual(hashlib.sha256(lock).hexdigest(), json.loads(manifest)['lock_sha256'],
+                         f'Checkout uv.lock has {len(lock)} bytes and {crlf_count} CRLF endings.')
         python, uv, wheels, lock_sha = setup._asset_plan(manifest, lock)
         self.assertEqual(len(wheels), 59)
         self.assertIn('pywin32', {w.name for w in wheels})
@@ -189,6 +193,90 @@ class WindowsSetupTests(unittest.TestCase):
         changed['wheels'][0]['sha256'] = '0' * 64
         with self.assertRaisesRegex(setup.SetupError, 'not in the reviewed lock'):
             setup._asset_plan(json.dumps(changed), lock)
+
+    def test_install_refuses_corrupted_or_transformed_lock_before_consent(self):
+        reviewed = (ROOT / 'uv.lock').read_bytes()
+        self.assertIn(b'version = 1\n', reviewed)
+        changes = (reviewed.replace(b'version = 1\n', b'version = 2\n', 1),
+                   reviewed.replace(b'\n', b'\r\n'))
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest = root / 'tools' / 'windows-setup-assets.json'
+            manifest.parent.mkdir()
+            manifest.write_bytes((ROOT / 'tools' / manifest.name).read_bytes())
+            destination = root / 'destination'
+            confirm, transaction, build = Mock(), Mock(), Mock()
+            report = SimpleNamespace(compatible=True, destination=destination)
+            for changed in changes:
+                with self.subTest(size=len(changed)):
+                    (root / 'uv.lock').write_bytes(changed)
+                    with (patch.object(setup, 'read_stable', side_effect=lambda path, limit:
+                                       (path.read_bytes(), SimpleNamespace(links=1))),
+                          self.assertRaisesRegex(setup.SetupError, 'uv.lock changed')):
+                        setup.install(root, status=Mock(), inspect=lambda: report,
+                                      confirm=confirm, storage=transaction, build=build)
+            for operation in (confirm, transaction, build):
+                operation.assert_not_called()
+            self.assertFalse(destination.exists())
+
+    def test_setup_adjusts_only_a_separate_child_token_with_the_same_user(self):
+        private = import_module(f'{storage.__package__}.windows_private')
+        security = object.__new__(private._SecurityAPI)
+        security.current_process = lambda: 'parent'
+        security.user_sid = lambda: 'user SID'
+        security._token = lambda *, process, access=0: nullcontext(process)
+        user = private._SidAndAttributes(123, 0)
+        for child_sid, child_id, expected_error in (
+            ('foreign SID', b'child-id', 'token user differs'),
+            ('user SID', b'parentid', 'separate primary token'),
+            ('user SID', b'child-id', None),
+        ):
+            with self.subTest(child_sid=child_sid, child_id=child_id):
+                security.sid_text = Mock(return_value=child_sid)
+                security._default_owner = Mock(side_effect=['administrators SID', 'user SID'])
+                security._token_data = Mock(side_effect=lambda token, kind: (
+                    user if kind == private._TOKEN_USER else
+                    b'parentid' if token == 'parent' else child_id))
+                security.set_token_info = Mock(return_value=True)
+                if expected_error:
+                    with self.assertRaisesRegex(PermissionError, expected_error):
+                        security.set_setup_child_owner('child')
+                    security.set_token_info.assert_not_called()
+                else:
+                    security.set_setup_child_owner('child')
+                    self.assertEqual(security.set_token_info.call_args.args[:2],
+                                     ('child', private._TOKEN_OWNER))
+                    self.assertEqual(security._default_owner.call_args_list, [call('child'), call('child')])
+
+    def test_wrong_owner_is_rejected_and_rollback_cannot_remove_it(self):
+        security = object.__new__(storage._SecurityAPI)
+        security.sid_text = Mock(return_value='S-1-5-32-544')
+        security.free = Mock()
+        security.descriptor_control = Mock()
+
+        def get_security(handle, kind, info, owner, group, acl, sacl, descriptor):
+            ctypes.cast(owner, ctypes.POINTER(ctypes.c_void_p))[0] = 1
+            return 0
+
+        security.get_security = get_security
+        disk = Mock()
+        disk.open_component.return_value = 'wrong-owner handle'
+        path = PureWindowsPath(r'C:\fixture\stage')
+        stage = storage.Stage(path, disk, security, 'user SID', [('root handle', 'root ID')], [])
+        stage.validate = Mock()  # The held generation root already passed verification.
+        entry = SimpleNamespace(name='foreign.txt', is_dir=lambda **_: False)
+        fake_os = SimpleNamespace(scandir=lambda _: nullcontext(iter([entry])))
+
+        def rollback():
+            stage._scan(stage.handle, stage.path, remove=True, budget=[1])
+
+        with patch.object(storage, 'os', fake_os):
+            with self.assertRaisesRegex(RuntimeError, 'safe rollback could not finish.*owner differs'):
+                with storage._verified_stage(stage, rollback):
+                    stage._open(stage.handle, entry.name, directory=False)
+        security.descriptor_control.assert_not_called()
+        self.assertEqual(disk.close.call_args_list, [call('wrong-owner handle')] * 2)
+        disk.remove.assert_not_called()
 
     def test_missing_corrupt_truncated_and_oversized_downloads_refuse(self):
         plan, files = make_plan(Path('fixture'))
@@ -346,11 +434,46 @@ class WindowsNativeSetupTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='ComposerLint ACL ') as tmp:
             destination = Path(tmp) / 'ComposerLint' / 'setup'
             with storage.transaction(destination) as stage:
-                directory = stage.path / 'ordinary'
-                directory.mkdir()
-                (directory / 'child.txt').write_bytes(b'normal Windows output')
+                with stage.security._token() as token:
+                    default_owner = stage.security._default_owner(token)
+                print(f'Staging fixture TokenUser={stage.sid} TokenOwner={default_owner}')
+                if default_owner != stage.sid:
+                    # This fixture deliberately creates the old failure with
+                    # its own unmodified token, then removes only its probe.
+                    probe = stage.path / 'default-owner-probe'
+                    probe.touch(exist_ok=False)
+                    try:
+                        with self.assertRaisesRegex(PermissionError, f'owner {default_owner},'):
+                            stage._open(stage.handle, probe.name, directory=False)
+                    finally:
+                        probe.unlink()
+                child = ('from pathlib import Path; '
+                         'Path("ordinary").mkdir(); '
+                         'Path("ordinary/child.txt").write_bytes(b"normal Windows output")')
+                setup.run_setup_command(
+                    [sys.executable, '-I', '-S', '-B', '-c',
+                     'import subprocess,sys; subprocess.run([sys.executable, "-I", "-S", "-B", '
+                     '"-c", sys.argv[1]], check=True)', child],
+                    cwd=str(stage.path), env={'SystemRoot': str(setup._system_root())}, timeout=15)
+                with stage.security._token() as token:
+                    self.assertEqual(stage.security._default_owner(token), default_owner)
                 stage.commit({'fixture': True})
-            self.assertTrue((directory.parent / 'complete.json').is_file())
+            self.assertEqual((stage.path / 'ordinary' / 'child.txt').read_bytes(), b'normal Windows output')
+            self.assertTrue((stage.path / 'complete.json').is_file())
+
+    def test_explicit_staging_creates_protected_user_owned_directories_and_files(self):
+        with tempfile.TemporaryDirectory(prefix='ComposerLint protected ') as tmp:
+            with storage.transaction(Path(tmp) / 'ComposerLint' / 'setup') as stage:
+                with stage.create(('nested', 'data')) as stream:
+                    stream.write(b'fixture')
+                stage.commit({'fixture': True})
+                with ExitStack() as held:
+                    directory = stage._directories(('nested',), held)
+                    stage.security.require_private(directory, stage.sid, tree_root=True)
+                    for parent, name in ((directory, 'data'), (stage.handle, 'complete.json')):
+                        handle = stage._open(parent, name, directory=False)
+                        held.callback(stage.disk.close, handle)
+                        stage.security.require_private(handle, stage.sid)
 
     def test_uncommitted_stage_and_no_replace_receipt(self):
         with tempfile.TemporaryDirectory(prefix='ComposerLint receipt ') as tmp:

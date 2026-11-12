@@ -1,0 +1,2 @@
+# The Windows installer verifies the raw bytes against its reviewed asset manifest.
+/uv.lock -text

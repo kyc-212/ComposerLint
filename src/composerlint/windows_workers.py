@@ -296,9 +296,10 @@ class _WorkerAPI:
         return self._launch(winapi, command, job, handles, stack, cwd=None, env=None)
 
     def launch_setup(self, winapi, command, job, handles, stack, *, cwd, env):
-        return self._launch(winapi, command, job, handles, stack, cwd=cwd, env=env)
+        return self._launch(winapi, command, job, handles, stack, cwd=cwd, env=env,
+                            prepare_process=_SecurityAPI().set_setup_child_owner)
 
-    def _launch(self, winapi, command, job, handles, stack, *, cwd, env):
+    def _launch(self, winapi, command, job, handles, stack, *, cwd, env, prepare_process=None):
         info = _ProcessInfo()
         line = ctypes.create_unicode_buffer(subprocess.list2cmdline(command))
         with self.startup(job, handles) as startup:
@@ -318,9 +319,10 @@ class _WorkerAPI:
         try:
             if not self.is_job_member(info.process, job):
                 raise OSError('Windows worker is missing its assigned job.')
+            if prepare_process is not None:
+                prepare_process(info.process)
         except BaseException:
-            # Only the exact newly created, still suspended process can reach
-            # this path. A failure to confirm job membership cannot leave it alive.
+            # Terminate only the exact newly created, still suspended process.
             if winapi.WaitForSingleObject(info.process, 0) != _WAIT_OBJECT_0:
                 winapi.TerminateProcess(info.process, 1)
                 self.wait_for_exit(info.process, time.monotonic() + _CLEANUP_SECONDS)

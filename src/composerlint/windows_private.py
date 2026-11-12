@@ -26,6 +26,9 @@ _FILE_DELETE_ON_CLOSE = 0x1000
 _ERROR_SHARING_VIOLATION = 32
 _ERROR_INSUFFICIENT_BUFFER = 122
 _ERROR_NO_TOKEN = 1008
+_TOKEN_QUERY = 0x0008
+_TOKEN_ADJUST_DEFAULT = 0x0080
+_TOKEN_USER, _TOKEN_OWNER, _TOKEN_STATISTICS = 1, 4, 10
 
 
 class _FileIdInfo(ctypes.Structure):
@@ -78,6 +81,8 @@ class _SecurityAPI:
                                        win.HANDLE, win.DWORD, win.BOOL, handle_pointer)
         self.token_info = _bind(advapi, 'GetTokenInformation', win.BOOL,
                                 win.HANDLE, ctypes.c_int, ctypes.c_void_p, win.DWORD, win.LPDWORD)
+        self.set_token_info = _bind(advapi, 'SetTokenInformation', win.BOOL,
+                                    win.HANDLE, ctypes.c_int, ctypes.c_void_p, win.DWORD)
         self.sid_string = _bind(advapi, 'ConvertSidToStringSidW', win.BOOL,
                                 ctypes.c_void_p, pointer)
         self.parse_descriptor = _bind(advapi, 'ConvertStringSecurityDescriptorToSecurityDescriptorW',
@@ -100,25 +105,59 @@ class _SecurityAPI:
         finally:
             self.free(result)
 
-    def user_sid(self):
+    @contextmanager
+    def _token(self, *, process=None, access=_TOKEN_QUERY):
         token = win.HANDLE()
-        if not self.open_thread_token(self.current_thread(), 8, True, ctypes.byref(token)):
+        if process is None and not self.open_thread_token(
+                self.current_thread(), access, True, ctypes.byref(token)):
             if ctypes.get_last_error() != _ERROR_NO_TOKEN:
                 raise ctypes.WinError(ctypes.get_last_error())
-            if not self.open_process_token(self.current_process(), 8, ctypes.byref(token)):
-                raise ctypes.WinError(ctypes.get_last_error())
+            process = self.current_process()
+        if process is not None and not self.open_process_token(process, access, ctypes.byref(token)):
+            raise ctypes.WinError(ctypes.get_last_error())
         try:
-            size = win.DWORD()
-            if self.token_info(token, 1, None, 0, ctypes.byref(size)):
-                raise OSError('Unexpected empty Windows token user.')
-            if ctypes.get_last_error() != _ERROR_INSUFFICIENT_BUFFER or not size.value:
-                raise ctypes.WinError(ctypes.get_last_error())
-            data = ctypes.create_string_buffer(size.value)
-            if not self.token_info(token, 1, data, len(data), ctypes.byref(size)):
-                raise ctypes.WinError(ctypes.get_last_error())
-            return self.sid_text(_SidAndAttributes.from_buffer(data).sid)
+            yield token
         finally:
             self.close(token)
+
+    def _token_data(self, token, info_class):
+        size = win.DWORD()
+        if self.token_info(token, info_class, None, 0, ctypes.byref(size)):
+            raise OSError('Unexpected empty Windows token information.')
+        if ctypes.get_last_error() != _ERROR_INSUFFICIENT_BUFFER or not size.value:
+            raise ctypes.WinError(ctypes.get_last_error())
+        data = ctypes.create_string_buffer(size.value)
+        if not self.token_info(token, info_class, data, len(data), ctypes.byref(size)):
+            raise ctypes.WinError(ctypes.get_last_error())
+        return data
+
+    def _default_owner(self, token):
+        data = self._token_data(token, _TOKEN_OWNER)
+        return self.sid_text(ctypes.c_void_p.from_buffer(data).value)
+
+    def user_sid(self):
+        with self._token() as token:
+            data = self._token_data(token, _TOKEN_USER)
+            return self.sid_text(_SidAndAttributes.from_buffer(data).sid)
+
+    def set_setup_child_owner(self, process):
+        """Set the suspended installer's default owner to its verified user."""
+        sid = self.user_sid()
+        with (self._token(process=self.current_process()) as parent,
+              self._token(process=process, access=_TOKEN_QUERY | _TOKEN_ADJUST_DEFAULT) as child):
+            user = self._token_data(child, _TOKEN_USER)
+            owner = ctypes.c_void_p(_SidAndAttributes.from_buffer(user).sid)
+            if self.sid_text(owner.value) != sid:
+                raise PermissionError('Setup tool token user differs from the effective setup user.')
+            if self._default_owner(child) == sid:
+                return
+            # TOKEN_STATISTICS begins with the token's unique eight-byte LUID.
+            if self._token_data(parent, _TOKEN_STATISTICS)[:8] == self._token_data(child, _TOKEN_STATISTICS)[:8]:
+                raise PermissionError('Setup tool does not have a separate primary token.')
+            if not self.set_token_info(child, _TOKEN_OWNER, ctypes.byref(owner), ctypes.sizeof(owner)):
+                raise ctypes.WinError(ctypes.get_last_error())
+            if self._default_owner(child) != sid:
+                raise PermissionError('Setup tool default owner differs from the effective setup user.')
 
     @contextmanager
     def descriptor(self, sddl):
@@ -135,30 +174,29 @@ class _SecurityAPI:
         grants = ''.join(f'(A;{flags};FA;;;{trustee})' for trustee in sorted({sid, _SYSTEM_SID}))
         return self.descriptor(f'O:{sid}D:P{grants}')
 
-    def require_private(self, handle, sid, *, tree_root=False, inherited_directory=None):
+    def require_private(self, handle, sid, *, tree_root=False, allow_inherited=False):
         owner, acl, descriptor = (ctypes.c_void_p() for _ in range(3))
         result = self.get_security(handle, 1, 5, ctypes.byref(owner), None,
                                    ctypes.byref(acl), None, ctypes.byref(descriptor))
         if result:
             raise ctypes.WinError(result)
         try:
-            if not owner or self.sid_text(owner) != sid:
-                raise PermissionError('Private Windows object owner differs from the effective user SID.')
+            actual_owner = self.sid_text(owner) if owner else None
+            if actual_owner != sid:
+                raise PermissionError('Private Windows object owner differs from the effective user SID '
+                                      f'(owner {actual_owner}, expected {sid}).')
             control, revision = win.WORD(), win.DWORD()
             if not self.descriptor_control(descriptor, ctypes.byref(control), ctypes.byref(revision)):
                 raise ctypes.WinError(ctypes.get_last_error())
-            protected = inherited_directory is None
-            expected_control = 0x1004 if protected else 0x0004
-            if not acl or control.value & 0x1004 != expected_control:
-                raise PermissionError('A present, protected Windows DACL is required.' if protected else
-                                      'Expected a present Windows DACL with private inheritance.')
-            # Setup tools create descendants through regular Windows APIs.
-            # Require the exact private inheritable grants on their root and
-            # only those same, inherited grants on every output.
+            protected = bool(control.value & 0x1000)
+            if not acl or not control.value & 0x0004 or not (protected or allow_inherited):
+                raise PermissionError('A present, private Windows DACL is required.')
+            # Only the setup tools' ordinary outputs may use inherited grants.
+            # Both forms require the same trustees and access masks.
             if protected:
                 flags = 0x03 if tree_root else 0
             else:
-                flags = 0x13 if inherited_directory else 0x10
+                flags = 0x13 if tree_root else 0x10
             info = _AclSizeInfo()
             if not self.acl_info(acl, ctypes.byref(info), ctypes.sizeof(info), 2):
                 raise ctypes.WinError(ctypes.get_last_error())
