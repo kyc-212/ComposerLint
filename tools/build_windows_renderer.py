@@ -347,12 +347,46 @@ def probe(env, tools):
     print('Compiler and CPython ABI probes passed; private scratch cleanup verified.', flush=True)
 
 
+def renderer_build_arguments(tools, python, workspace):
+    def cmake_path(path):
+        value = path.as_posix()
+        # Generated CMake files interpolate tool paths into quoted arguments.
+        # Refuse paths that CMake can interpret as lists or expressions.
+        if any(token in value for token in (';', '${', '$ENV{', '$CACHE{', '$<')):
+            raise ValueError(f'CMake cannot use this path literally: {path}')
+        return value
+
+    python_root = python.parent
+    definitions = {
+        'CMAKE_CXX_COMPILER': tools['cl'],
+        'CMAKE_C_COMPILER': tools['cl'],
+        'CMAKE_LINKER': tools['link'],
+        'CMAKE_RC_COMPILER': tools['rc'],
+        'CMAKE_MT': tools['mt'],
+        'Python_EXECUTABLE': python,
+        'Python_ROOT_DIR': python_root,
+        'Python_INCLUDE_DIR': python_root / 'include',
+        'Python_SABI_LIBRARY': python_root / 'libs' / 'python3.lib',
+    }
+    # scikit-build-core formats build-dir before passing it to CMake.
+    build_dir = cmake_path(workspace / 'build').replace('{', '{{').replace('}', '}}')
+    return (
+        '-I', '-B', '-m', 'build', '--no-isolation', '--wheel',
+        *(f'-Ccmake.define.{key}={cmake_path(path)}' for key, path in definitions.items()),
+        '-Ccmake.define.CMAKE_FIND_USE_PACKAGE_REGISTRY=OFF',
+        '-Ccmake.define.CMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY=OFF',
+        '-Cbuild-dir=' + build_dir, '--outdir', cmake_path(workspace / 'dist'),
+        cmake_path(workspace / 'verovio-6.3.0'),
+    )
+
+
 def build(args):
     developer, tools = toolchain()
     if args.probe_only:
         probe(developer, tools)
         return
-    python_root = Path(sys._base_executable).parent
+    python = Path(sys._base_executable)
+    python_root = python.parent
     if sys.version_info[:3] != (3, 12, 13) or not all(
             (python_root / item).is_file() for item in ('include/Python.h', 'libs/python3.lib')):
         raise RuntimeError('The private CPython 3.12.13 headers and stable ABI import library are required.')
@@ -388,20 +422,7 @@ def build(args):
         env.update(VEROVIO_BUILD_VERSION=recipe.BUILD, CMAKE_GENERATOR='Ninja',
                    PATH=str(tool_python.parent) + os.pathsep + env['PATH'],
                    CMAKE_BUILD_PARALLEL_LEVEL='2')
-        output = run(tool_python, '-I', '-B', '-m', 'build', '--no-isolation', '--wheel',
-            '-Ccmake.define.CMAKE_CXX_COMPILER=' + str(tools['cl']),
-            '-Ccmake.define.CMAKE_C_COMPILER=' + str(tools['cl']),
-            '-Ccmake.define.CMAKE_LINKER=' + str(tools['link']),
-            '-Ccmake.define.CMAKE_RC_COMPILER=' + str(tools['rc']),
-            '-Ccmake.define.CMAKE_MT=' + str(tools['mt']),
-            '-Ccmake.define.CMAKE_FIND_USE_PACKAGE_REGISTRY=OFF',
-            '-Ccmake.define.CMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY=OFF',
-            '-Ccmake.define.Python_EXECUTABLE=' + str(Path(sys._base_executable)),
-            '-Ccmake.define.Python_ROOT_DIR=' + str(python_root),
-            '-Ccmake.define.Python_INCLUDE_DIR=' + str(python_root / 'include'),
-            '-Ccmake.define.Python_SABI_LIBRARY=' + str(python_root / 'libs' / 'python3.lib'),
-            '-Cbuild-dir=' + str(stage.path / 'build'), '--outdir', stage.path / 'dist',
-            stage.path / 'verovio-6.3.0', timeout=1500)
+        output = run(tool_python, *renderer_build_arguments(tools, python, stage.path), timeout=1500)
         print(output, flush=True)
         stage.audit()
         dist = stage.path / 'dist'

@@ -88,6 +88,49 @@ class WindowsCompilerProbeTests(unittest.TestCase):
         self.assertEqual(output, 'link output')
         self.assertEqual(diagnostics.getvalue(), 'link warning\r\n')
 
+    def test_renderer_build_passes_literal_cmake_paths_as_separate_arguments(self):
+        vc = PureWindowsPath(r'C:\Program Files\Microsoft Visual Studio\18\VC\bin\Hostx64\x64')
+        sdk = PureWindowsPath(r'C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64')
+        tools = {'cl': vc / 'cl.exe', 'link': vc / 'link.exe', 'rc': sdk / 'rc.exe', 'mt': sdk / 'mt.exe'}
+        workspace = PureWindowsPath(r"D:\构建 & score (#2)\éditeur's [x64] + 100% = {name}")
+        python = workspace / 'python' / 'python.exe'
+        interpreter = workspace / 'build-tools' / 'Scripts' / 'python.exe'
+        arguments = self.probe.renderer_build_arguments(tools, python, workspace)
+        with patch.object(self.probe.workers, 'run_setup_command',
+                          return_value=subprocess.CompletedProcess([], 0, b'', b'')) as launch:
+            self.probe.run_probe_command('Build renderer', interpreter, *arguments,
+                                         cwd=workspace, env={'SystemRoot': r'C:\Windows'})
+        command = launch.call_args.args[0]
+        self.assertEqual(command[:7], [str(interpreter), '-I', '-B', '-m', 'build', '--no-isolation', '--wheel'])
+        defines = dict(option.removeprefix('-Ccmake.define.').split('=', 1)
+                       for option in command if option.startswith('-Ccmake.define.'))
+        base = "D:/构建 & score (#2)/éditeur's [x64] + 100% = {name}"
+        self.assertEqual(defines, {
+            'CMAKE_CXX_COMPILER': 'C:/Program Files/Microsoft Visual Studio/18/VC/bin/Hostx64/x64/cl.exe',
+            'CMAKE_C_COMPILER': 'C:/Program Files/Microsoft Visual Studio/18/VC/bin/Hostx64/x64/cl.exe',
+            'CMAKE_LINKER': 'C:/Program Files/Microsoft Visual Studio/18/VC/bin/Hostx64/x64/link.exe',
+            'CMAKE_RC_COMPILER': 'C:/Program Files (x86)/Windows Kits/10/bin/10.0.26100.0/x64/rc.exe',
+            'CMAKE_MT': 'C:/Program Files (x86)/Windows Kits/10/bin/10.0.26100.0/x64/mt.exe',
+            'Python_EXECUTABLE': f'{base}/python/python.exe',
+            'Python_ROOT_DIR': f'{base}/python',
+            'Python_INCLUDE_DIR': f'{base}/python/include',
+            'Python_SABI_LIBRARY': f'{base}/python/libs/python3.lib',
+            'CMAKE_FIND_USE_PACKAGE_REGISTRY': 'OFF',
+            'CMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY': 'OFF',
+        })
+        self.assertTrue(all('\\' not in argument for argument in command[1:]))
+        self.assertEqual(command[-4].removeprefix('-Cbuild-dir=').format(name='verovio'), f'{base}/build')
+        self.assertEqual(command[-3:], ['--outdir', f'{base}/dist', f'{base}/verovio-6.3.0'])
+
+    def test_renderer_build_rejects_paths_that_cmake_would_reinterpret(self):
+        root = PureWindowsPath(r'D:\private build')
+        tools = {name: root / (name + '.exe') for name in ('cl', 'link', 'rc', 'mt')}
+        for component in ('compiler;other', 'compiler${name}', 'compiler$ENV{PATH}', 'compiler$CACHE{path}',
+                          'compiler$<CONFIG>'):
+            with self.subTest(component=component), self.assertRaisesRegex(ValueError, 'cannot use this path literally'):
+                self.probe.renderer_build_arguments(tools | {'rc': root / component / 'rc.exe'},
+                                                    root / 'python.exe', root)
+
     def test_uv_0123_build_tool_sync_uses_offline_hash_pinned_wheels(self):
         with tempfile.TemporaryDirectory(prefix='ComposerLint uv build ') as temporary:
             root = Path(temporary)
