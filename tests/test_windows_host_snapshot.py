@@ -1,15 +1,24 @@
-"""Focused CI inventory controls. Use Win32 directory-entry metadata fixtures."""
+"""Focused CI orchestration controls without acquiring or installing assets."""
 
+from contextlib import redirect_stdout
+from io import StringIO
+import json
 from pathlib import Path, PureWindowsPath
 from runpy import run_path
+import shutil
 import stat
+import subprocess
+import sys
+from tempfile import TemporaryDirectory
+from textwrap import dedent
 import unittest
 from unittest.mock import Mock
 
 
-snapshot_entry = run_path(str(
-    Path(__file__).resolve().parents[1] / 'tools' / 'ci_windows_host_files.py'
-))['snapshot_entry']
+ROOT = Path(__file__).resolve().parents[1]
+host = run_path(str(ROOT / 'tools' / 'ci_windows_host_files.py'))
+snapshot_entry = host['snapshot_entry']
+install_once = run_path(str(ROOT / 'tools' / 'ci_windows_text_setup.py'))['install_once']
 ALIAS_ROOT = PureWindowsPath(r'C:\Users\runneradmin\AppData\Local\Microsoft\WindowsApps')
 ALIAS = ALIAS_ROOT / 'python.exe'
 ALIAS_METADATA = {
@@ -64,3 +73,149 @@ class WindowsHostSnapshotTests(unittest.TestCase):
                          {'path': str(path), 'type': 'missing'})
         with self.assertRaisesRegex(FileNotFoundError, 'Discovered executable disappeared'):
             snapshot_entry(ALIAS, ALIAS_ROOT, executable=True, metadata=read)
+
+    def test_inventory_covers_cache_python_and_alias_independently_of_path(self):
+        cached = PureWindowsPath(r'D:\tool cache\Python\3.12.10\x64\python.exe')
+        read = Mock(side_effect={
+            cached: {'attributes': stat.FILE_ATTRIBUTE_ARCHIVE},
+            ALIAS: ALIAS_METADATA,
+        }.get)
+        digest = Mock(return_value='a' * 64)
+        inventory = host['executable_inventory'](r'"C:\Program Files\Git\cmd"', cached, ALIAS_ROOT,
+                                                  metadata=read, digest=digest)
+        self.assertEqual({item['path']: item['type'] for item in inventory},
+                         {str(cached): 'regular_file', str(ALIAS): 'app_execution_alias'})
+        digest.assert_called_once_with(cached)
+
+    def test_offline_file_is_refused_and_metadata_errors_are_not_treated_as_absence(self):
+        digest = Mock()
+        with self.assertRaisesRegex(OSError, 'Offline or recalled file refused'):
+            snapshot_entry(ALIAS, ALIAS_ROOT, executable=False, digest=digest,
+                           metadata=Mock(return_value={'attributes': 0x1000}))
+        with self.assertRaises(PermissionError):
+            snapshot_entry(ALIAS, ALIAS_ROOT, executable=False, digest=digest,
+                           metadata=Mock(side_effect=PermissionError('denied')))
+        digest.assert_not_called()
+
+    def test_regular_file_change_during_hashing_fails(self):
+        attributes = {'attributes': stat.FILE_ATTRIBUTE_ARCHIVE}
+        with self.assertRaisesRegex(OSError, 'metadata changed'):
+            snapshot_entry(ALIAS, ALIAS_ROOT, executable=False, digest=Mock(return_value='a' * 64),
+                           metadata=Mock(side_effect=[attributes, {**attributes, 'size': 2}]))
+
+
+class RegistryKey(str):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exception):
+        pass
+
+
+class WindowsRegistrySnapshotTests(unittest.TestCase):
+    def test_values_remain_bound_to_their_key_and_type(self):
+        values = {'scope/first': (1, 'one'), 'scope/second': (1, 'two')}
+        registry = Mock(HKEY_CURRENT_USER='user')
+        registry.OpenKey.side_effect = lambda parent, name: RegistryKey(
+            name if parent == 'user' else f'{parent}/{name}')
+        registry.QueryInfoKey.side_effect = lambda key: (2, 0, 1) if key == 'scope' else (0, 1, 1)
+        registry.EnumKey.side_effect = lambda key, index: ('first', 'second')[index]
+        registry.EnumValue.side_effect = lambda key, index: ('Path', values[key][1], values[key][0])
+        scopes = (('HKEY_CURRENT_USER', 'scope'),)
+        before = host['registry_snapshot'](scopes, registry=registry)
+        values['scope/first'], values['scope/second'] = values['scope/second'], values['scope/first']
+        self.assertNotEqual(before, host['registry_snapshot'](scopes, registry=registry))
+        values.update({'scope/first': (2, 'one'), 'scope/second': (1, 'two')})
+        self.assertNotEqual(before, host['registry_snapshot'](scopes, registry=registry))
+
+    def test_registry_access_errors_do_not_count_as_missing_keys(self):
+        registry = Mock(HKEY_CURRENT_USER='user')
+        scopes = (('HKEY_CURRENT_USER', 'scope'),)
+        registry.OpenKey.side_effect = FileNotFoundError
+        self.assertEqual(host['registry_snapshot'](scopes, registry=registry), {scopes[0]: None})
+        registry.OpenKey.side_effect = PermissionError
+        with self.assertRaises(PermissionError):
+            host['registry_snapshot'](scopes, registry=registry)
+
+
+class WindowsCIOrchestrationTests(unittest.TestCase):
+    @staticmethod
+    def snapshot():
+        return {'Process PATH': 'original', 'Python/uv files and aliases': []}
+
+    def test_exact_consent_reaches_stub_cli_and_verified_receipt(self):
+        with TemporaryDirectory() as scratch:
+            root = Path(scratch).resolve() / 'reviewed source'
+            (root / 'tools').mkdir(parents=True)
+            for pin in ('uv.lock', 'tools/windows-setup-assets.json'):
+                shutil.copyfile(ROOT / pin, root / pin)
+            (root / 'tools/setup_composerlint.py').write_text(dedent('''
+                import json, sys
+                from pathlib import Path
+                assert sys.argv[1:] == ['--windows-text-pilot']
+                assert sys.stdin.read() == 'INSTALL\\n'
+                root = Path(__file__).resolve().parents[1]
+                assert Path.cwd() == root
+                destination = root.parent / 'Local AppData' / 'ComposerLint' / 'setup'
+                generation = destination / ('install-' + 'a' * 20)
+                runtime = generation / 'runtime/Scripts/python.exe'
+                for tool in (runtime, generation / 'python/python.exe', generation / 'uv/uv.exe'):
+                    tool.parent.mkdir(parents=True)
+                    tool.write_bytes(b'fixture only')
+                (destination / 'setup.lock').touch()
+                manifest = json.loads((root / 'tools/windows-setup-assets.json').read_bytes())
+                receipt = {'schema': 1, 'target': 'windows-x64-text-pilot', 'plan': 'a' * 64,
+                           'lock_sha256': manifest['lock_sha256'], 'python': str(runtime)}
+                (generation / 'complete.json').write_text(json.dumps(receipt), encoding='utf-8')
+                print('Reviewed setup plan:', receipt['plan'])
+                print('Private Windows text environment verified:', runtime)
+            '''), encoding='utf-8')
+            profile = root.parent / 'Local AppData'
+            profile.mkdir()
+            snapshot = Mock(side_effect=[self.snapshot(), self.snapshot()])
+            output = StringIO()
+            with redirect_stdout(output):
+                install_once(root, Path(sys.executable), profile, snapshot=snapshot)
+            self.assertEqual(snapshot.call_count, 2)
+            self.assertIn('Before and after host snapshots match.', output.getvalue())
+            self.assertIn('Verified completion receipt', output.getvalue())
+
+    def test_baseline_failure_never_launches_installer(self):
+        with TemporaryDirectory() as profile:
+            run = Mock()
+            snapshot = Mock(side_effect=PermissionError('snapshot access denied'))
+            with self.assertRaisesRegex(PermissionError, 'snapshot access denied'):
+                install_once(ROOT, Path(sys.executable), Path(profile), run=run, snapshot=snapshot)
+            run.assert_not_called()
+
+    def test_failed_installation_is_not_retried_and_still_compares_host(self):
+        with TemporaryDirectory() as profile:
+            snapshot = Mock(side_effect=[self.snapshot(), self.snapshot()])
+            run = Mock(return_value=subprocess.CompletedProcess([], 1, 'Pinned acquisition failed.\n'))
+            output = StringIO()
+            with redirect_stdout(output), self.assertRaises(subprocess.CalledProcessError):
+                install_once(ROOT, Path(sys.executable), Path(profile), run=run, snapshot=snapshot)
+            run.assert_called_once()
+            self.assertEqual(snapshot.call_count, 2)
+            self.assertIn('Pinned acquisition failed.', output.getvalue())
+            self.assertIn('Before and after host snapshots match.', output.getvalue())
+            self.assertNotIn('Verified 61 pinned files', output.getvalue())
+
+    def test_exit_zero_without_a_receipt_is_still_failure(self):
+        with TemporaryDirectory() as profile:
+            snapshot = Mock(side_effect=[self.snapshot(), self.snapshot()])
+            run = Mock(return_value=subprocess.CompletedProcess([], 0, 'Cancelled.\n'))
+            output = StringIO()
+            with redirect_stdout(output), self.assertRaises(FileNotFoundError):
+                install_once(ROOT, Path(sys.executable), Path(profile), run=run, snapshot=snapshot)
+            run.assert_called_once()
+            self.assertEqual(snapshot.call_count, 2)
+            self.assertNotIn('Verified 61 pinned files', output.getvalue())
+
+    def test_host_change_is_a_failure_even_when_installer_also_fails(self):
+        with TemporaryDirectory() as profile:
+            snapshot = Mock(side_effect=[self.snapshot(), {**self.snapshot(), 'Process PATH': 'changed'}])
+            run = Mock(return_value=subprocess.CompletedProcess([], 1, 'Installer stopped.\n'))
+            with redirect_stdout(StringIO()), self.assertRaisesRegex(RuntimeError, 'Process PATH') as error:
+                install_once(ROOT, Path(sys.executable), Path(profile), run=run, snapshot=snapshot)
+            self.assertIsInstance(error.exception.__context__, subprocess.CalledProcessError)

@@ -1,15 +1,26 @@
 """Read-only file inventory for the Windows installation CI checkpoint."""
 
-import argparse
 import ctypes
 from ctypes import wintypes as win
 import hashlib
-import json
+import ntpath
+import os
 from pathlib import Path, PureWindowsPath
 import stat
 
 
 _APP_EXEC_LINK = 0x8000001B
+_RECALL_OR_OFFLINE = 0x00441000
+_REGISTRY_SCOPES = (
+    ('HKEY_CURRENT_USER', r'Environment'),
+    ('HKEY_LOCAL_MACHINE', r'SYSTEM\CurrentControlSet\Control\Session Manager\Environment'),
+    ('HKEY_CURRENT_USER', r'Software\Python'),
+    ('HKEY_LOCAL_MACHINE', r'Software\Python'),
+    ('HKEY_LOCAL_MACHINE', r'Software\WOW6432Node\Python'),
+    ('HKEY_CURRENT_USER', r'Software\Microsoft\Windows\CurrentVersion\Uninstall'),
+    ('HKEY_LOCAL_MACHINE', r'Software\Microsoft\Windows\CurrentVersion\Uninstall'),
+    ('HKEY_LOCAL_MACHINE', r'Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall'),
+)
 
 
 class _FindData(ctypes.Structure):
@@ -53,14 +64,20 @@ def file_hash(path):
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
-def snapshot_entry(path, alias_root, *, executable, metadata=find_metadata, digest=file_hash):
+def literal_path(path):
     path = PureWindowsPath(path)
     if (not path.is_absolute() or len(path.drive) != 2 or '..' in path.parts
             or any(char in str(path)[2:] for char in '*?:')):
         raise ValueError(f'Expected an absolute, literal local file path: {path}')
+    return path
+
+
+def snapshot_entry(path, alias_root, *, executable, allow_missing=False,
+                   metadata=find_metadata, digest=file_hash):
+    path = literal_path(path)
     info = metadata(path)
     if info is None:
-        if executable:
+        if executable and not allow_missing:
             raise FileNotFoundError(f'Discovered executable disappeared: {path}')
         return {'path': str(path), 'type': 'missing'}
     attributes = info['attributes']
@@ -72,22 +89,83 @@ def snapshot_entry(path, alias_root, *, executable, metadata=find_metadata, dige
                 or tag != _APP_EXEC_LINK):
             raise OSError(f'Unexpected reparse point at {path}, tag=0x{tag:08X}')
         return {'path': str(path), 'type': 'app_execution_alias', **info}
-    return {'path': str(path), 'type': 'regular_file', 'sha256': digest(path)}
+    if attributes & _RECALL_OR_OFFLINE:
+        raise OSError(f'Offline or recalled file refused at {path}, attributes=0x{attributes:08X}')
+    sha256 = digest(path)
+    if metadata(path) != info:
+        raise OSError(f'Host file metadata changed while hashing: {path}')
+    return {'path': str(path), 'type': 'regular_file', 'sha256': sha256}
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('local_app_data', type=PureWindowsPath)
-    parser.add_argument('--settings', nargs='+', required=True)
-    parser.add_argument('--executables', nargs='+', required=True)
-    args = parser.parse_args()
-    alias_root = args.local_app_data / 'Microsoft' / 'WindowsApps'
-    print(json.dumps([
-        snapshot_entry(path, alias_root, executable=executable)
-        for executable, paths in ((False, args.settings), (True, args.executables))
-        for path in sorted(set(paths), key=str.casefold)
-    ], sort_keys=True))
+def executable_inventory(raw_path, runner_python, alias_root, *, metadata=find_metadata, digest=file_hash):
+    # Record the actual runner interpreter even when it is absent from PATH.
+    # Check the known alias directory even when it is absent from PATH, too.
+    directories = {alias_root}
+    for entry in raw_path.split(';'):
+        if entry:
+            directories.add(literal_path(ntpath.expandvars(entry.strip('"'))))
+    runner_python = literal_path(runner_python)
+    candidates = {runner_python} | {
+        directory / name for directory in directories for name in ('python.exe', 'uv.exe')
+    }
+    files = []
+    for path in sorted(candidates):
+        entry = snapshot_entry(path, alias_root, executable=True, allow_missing=path != runner_python,
+                               metadata=metadata, digest=digest)
+        if entry['type'] != 'missing':
+            files.append(entry)
+    return files
 
 
-if __name__ == '__main__':
-    main()
+def registry_snapshot(scopes=_REGISTRY_SCOPES, *, registry=None):
+    if registry is None:
+        import winreg as registry
+
+    def contents(handle):
+        before = registry.QueryInfoKey(handle)
+        subkeys, values, _ = before
+        result = {'values': {}, 'subkeys': {}}
+        for index in range(values):
+            name, data, kind = registry.EnumValue(handle, index)
+            result['values'][name] = (kind, data)
+        for index in range(subkeys):
+            name = registry.EnumKey(handle, index)
+            with registry.OpenKey(handle, name) as child:
+                result['subkeys'][name] = contents(child)
+        if registry.QueryInfoKey(handle) != before:
+            raise OSError('Registry key changed while taking the snapshot.')
+        return result
+
+    result = {}
+    for hive, path in scopes:
+        try:
+            handle = registry.OpenKey(getattr(registry, hive), path)
+        except FileNotFoundError:
+            result[(hive, path)] = None
+        else:
+            with handle:
+                result[(hive, path)] = contents(handle)
+    return result
+
+
+def host_snapshot(runner_python, local_app_data):
+    alias_root = literal_path(local_app_data) / 'Microsoft' / 'WindowsApps'
+    home = literal_path(os.environ['USERPROFILE'])
+    roaming = literal_path(os.environ['APPDATA'])
+    settings = {
+        literal_path(os.environ['GITHUB_PATH']), literal_path(os.environ['GITHUB_ENV']),
+        home / '.codex/config.toml', home / '.claude.json', home / '.claude/settings.json',
+        roaming / 'Claude/claude_desktop_config.json',
+        roaming / 'Code/User/mcp.json', roaming / 'Code/User/settings.json', home / '.cursor/mcp.json',
+    }
+    if codex_home := os.environ.get('CODEX_HOME'):
+        settings.add(literal_path(codex_home) / 'config.toml')
+    raw_path = os.environ['PATH']
+    return {
+        'Process PATH': raw_path,
+        'Python/uv files and aliases': executable_inventory(raw_path, runner_python, alias_root),
+        'CI and AI client settings files': [
+            snapshot_entry(path, alias_root, executable=False) for path in sorted(settings)
+        ],
+        'user and machine registry scopes (including persisted PATH)': registry_snapshot(),
+    }

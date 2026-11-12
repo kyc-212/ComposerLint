@@ -17,12 +17,12 @@ concurrency:
 
 jobs:
   windows-ntfs:
-    # One approved real installation on run 12, with no rerun.
+    # One approved real installation on run 13, with no rerun.
     if: >-
       github.repository == 'kyc-212/ComposerLint' &&
       github.actor == github.repository_owner &&
       github.ref == 'refs/heads/codex/windows-ci-pilot' &&
-      github.run_number == '12' && github.run_attempt == '1' &&
+      github.run_number == '13' && github.run_attempt == '1' &&
       github.sha == inputs.expected_sha
     runs-on: windows-2025
     timeout-minutes: 20
@@ -35,36 +35,58 @@ jobs:
           fetch-depth: 1
           submodules: false
           lfs: false
-      - name: Run native NTFS controls using the runner's Python
+      - name: Select and verify the CI-only Python from the installed tool cache
+        id: runner-python
         shell: pwsh
         run: |
-          python -I -S -B -c "import sys; assert sys.platform == 'win32' and sys.implementation.name == 'cpython' and sys.version_info[:2] == (3, 12), sys.version"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python -I -S -B -X utf8 -m unittest discover -s tests -p test_windows_read_native.py -v
+          ./tests/test_windows_runner_python.ps1
+          . ./tools/ci_windows_runner_python.ps1
+          $runnerPython = Get-VerifiedRunnerPython $env:RUNNER_TOOL_CACHE
+          Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "path=$runnerPython" -Encoding utf8
+      - name: Run native NTFS controls using the runner's Python
+        shell: pwsh
+        env:
+          CI_RUNNER_PYTHON: ${{ steps.runner-python.outputs.path }}
+        run: |
+          & $env:CI_RUNNER_PYTHON -I -S -B -X utf8 -m unittest discover -s tests -p test_windows_read_native.py -v
           exit $LASTEXITCODE
       - name: Run Windows preflight tests
         shell: pwsh
+        env:
+          CI_RUNNER_PYTHON: ${{ steps.runner-python.outputs.path }}
         run: |
-          python -I -S -B -X utf8 -m unittest discover -s tests -p test_windows_preflight.py -v
+          & $env:CI_RUNNER_PYTHON -I -S -B -X utf8 -m unittest discover -s tests -p test_windows_preflight.py -v
           exit $LASTEXITCODE
       - name: Show the standalone Windows preflight diagnostics
         shell: pwsh
+        env:
+          CI_RUNNER_PYTHON: ${{ steps.runner-python.outputs.path }}
         run: |
-          python -I -S -B -X utf8 tools/preflight_windows.py
+          & $env:CI_RUNNER_PYTHON -I -S -B -X utf8 tools/preflight_windows.py
           exit $LASTEXITCODE
       - name: Run Windows terminal setup security fixtures
         shell: pwsh
+        env:
+          CI_RUNNER_PYTHON: ${{ steps.runner-python.outputs.path }}
         run: |
-          python -I -S -B -X utf8 -m unittest discover -s tests -p test_windows_setup.py -v
+          & $env:CI_RUNNER_PYTHON -I -S -B -X utf8 -m unittest discover -s tests -p test_windows_setup.py -v
+          exit $LASTEXITCODE
+      - name: Run host snapshot and CI orchestration controls
+        shell: pwsh
+        env:
+          CI_RUNNER_PYTHON: ${{ steps.runner-python.outputs.path }}
+        run: |
+          & $env:CI_RUNNER_PYTHON -I -S -B -X utf8 -m unittest discover -s tests -p test_windows_host_snapshot.py -v
           exit $LASTEXITCODE
       - name: Run the one approved Windows text installation and verify the receipt
         shell: pwsh
         env:
           REVIEWED_COMMIT: ${{ inputs.expected_sha }}
+          CI_RUNNER_PYTHON: ${{ steps.runner-python.outputs.path }}
         run: |
-          python -I -S -B -X utf8 -m unittest discover -s tests -p test_windows_host_snapshot.py -v
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          ./tools/ci_windows_text_setup.ps1
+          $local = [Environment]::GetFolderPath('LocalApplicationData')
+          & $env:CI_RUNNER_PYTHON -I -S -B -X utf8 tools/ci_windows_text_setup.py $local
+          exit $LASTEXITCODE
       - name: Verify the checkout is clean
         if: ${{ !cancelled() && steps.reviewed-checkout.outcome == 'success' }}
         shell: pwsh
