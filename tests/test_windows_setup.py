@@ -88,6 +88,105 @@ class WindowsCompilerProbeTests(unittest.TestCase):
         self.assertEqual(output, 'link output')
         self.assertEqual(diagnostics.getvalue(), 'link warning\r\n')
 
+    def test_uv_0123_build_tool_sync_uses_offline_hash_pinned_wheels(self):
+        with tempfile.TemporaryDirectory(prefix='ComposerLint uv build ') as temporary:
+            root = Path(temporary)
+            python = root / 'python' / 'python.exe'
+            for name in ('include/Python.h', 'libs/python3.lib'):
+                file = python.parent / name
+                file.parent.mkdir(parents=True, exist_ok=True)
+                file.touch()
+            args = SimpleNamespace(probe_only=False, inputs=root / 'inputs', uv=root / 'uv.exe',
+                                   wheelhouse=root / 'wheelhouse', build_requirements=root / 'build.txt')
+            developer = {'INCLUDE': 'headers', 'LIB': 'libs', 'VCToolsVersion': 'fixture',
+                         'WindowsSDKVersion': 'fixture'}
+            tools = {name: root / (name + '.exe') for name in ('cl', 'rc')}
+            stage = Mock(path=root / 'stage')
+            runtime = SimpleNamespace(version_info=(3, 12, 13), _base_executable=str(python),
+                                      version='3.12.13 fixture')
+            stop = RuntimeError('Reached build dependency installation')
+            with (patch.object(self.probe, 'sys', runtime),
+                  patch.object(self.probe, 'toolchain', return_value=(developer, tools)),
+                  patch.object(self.probe, 'probe'),
+                  patch.object(self.probe, 'verify_probe_tools'),
+                  patch.object(self.probe.paths, 'temporary_parent', return_value=root),
+                  patch.object(self.probe.storage, 'private_workspace', return_value=nullcontext(stage)),
+                  patch.object(self.probe.setup, '_system_root', return_value=root / 'Windows'),
+                  patch.object(self.probe.recipe, 'checked_bytes', return_value=b'verified'),
+                  patch.object(self.probe.setup, 'unpack'),
+                  patch.object(self.probe, 'run_probe_command', side_effect=['', stop]) as run,
+                  self.assertRaisesRegex(RuntimeError, str(stop))):
+                self.probe.build(args)
+            prefix = ('uv.exe', args.uv, '--offline', '--no-config', '--no-progress', '--no-python-downloads')
+            tools_env = stage.path / 'build-tools'
+            self.assertEqual([command.args for command in run.call_args_list], [
+                (*prefix, 'venv', '--python', str(python), tools_env),
+                (*prefix, 'pip', 'sync', '--python', tools_env / 'Scripts/python.exe', '--require-hashes',
+                 '--no-index', '--no-build', '--link-mode', 'copy', '--find-links',
+                 args.wheelhouse, args.build_requirements),
+            ])
+
+    def test_uv_0123_renderer_control_sync_and_both_installs_use_verified_wheels(self):
+        spec = util.spec_from_file_location('ci_windows_renderer', ROOT / 'tools' / 'ci_windows_renderer.py')
+        checkpoint = util.module_from_spec(spec)
+        with (patch.dict(sys.modules, {'build_windows_renderer': self.probe}),
+              patch.object(sys, 'path', sys.path[:])):
+            spec.loader.exec_module(checkpoint)
+
+        with tempfile.TemporaryDirectory(prefix='ComposerLint uv control ') as temporary:
+            root = Path(temporary)
+            stage = Mock(path=root)
+            stage.mkdir.side_effect = lambda parts: root.joinpath(*parts).mkdir()
+            stage.held_file.side_effect = lambda parts: nullcontext(root.joinpath(*parts))
+            pins = checkpoint.recipe
+            bundle = root / 'renderer-artifacts'
+            provenance = dict(source_sha256=pins.SOURCE_SHA256, patch_sha256=pins.PATCH_SHA256,
+                              preimage_sha256=pins.PREIMAGE, postimage_sha256=pins.POSTIMAGE,
+                              wheel_sha256='fixture')
+            runtime = root / 'runtime' / 'Scripts' / 'python.exe'
+            renderer = root / 'renderer' / 'Scripts' / 'python.exe'
+            uv_commands = []
+            stop = RuntimeError('Reached patched renderer load')
+
+            def command(_, executable, *args, **kwargs):
+                if executable.name == 'uv.exe':
+                    uv_commands.append(args)
+                    return 'uv 0.12.3' if '--version' in args else ''
+                if '--output' in args:
+                    bundle.mkdir()
+                    for name in (pins.SOURCE_ARCHIVE, pins.OFFICIAL_WHEEL, pins.PATCH,
+                                 pins.PATCHED_WHEEL, 'build-provenance.json'):
+                        (bundle / name).touch()
+                if executable == renderer:
+                    raise stop
+                return ''
+
+            with (patch.object(checkpoint.setup, 'acquire', return_value=b'verified'),
+                  patch.object(checkpoint.setup, '_write'),
+                  patch.object(checkpoint.setup, 'unpack'),
+                  patch.object(checkpoint.setup, '_read_source', return_value=json.dumps(provenance).encode()),
+                  patch.object(checkpoint.setup, '_system_root', return_value=root / 'Windows'),
+                  patch.object(checkpoint.recipe, 'checked_bytes'),
+                  patch.object(checkpoint, 'toolchain', return_value=({}, {})),
+                  patch.object(checkpoint, 'run_probe_command', side_effect=command),
+                  redirect_stdout(io.StringIO()),
+                  self.assertRaisesRegex(RuntimeError, str(stop))):
+                checkpoint.checkpoint(stage, *checkpoint.reviewed_assets())
+            prefix = ('--offline', '--no-config', '--no-progress', '--no-python-downloads')
+            policy = ('--no-index', '--no-build', '--link-mode', 'copy')
+            python = root / 'python' / 'python.exe'
+            self.assertEqual(uv_commands, [
+                (*prefix, '--version'),
+                (*prefix, 'venv', '--python', python, runtime.parents[1]),
+                (*prefix, 'pip', 'sync', '--python', runtime, *policy, '--require-hashes',
+                 '--find-links', root / 'wheelhouse', root / 'work' / 'controls.txt'),
+                (*prefix, 'pip', 'install', '--python', runtime, *policy, '--no-deps', bundle / pins.OFFICIAL_WHEEL),
+                (*prefix, 'pip', 'check', '--python', runtime),
+                (*prefix, 'venv', '--python', python, renderer.parents[1]),
+                (*prefix, 'pip', 'install', '--python', renderer, *policy, '--no-deps', bundle / pins.PATCHED_WHEEL),
+                (*prefix, 'pip', 'check', '--python', renderer),
+            ])
+
     def test_probe_environment_preserves_profile_and_limits_tool_settings(self):
         system = PureWindowsPath(r'C:\Windows')
         temp = PureWindowsPath(r'C:\Private Workspace\tmp')

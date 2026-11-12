@@ -148,7 +148,7 @@ def checkpoint(stage, python_pin, uv_pin, inputs, controls):
                            (recipe.PATCH, recipe.PATCH_SHA256), (recipe.PATCHED_WHEEL, provenance['wheel_sha256'])):
         recipe.checked_bytes(bundle / name, expected, 32 * 1024**2)
 
-    pip_options = ('--no-index', '--no-build', '--only-binary', ':all:', '--link-mode', 'copy')
+    pip_options = ('--no-index', '--no-build', '--link-mode', 'copy')
     runtime = root / 'runtime' / 'Scripts' / 'python.exe'
     renderer = root / 'renderer' / 'Scripts' / 'python.exe'
     for executable, wheel, version in ((runtime, official, '6.3.0'),

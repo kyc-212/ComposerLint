@@ -383,7 +383,7 @@ def build(args):
         uv('venv', '--python', sys._base_executable, tool_env)
         tool_python = tool_env / 'Scripts/python.exe'
         uv('pip', 'sync', '--python', tool_python, '--require-hashes', '--no-index',
-           '--no-build', '--only-binary', ':all:', '--link-mode', 'copy',
+           '--no-build', '--link-mode', 'copy',
            '--find-links', args.wheelhouse, args.build_requirements)
         env.update(VEROVIO_BUILD_VERSION=recipe.BUILD, CMAKE_GENERATOR='Ninja',
                    PATH=str(tool_python.parent) + os.pathsep + env['PATH'],
