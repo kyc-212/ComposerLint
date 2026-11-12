@@ -190,11 +190,11 @@ def verify_probe_tools(tools, env):
             for name, tool in tools.items()}
 
 
-def run_probe_command(step, executable, *arguments, cwd, env):
+def run_probe_command(step, executable, *arguments, cwd, env, timeout=120):
     command = [str(executable), *(str(arg) for arg in arguments)]
     try:
         result = workers.run_setup_command(command, cwd=str(cwd), env=env,
-                                           timeout=120, capture_result=True)
+                                           timeout=timeout, capture_result=True)
     except workers.SetupProcessCleanupUnconfirmed:
         raise
     except (OSError, ValueError, RuntimeError) as error:
@@ -348,39 +348,28 @@ def probe(env, tools):
 
 
 def build(args):
-    env, tools = toolchain()
+    developer, tools = toolchain()
     if args.probe_only:
-        probe(env, tools)
+        probe(developer, tools)
         return
-    print('Windows build tools:', *(f'{key}={value}' for key, value in tools.items()), sep='\n')
-    with storage.private_workspace(paths.temporary_parent(), 'composerlint-verovio-') as stage:
+    python_root = Path(sys._base_executable).parent
+    if sys.version_info[:3] != (3, 12, 13) or not all(
+            (python_root / item).is_file() for item in ('include/Python.h', 'libs/python3.lib')):
+        raise RuntimeError('The private CPython 3.12.13 headers and stable ABI import library are required.')
+    probe(developer, tools)
+    with storage.private_workspace(paths.temporary_parent(), 'cl-vr-build-') as stage:
         stage.mkdir(('tmp',))
-        temp = stage.path / 'tmp'
-        env.update(SystemRoot=str(setup._system_root()), TEMP=str(temp), TMP=str(temp),
-                   LOCALAPPDATA=str(temp), USERPROFILE=str(temp), UV_CACHE_DIR=str(temp / 'uv'),
+        env = probe_environment(developer, tools, setup._system_root(), stage.path / 'tmp', os.environ)
+        env.update(UV_CACHE_DIR=str(stage.path / 'tmp' / 'uv'),
                    PYTHONDONTWRITEBYTECODE='1', PYTHONUTF8='1', UV_PYTHON_DOWNLOADS='never')
 
         def run(executable, *arguments, timeout=120):
-            return workers.run_setup_command([str(executable), *(str(arg) for arg in arguments)],
-                                     cwd=str(stage.path), env=env, timeout=timeout)
+            return run_probe_command(executable.name, executable, *arguments, cwd=stage.path,
+                                     env=env, timeout=timeout)
 
-        provenance = {'vctools': env['VCToolsVersion'],
-                      'windows_sdk': env['WindowsSDKVersion'].rstrip('\\'),
-                      'tool_sha256': {name: recipe.sha(private.read_stable(path, limit=64 * 1024**2)[0])
-                                      for name, path in tools.items()}}
-        print(json.dumps(provenance, sort_keys=True), flush=True)
-        setup._write(stage, ('probe.cpp',), PROBE)
-        run(tools['cl'], '/nologo', '/std:c++20', '/EHsc', '/c', 'probe.cpp')
-        run(tools['link'], '/nologo', '/machine:x64', '/subsystem:console', '/out:probe.exe',
-            'probe.obj', 'kernel32.lib')
-        compiler = run(stage.path / 'probe.exe').decode('ascii').strip()
-        provenance['compiler'] = compiler
-        print(f'Native x64 C++20 compile/link/run passed. {compiler}', flush=True)
-
-        python_root = Path(sys._base_executable).parent
-        if sys.version_info[:3] != (3, 12, 13) or not all(
-                (python_root / item).is_file() for item in ('include/Python.h', 'libs/python3.lib')):
-            raise RuntimeError('The private CPython 3.12.13 headers and stable ABI import library are required.')
+        provenance = {'vctools': developer['VCToolsVersion'],
+                      'windows_sdk': developer['WindowsSDKVersion'].rstrip('\\'),
+                      'tool_sha256': verify_probe_tools(tools, developer), 'python': sys.version}
         source = recipe.checked_bytes(args.inputs / recipe.SOURCE_ARCHIVE, recipe.SOURCE_SHA256, 32 * 1024**2)
         official = recipe.checked_bytes(args.inputs / recipe.OFFICIAL_WHEEL, recipe.OFFICIAL_SHA256, 32 * 1024**2)
         patch = recipe.checked_bytes(ROOT / 'patches' / recipe.PATCH, recipe.PATCH_SHA256, 65536)
@@ -395,15 +384,26 @@ def build(args):
         tool_python = tool_env / 'Scripts/python.exe'
         uv('pip', 'sync', '--python', tool_python, '--require-hashes', '--no-index',
            '--no-build', '--only-binary', ':all:', '--link-mode', 'copy',
-           '--find-links', args.wheelhouse, REQUIREMENTS)
+           '--find-links', args.wheelhouse, args.build_requirements)
         env.update(VEROVIO_BUILD_VERSION=recipe.BUILD, CMAKE_GENERATOR='Ninja',
                    PATH=str(tool_python.parent) + os.pathsep + env['PATH'],
                    CMAKE_BUILD_PARALLEL_LEVEL='2')
-        run(tool_python, '-I', '-B', '-m', 'build', '--no-isolation', '--wheel',
+        output = run(tool_python, '-I', '-B', '-m', 'build', '--no-isolation', '--wheel',
             '-Ccmake.define.CMAKE_CXX_COMPILER=' + str(tools['cl']),
             '-Ccmake.define.CMAKE_C_COMPILER=' + str(tools['cl']),
+            '-Ccmake.define.CMAKE_LINKER=' + str(tools['link']),
+            '-Ccmake.define.CMAKE_RC_COMPILER=' + str(tools['rc']),
+            '-Ccmake.define.CMAKE_MT=' + str(tools['mt']),
+            '-Ccmake.define.CMAKE_FIND_USE_PACKAGE_REGISTRY=OFF',
+            '-Ccmake.define.CMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY=OFF',
+            '-Ccmake.define.Python_EXECUTABLE=' + str(Path(sys._base_executable)),
+            '-Ccmake.define.Python_ROOT_DIR=' + str(python_root),
+            '-Ccmake.define.Python_INCLUDE_DIR=' + str(python_root / 'include'),
+            '-Ccmake.define.Python_SABI_LIBRARY=' + str(python_root / 'libs' / 'python3.lib'),
             '-Cbuild-dir=' + str(stage.path / 'build'), '--outdir', stage.path / 'dist',
             stage.path / 'verovio-6.3.0', timeout=1500)
+        print(output, flush=True)
+        stage.audit()
         dist = stage.path / 'dist'
         if {path.name for path in dist.iterdir()} != {recipe.PATCHED_WHEEL}:
             raise RuntimeError('Expected the exact patched cp310-abi3 Windows x64 wheel.')
@@ -411,18 +411,20 @@ def build(args):
         if stamp.links != 1:
             raise RuntimeError('Patched renderer wheel must have exactly one NTFS link.')
         provenance.update(source_sha256=recipe.SOURCE_SHA256, patch_sha256=recipe.PATCH_SHA256,
-                          postimage_sha256=recipe.POSTIMAGE, wheel_sha256=recipe.sha(candidate))
-        with private.private_directory(args.output, create=True) as output:
+                          preimage_sha256=recipe.PREIMAGE, postimage_sha256=recipe.POSTIMAGE, wheel_sha256=recipe.sha(candidate))
+        with private.private_directory(args.output, create=True, tree_root=True) as output:
             for name, data in ((recipe.OFFICIAL_WHEEL, official), (recipe.SOURCE_ARCHIVE, source),
                                (recipe.PATCH, patch), (recipe.PATCHED_WHEEL, candidate)):
                 output.write_new(name, data)
             output.write_new('build-provenance.json', (json.dumps(provenance, indent=2) + '\n').encode())
-        print('Local candidate SHA-256:', provenance['wheel_sha256'])
+        print('Local candidate SHA-256:', provenance['wheel_sha256'], flush=True)
+    print('Renderer build scratch cleanup verified.', flush=True)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--probe-only', action='store_true')
+    parser.add_argument('--build-requirements', type=Path, default=REQUIREMENTS)
     for option in ('inputs', 'wheelhouse', 'uv', 'output'):
         parser.add_argument('--' + option, type=Path)
     args = parser.parse_args()
