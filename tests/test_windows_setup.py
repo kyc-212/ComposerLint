@@ -483,6 +483,25 @@ class FakeStage:
             stream.write(json.dumps(receipt).encode())
 
 
+def timed_transfer(reads):
+    """Yield (elapsed seconds, bytes) from reads without sleeping or networking."""
+    elapsed = 10.0  # The monotonic clock need not start at zero.
+    events = iter(reads)
+
+    def read1(limit):
+        nonlocal elapsed
+        seconds, data = next(events)
+        elapsed = 10.0 + seconds
+        assert len(data) <= limit
+        return data
+
+    response = Mock(read1=Mock(side_effect=read1))
+    stream = Mock()
+    stream.__enter__ = Mock(return_value=response)
+    stream.__exit__ = Mock(return_value=False)
+    return Mock(open=Mock(return_value=stream)), lambda: elapsed, stream.__exit__
+
+
 def fixture_build(plan, stage, files, *, fail=None):
     actions = []
 
@@ -514,6 +533,11 @@ def fixture_build(plan, stage, files, *, fail=None):
     def fetch(asset):
         if fail == 'missing' and asset == plan.wheels[0]:
             raise setup.SetupError('Could not acquire fixture wheel')
+        if fail == 'deadline' and asset == plan.wheels[0]:
+            # The wheel is incomplete when a read hits the deadline.
+            opener, clock, _ = timed_transfer([(890, b'a'), (900, b'b')])
+            with patch.object(setup.time, 'monotonic', clock):
+                return setup.acquire(asset, opener=opener)
         return setup.acquire(asset, opener=Mock(open=Mock(return_value=io.BytesIO(files[asset.filename]))))
 
     runtime = setup.populate(plan, stage, Mock(), fetch=fetch, command=command,
@@ -823,6 +847,32 @@ class WindowsSetupTests(unittest.TestCase):
         with self.assertRaisesRegex(setup.SetupError, 'Could not acquire'):
             setup.acquire(asset, opener=opener)
 
+    def test_active_download_can_finish_after_180_seconds(self):
+        body = b'a' * 89
+        asset = setup.Asset('wheel.whl', 'https://files.pythonhosted.org/wheel.whl',
+                            hashlib.sha256(body).hexdigest(), len(body))
+        opener, clock, closed = timed_transfer(
+            [(t, b'a') for t in range(10, 900, 10)] + [(899, b'')])
+        with patch.object(setup.time, 'monotonic', clock):
+            self.assertEqual(setup.acquire(asset, opener=opener), body)
+        self.assertEqual(opener.open.call_args.kwargs['timeout'], 20)
+        closed.assert_called_once_with(None, None, None)
+
+    def test_active_download_refuses_data_or_eof_at_deadline(self):
+        for final_read in (b'a', b''):
+            with self.subTest(final_read=final_read):
+                # For EOF, all pinned bytes already arrived; a late EOF still fails.
+                body = b'a' * (89 + len(final_read))
+                asset = setup.Asset('wheel.whl', 'https://files.pythonhosted.org/wheel.whl',
+                                    hashlib.sha256(body).hexdigest(), len(body))
+                opener, clock, closed = timed_transfer(
+                    [(t, b'a') for t in range(10, 900, 10)] + [(900, final_read)])
+                with (patch.object(setup.time, 'monotonic', clock),
+                      self.assertRaisesRegex(setup.SetupError, 'Download timed out')):
+                    setup.acquire(asset, opener=opener)
+                self.assertEqual(clock(), 910)
+                closed.assert_called_once()
+
     def test_archive_paths_and_links_refused_without_touching_outside(self):
         for kind, blob in (
             ('python', tar(('python/../outside', b'unsafe'))),
@@ -879,15 +929,17 @@ class WindowsSetupTests(unittest.TestCase):
         fetch.assert_not_called()
 
     def test_no_completion_receipt_when_acquisition_or_verification_fails(self):
-        for failure in ('missing', 'verify', 'corrupt'):
+        for failure in ('missing', 'verify', 'corrupt', 'deadline'):
             with self.subTest(failure=failure), tempfile.TemporaryDirectory() as tmp:
                 stage = FakeStage(Path(tmp))
                 plan, files = make_plan(stage.path)
                 if failure == 'corrupt':
                     files[plan.uv.filename] = b'corrupt'
-                with self.assertRaisesRegex(RuntimeError, 'fixture|integrity|exceeded'):
+                with self.assertRaisesRegex(RuntimeError, 'fixture|integrity|exceeded|Download timed out'):
                     fixture_build(plan, stage, files, fail=failure)
                 self.assertFalse((stage.path / 'complete.json').exists())
+                if failure == 'deadline':
+                    self.assertFalse((stage.path / 'work' / 'wheels' / plan.wheels[0].filename).exists())
 
     def test_rollback_runs_on_failure_but_preserves_staging_if_process_exit_unknown(self):
         stage = Mock(path=Path('staging'), committed=False, work_cleanup_incomplete=False,
@@ -1255,13 +1307,16 @@ class WindowsNativeSetupTests(unittest.TestCase):
                         self.fail('A second setup acquired the exclusive lock.')
             self.assertTrue(runtime.is_file())
             before = complete.read_bytes()
-            with self.assertRaisesRegex(RuntimeError, 'fixture dependency verification failure'):
-                with storage.transaction(destination) as stage:
-                    failed = stage.path
-                    fixture_build(plan, stage, files, fail='verify')
-            self.assertFalse(failed.exists())
-            self.assertEqual(complete.read_bytes(), before)
-            self.assertEqual(sentinel.read_bytes(), b'original')
+            for failure, message in (('verify', 'fixture dependency verification failure'),
+                                     ('deadline', 'Download timed out')):
+                with self.subTest(failure=failure):
+                    with self.assertRaisesRegex(RuntimeError, message):
+                        with storage.transaction(destination) as stage:
+                            failed = stage.path
+                            fixture_build(plan, stage, files, fail=failure)
+                    self.assertFalse(failed.exists())
+                    self.assertEqual(complete.read_bytes(), before)
+                    self.assertEqual(sentinel.read_bytes(), b'original')
 
     def test_ordinary_windows_outputs_inherit_only_private_grants(self):
         with tempfile.TemporaryDirectory(prefix='ComposerLint ACL ') as tmp:

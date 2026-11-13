@@ -17,12 +17,12 @@ concurrency:
 
 jobs:
   windows-ntfs:
-    # One approved full installation on run 24, with no rerun.
+    # One manually dispatched timeout verification on run 25, with no rerun.
     if: >-
       github.repository == 'kyc-212/ComposerLint' &&
       github.actor == github.repository_owner &&
       github.ref == 'refs/heads/codex/windows-ci-pilot' &&
-      github.run_number == '24' && github.run_attempt == '1' &&
+      github.run_number == '25' && github.run_attempt == '1' &&
       github.sha == inputs.expected_sha
     runs-on: windows-2025
     timeout-minutes: 40
@@ -35,6 +35,9 @@ jobs:
           fetch-depth: 1
           submodules: false
           lfs: false
+      - name: Run the installer bootstrap deadline tests in Windows PowerShell
+        shell: powershell
+        run: ./tests/test_windows_bootstrap_download.ps1
       - name: Select and verify the CI-only Python from the installed tool cache
         id: runner-python
         shell: pwsh

@@ -27,6 +27,10 @@ from .windows_read import _bind
 from .windows_workers import SetupProcessCleanupUnconfirmed, run_setup_command
 
 
+# Per-file elapsed budget for slow, active transfers; the socket timeout is separate.
+_DOWNLOAD_DEADLINE_SECONDS = 900
+
+
 class SetupError(RuntimeError):
     pass
 
@@ -154,7 +158,7 @@ class _AssetRedirects(urllib.request.HTTPRedirectHandler):
 def acquire(asset, *, opener=None):
     """Return bytes only after comparing length and the reviewed SHA-256."""
     opener = opener or urllib.request.build_opener(_AssetRedirects())
-    deadline = time.monotonic() + 180
+    deadline = time.monotonic() + _DOWNLOAD_DEADLINE_SECONDS
     try:
         request = urllib.request.Request(asset.url, headers={'Accept-Encoding': 'identity'})
         with opener.open(request, timeout=20) as response:
@@ -164,6 +168,9 @@ def acquire(asset, *, opener=None):
                 if time.monotonic() >= deadline:
                     raise SetupError(f'Download timed out: {asset.filename}')
                 chunk = response.read1(min(1024**2, asset.size + 1 - len(content)))
+                # A blocking read can cross the deadline, including the EOF read.
+                if time.monotonic() >= deadline:
+                    raise SetupError(f'Download timed out: {asset.filename}')
                 if not chunk:
                     break
                 content.extend(chunk)
