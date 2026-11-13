@@ -404,7 +404,7 @@ Windows refuses permanent export, discards the candidate, and compares source
 bytes. The completion receipt follows MCP shutdown and verified staging cleanup.
 The job compares the existing host snapshots around the terminal install.
 
-The workflow is restricted to the approved Run 23, attempt 1, on the reviewed
+The workflow is restricted to the approved Run 24, attempt 1, on the reviewed
 feature-branch commit. Windows 11 x64 desktop browser navigation, an actual AI
 client connection and the terminal ZIP on the target laptop require a later
 trial before graphical setup.

@@ -29,6 +29,33 @@ def require(condition, message):
         raise RuntimeError(message)
 
 
+def read_private_score(path, *, expected=None):
+    from composerlint.windows_private import private_directory
+
+    with private_directory(path.parent, tree_root=True) as directory:
+        data, stamp = directory.read_file(path.name, limit=10240, expected=expected)
+    require(stamp.links == 1 and stamp.size == len(data),
+            f'Invalid private score identity: {path.name}.')
+    return data, stamp
+
+
+def verify_mxl_copy(working, source, source_bytes, source_hash):
+    require(working.parent.parent == source.parent and working.name == 'score.musicxml',
+            'MXL working source is outside the private MCP import directory.')
+    data, stamp = read_private_score(working)
+    require(data == source_bytes and hashlib.sha256(data).hexdigest() == source_hash,
+            'Private MXL copy does not match the authored MusicXML bytes.')
+    return stamp
+
+
+def verify_candidate(candidate, candidate_hash, original_stamp):
+    data, stamp = read_private_score(candidate)
+    require((stamp.volume, stamp.file_id) != (original_stamp.volume, original_stamp.file_id),
+            'Candidate refers to the original score file.')
+    require(hashlib.sha256(data).hexdigest() == candidate_hash,
+            'Private candidate bytes differ from the verified proposal.')
+
+
 def asset(url, route, data=None, *, content_type=None, expected_status=200):
     target = urlsplit(url)
     require(target.scheme == 'http' and target.hostname == '127.0.0.1' and target.port
@@ -107,7 +134,9 @@ async def exercise(full):
 
 
 async def exercise_stdio(full, source, archive, harmony, unrelated_cwd):
-    source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+    source_bytes = source.read_bytes()
+    source_hash = hashlib.sha256(source_bytes).hexdigest()
+    archive_hash = hashlib.sha256(archive.read_bytes()).hexdigest()
     arguments = {'path': str(source)}
     params = StdioServerParameters(command=sys.executable, cwd=unrelated_cwd,
                                    args=['-I', '-B', '-X', 'utf8', '-m', 'composerlint.server'],
@@ -142,18 +171,16 @@ async def exercise_stdio(full, source, archive, harmony, unrelated_cwd):
             require(imported['source_format'] == 'musicxml' and imported['musicxml_sha256'] == source_hash,
                     'MusicXML import identity differs from the authored source.')
             compressed = await call('import_score', {'path': str(archive)})
-            require(compressed['source_format'] == 'mxl' and compressed['musicxml_sha256'] == source_hash,
-                    'MXL import did not extract the expected MusicXML bytes.')
+            require(compressed['source_format'] == 'mxl' and compressed['musicxml_sha256'] == source_hash
+                    and compressed['original_sha256'] == archive_hash and Path(compressed['original_path']) == archive,
+                    'MXL import provenance differs from the authored archive or MusicXML.')
             working = Path(compressed['working_path'])
             if sys.platform == 'win32':
-                from composerlint.windows_private import private_directory
-                require(working.parent.parent == source.parent and working.parent != source.parent,
-                        'MXL working source is outside the private MCP scratch directory.')
-                with private_directory(working.parent, tree_root=True) as directory:
-                    require(hashlib.sha256(directory.read_file(working.name, limit=10240)).hexdigest() == source_hash,
-                            'Private MXL copy does not match the source hash.')
+                imported_stamp = verify_mxl_copy(working, source, source_bytes, source_hash)
             copied_review = await call('get_review_page', {'path': str(working)})
             require(copied_review['source_sha256'] == source_hash, 'Review was not bound to the MXL working source.')
+            if sys.platform == 'win32':
+                read_private_score(working, expected=imported_stamp)
             analysis = await call('analyze_score', arguments)
             require(analysis['score']['parts'], 'Score analysis returned no parts.')
             review = await call('get_review_page', arguments)
@@ -192,6 +219,11 @@ async def exercise_stdio(full, source, archive, harmony, unrelated_cwd):
 
 
 async def verify_view_and_edit(call, arguments, snapshot, source_hash):
+    source = Path(arguments['path'])
+    if sys.platform == 'win32':
+        original, original_stamp = read_private_score(source)
+        require(hashlib.sha256(original).hexdigest() == source_hash,
+                'Original bytes changed before temporary editing.')
     source_view = await call('get_score_view', arguments | {'presentation': 'interactive'})
     require(ET.fromstring(asset(source_view['viewer_url'], 'score.svg', content_type='image/svg+xml'))
             .tag == '{http://www.w3.org/2000/svg}svg', 'Source-bound viewer did not serve SVG.')
@@ -233,15 +265,14 @@ async def verify_view_and_edit(call, arguments, snapshot, source_hash):
         refusal = json.loads(asset(url, 'approve-export', {'nonce': state['csrf_nonce'], 'binding': {}},
                                    expected_status=409))
         require(refusal['error']['code'] == 'export_unavailable', 'Permanent export was not explicitly refused.')
-        from composerlint.windows_private import private_directory
-        parent = Path(arguments['path']).parent
-        candidates = list(parent.glob('composerlint-m5-*/*/*.musicxml'))
+        print('Verified Windows permanent export refusal (export_unavailable).', flush=True)
+        candidates = list(source.parent.glob('composerlint-m5-*/*/*.musicxml'))
         candidates = [path for path in candidates if path.name != 'original.musicxml']
         require(len(candidates) == 1, 'Expected one private candidate file.')
         candidate = candidates[0]
-        with private_directory(candidate.parent, tree_root=True) as directory:
-            require(hashlib.sha256(directory.read_file(candidate.name, limit=10240)).hexdigest()
-                    == proposal['candidate_sha256'], 'Private candidate bytes differ from the verified proposal.')
+        verify_candidate(candidate, proposal['candidate_sha256'], original_stamp)
+        unchanged, _ = read_private_score(source, expected=original_stamp)
+        require(unchanged == original, 'Temporary preview changed the original source.')
     discarded = await call('discard_edit_proposal', {
         'workspace_id': ident, 'expected_workspace_revision': proposed['workspace_revision'],
         'proposal_id': proposal['proposal_id'],
@@ -249,9 +280,17 @@ async def verify_view_and_edit(call, arguments, snapshot, source_hash):
     require(discarded['state'] == 'discarded', 'The temporary edit was not discarded.')
     asset(url, preview, expected_status=410)
     if sys.platform == 'win32':
-        require(not candidate.exists(), 'Discard left the candidate on disk.')
-    require(hashlib.sha256(Path(arguments['path']).read_bytes()).hexdigest() == source_hash,
-            'Temporary editing changed the original source.')
+        try:
+            candidate.lstat()
+        except FileNotFoundError:
+            pass
+        else:
+            raise RuntimeError('Discard left a candidate entry on disk.')
+        unchanged, _ = read_private_score(source, expected=original_stamp)
+        require(unchanged == original, 'Discard changed the original source.')
+    else:
+        require(hashlib.sha256(source.read_bytes()).hexdigest() == source_hash,
+                'Temporary editing changed the original source.')
     print('Verified loopback notation, live selection, verified temporary preview and discard.', flush=True)
 
 

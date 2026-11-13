@@ -22,7 +22,7 @@ REVIEWED_TOOLS = {
 
 def main():
     # Must match the workflow's reviewed one-run guard before any acquisition.
-    runner_python, local_app_data = guarded_runner('23')
+    runner_python, local_app_data = guarded_runner('24')
     reviewed_manifest(ROOT)
     report = preflight.inspect()
     if not report.compatible or report.destination != local_app_data / 'ComposerLint' / 'setup':
