@@ -388,16 +388,23 @@ environment value. The renderer requires the private installation tree and keeps
 manifest, files, and directory handles open for the worker lifetime. Windows
 permanent Approve & Export is disabled.
 
-For native verification, start with the existing read-only host snapshot and
-Windows tests. Probe and record the compiler and SDK. Build the exact patched
-wheel, record the source/patch/postimage and candidate hashes, and exercise the
-full setup once from a clean per-user location. Retain the ten-control counts
-and the actual MCP probe output. The probe checks real stdio 18-tool discovery,
-Unicode-path MusicXML and MXL import, review, analysis, style and persistent
-passage reuse, and full-mode loopback notation and temporary edit/discard. In a
-fresh text environment, run `tools/ci_windows_mcp.py` without `--full` for
-renderer refusal. Exercise a missing/tampered renderer, worker launch refusal,
-deadline, cancellation, nested jobs and cleanup. Compare the host snapshot
-before and after. Follow up on Windows 11 x64 with actual browser navigation,
-selection, AI-client reconnection and the authored editing workflow before
-building a graphical installer.
+The prepared Windows Actions job uses the already reviewed x64 Visual Studio
+and SDK on the Windows runner. It builds the patched wheel once from the pinned
+inputs and passes its local bundle and SHA-256 to the terminal installer. The
+standalone compiler and renderer probes are covered by run 22. The integration
+job retains the existing native NTFS, cancellation and Job Object controls.
+
+Full setup verifies both renderer identities, including the loaded Verovio and
+Python DLL paths, and requires ten passing equivalence controls before it
+launches the installed Python's MCP server over stdio. The MCP control requires
+18 discovered tools, Unicode-path MusicXML and MXL import, a known authentic
+cadence, style records, score review, persistent passage reuse, loopback HTML and
+SVG, and a live selection. It verifies the temporary edit preview, checks that
+Windows refuses permanent export, discards the candidate, and compares source
+bytes. The completion receipt follows MCP shutdown and verified staging cleanup.
+The job compares the existing host snapshots around the terminal install.
+
+The workflow is restricted to the approved Run 23, attempt 1, on the reviewed
+feature-branch commit. Windows 11 x64 desktop browser navigation, an actual AI
+client connection and the terminal ZIP on the target laptop require a later
+trial before graphical setup.

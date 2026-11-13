@@ -59,11 +59,9 @@ def check_inventory(label, directory, expected):
         raise ValueError(f'{label}: missing {sorted(expected - actual)!r}, unexpected {sorted(actual - expected)!r}')
 
 
-def checkpoint(stage, python_pin, uv_pin, inputs, controls):
+def build_bundle(stage, python_pin, uv_pin, inputs, build_support, *, control_wheels=()):
     for name in ('tmp', 'work', 'inputs', 'wheelhouse', 'cache'):
         stage.mkdir((name,))
-    expected_top = {'tmp', 'work', 'inputs', 'wheelhouse', 'cache', 'python', 'uv', 'lock',
-                    'runtime', 'renderer', 'renderer-artifacts', 'renderer.json'}
     root = stage.path
     cwd, temp, wheelhouse, bundle = (root / name for name in ('work', 'tmp', 'wheelhouse', 'renderer-artifacts'))
     source, official = recipe.SOURCE_ARCHIVE, recipe.OFFICIAL_WHEEL
@@ -81,7 +79,7 @@ def checkpoint(stage, python_pin, uv_pin, inputs, controls):
 
     for asset in (python_pin, uv_pin):
         fetch(asset, 'inputs')
-    for asset in (*inputs, *controls):
+    for asset in (*inputs, *build_support, *control_wheels):
         fetch(asset, 'inputs' if asset.filename in (source, official) else 'wheelhouse')
     for kind, asset in (('python', python_pin), ('uv', uv_pin)):
         with stage.held_file(('inputs', asset.filename)) as verified:
@@ -108,9 +106,8 @@ def checkpoint(stage, python_pin, uv_pin, inputs, controls):
     if uv_run('--version').split()[:2] != ['uv', '0.12.3']:
         raise ValueError('Unexpected private uv version.')
     build_reqs = [a for a in inputs if a.filename not in (source, official)]
-    build_reqs.extend(a for a in controls if a.name == 'colorama')
+    build_reqs.extend(build_support)
     setup._write(stage, ('work', 'build.txt'), requirements(build_reqs))
-    setup._write(stage, ('work', 'controls.txt'), requirements(controls))
     print(run(python, '-I', '-B', '-X', 'utf8', ROOT / 'tools' / 'build_windows_renderer.py',
               '--inputs', root / 'inputs', '--wheelhouse', wheelhouse, '--uv', uv, '--output', bundle,
               '--build-requirements', cwd / 'build.txt', timeout=1800), flush=True)
@@ -125,6 +122,23 @@ def checkpoint(stage, python_pin, uv_pin, inputs, controls):
     for name, expected in ((source, recipe.SOURCE_SHA256), (official, recipe.OFFICIAL_SHA256),
                            (recipe.PATCH, recipe.PATCH_SHA256), (recipe.PATCHED_WHEEL, provenance['wheel_sha256'])):
         recipe.checked_bytes(bundle / name, expected, 32 * 1024**2)
+
+    return bundle, provenance['wheel_sha256'], env, run, uv_run
+
+
+def checkpoint(stage, python_pin, uv_pin, inputs, controls):
+    build_support = tuple(a for a in controls if a.name == 'colorama')
+    bundle, _, env, run, uv_run = build_bundle(
+        stage, python_pin, uv_pin, inputs, build_support, control_wheels=controls)
+    root = stage.path
+    cwd, temp, wheelhouse = (root / name for name in ('work', 'tmp', 'wheelhouse'))
+    setup._write(stage, ('work', 'controls.txt'), requirements(controls))
+    python = root / 'python' / 'python.exe'
+    official = recipe.OFFICIAL_WHEEL
+    expected_artifacts = {a.filename for a in inputs if a.filename in (recipe.SOURCE_ARCHIVE, official)}
+    expected_artifacts.update((recipe.PATCH, recipe.PATCHED_WHEEL, 'build-provenance.json'))
+    expected_top = {'tmp', 'work', 'inputs', 'wheelhouse', 'cache', 'python', 'uv', 'lock',
+                    'runtime', 'renderer', 'renderer-artifacts', 'renderer.json'}
 
     pip_options = ('--no-index', '--no-build', '--link-mode', 'copy')
     runtime = root / 'runtime' / 'Scripts' / 'python.exe'

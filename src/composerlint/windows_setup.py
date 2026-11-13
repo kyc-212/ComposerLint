@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import re
 import stat
+import subprocess
 import sys
 import tarfile
 import time
@@ -23,7 +24,7 @@ from . import windows_preflight as preflight
 from .windows_install_storage import _component, transaction
 from .windows_private import read_stable
 from .windows_read import _bind
-from .windows_workers import run_setup_command
+from .windows_workers import SetupProcessCleanupUnconfirmed, run_setup_command
 
 
 class SetupError(RuntimeError):
@@ -289,7 +290,9 @@ for line in Path(sys.argv[2]).read_text(encoding='utf-8').splitlines():
             raise RuntimeError('Lock export is not an exact wheel plan.')
         locked[req.name] = match[1]
 if locked != versions:
-    raise RuntimeError('Windows wheel manifest differs from the Windows lock closure.')
+    differing = {name: (locked.get(name), versions.get(name)) for name in sorted(locked.keys() | versions.keys())
+                 if locked.get(name) != versions.get(name)}
+    raise RuntimeError('Windows lock closure differs (lock, manifest): ' + str(differing))
 expected = versions | {'composerlint': '0.2.0'}
 installed = {}
 for dist in distributions():
@@ -298,13 +301,30 @@ for dist in distributions():
         raise RuntimeError('Duplicate installed distribution: ' + name)
     installed[name] = dist.version
 if expected != installed:
-    raise RuntimeError('Installed Python distributions do not match the plan.')
+    differing = {name: (expected.get(name), installed.get(name)) for name in sorted(expected.keys() | installed.keys())
+                 if expected.get(name) != installed.get(name)}
+    raise RuntimeError('Installed distributions differ (expected, installed): ' + str(differing))
 import composerlint, numpy, pydantic_core, win32api
 print('Verified locked distributions, core import and native extension loading.')
 '''
 
 
-def populate(plan, stage, status, *, fetch=acquire, command=run_setup_command, windows_root=_system_root):
+def checked_command(arguments, *, cwd, env, timeout):
+    try:
+        result = run_setup_command(arguments, cwd=cwd, env=env, timeout=timeout, capture_result=True)
+    except SetupProcessCleanupUnconfirmed:
+        raise
+    except (OSError, RuntimeError, ValueError) as error:
+        raise SetupError(f'Could not run {subprocess.list2cmdline(arguments)}: {error}') from error
+    if result.returncode:
+        stdout, stderr = (data.decode('utf-8', 'backslashreplace').strip() or '(empty)'
+                          for data in (result.stdout, result.stderr))
+        raise SetupError(f'Command exited with 0x{result.returncode & 0xffffffff:08X}: '
+                         f'{subprocess.list2cmdline(arguments)}\nstdout: {stdout}\nstderr: {stderr}')
+    return result.stdout
+
+
+def populate(plan, stage, status, *, fetch=acquire, command=checked_command, windows_root=_system_root):
     # Exercise inherited directory and file access before the first transfer.
     for directory in ('home', 'tmp', 'wheels', 'dist', 'cache'):
         stage.mkdir(('work', directory))
@@ -325,10 +345,15 @@ def populate(plan, stage, status, *, fetch=acquire, command=run_setup_command, w
     }.items()}
     env.update(UV_PYTHON_DOWNLOADS='never', PYTHONDONTWRITEBYTECODE='1', PYTHONUTF8='1')
 
+    def verified_asset(asset):
+        data = fetch(asset)
+        print(f'Verified {asset.filename} bytes={asset.size} SHA-256={asset.sha256}', flush=True)
+        return data
+
     status('bootstrap', 'Acquiring and verifying the pinned private Python and uv.')
     for asset, kind in ((plan.python, 'python'), (plan.uv, 'uv')):
         try:
-            unpack(stage, fetch(asset), kind)
+            unpack(stage, verified_asset(asset), kind)
         except (tarfile.TarError, zipfile.BadZipFile, EOFError) as error:
             raise SetupError(f'Cannot unpack the verified {kind} archive: {error}') from error
 
@@ -349,8 +374,11 @@ def populate(plan, stage, status, *, fetch=acquire, command=run_setup_command, w
 
     result = run(python, '-I', '-S', '-B', '-c',
                  'import struct,sys; print(sys.implementation.name, sys.version.split()[0], struct.calcsize("P"))')
-    if result.strip() != b'cpython 3.12.13 8' or uv_run('--version').split()[:2] != [b'uv', b'0.12.3']:
-        raise SetupError('Private bootstrap tools did not report the reviewed identities.')
+    if result.strip() != b'cpython 3.12.13 8':
+        raise SetupError(f'Expected private CPython 3.12.13 x64, got {result.strip()!r}.')
+    uv_version = uv_run('--version').strip()
+    if uv_version.split()[:2] != [b'uv', b'0.12.3']:
+        raise SetupError(f'Expected private uv 0.12.3, got {uv_version!r}.')
 
     status('dependencies', 'Verifying and staging the exact Windows wheels from uv.lock.')
     export = uv_run('export', '--locked', '--python', base_python,
@@ -359,7 +387,7 @@ def populate(plan, stage, status, *, fetch=acquire, command=run_setup_command, w
                     cwd=source)
     _write(stage, ('work', 'export.txt'), export)
     for wheel in plan.wheels:
-        _write(stage, ('work', 'wheels', wheel.filename), fetch(wheel))
+        _write(stage, ('work', 'wheels', wheel.filename), verified_asset(wheel))
     requirements = ''.join(f'{w.name}=={w.version} --hash=sha256:{w.sha256}\n' for w in plan.wheels)
     _write(stage, ('work', 'windows-requirements.txt'), requirements.encode('ascii'))
     uv_run('venv', '--python', base_python, stage.path / 'runtime')
@@ -385,6 +413,7 @@ def populate(plan, stage, status, *, fetch=acquire, command=run_setup_command, w
                'lock_sha256': plan.lock_sha256, 'python': str(target_python)}
     if plan.renderer:
         receipt.update(install_renderer(plan, stage, run, uv_run, pip, base_python, env, status))
+    status('cleanup', 'Verifying private staging cleanup before publishing the installation receipt.')
     stage.clear_work()
     stage.commit(receipt)
     return target_python
@@ -394,6 +423,7 @@ _CONTROL_FILES = (
     'tools/ci_windows_mcp.py',
     'tests/test_renderer_packaging_equivalence.py', 'tests/test_v02_renderer_ties.py',
     'tests/fixtures/v02_m2/multipage.musicxml', 'tests/fixtures/basic.musicxml',
+    'tests/fixtures/m3/cadence_authentic_end.musicxml',
 )
 RENDERER_PYTEST_OPTIONS = ('-p', 'no:cacheprovider', '-p', 'no:tmpdir')
 RENDERER_CONTROL_SELECTION = ('-k', 'not test_windows_render_holds_pins_through_worker_exit')
@@ -401,7 +431,7 @@ RENDERER_CONTROL_SELECTION = ('-k', 'not test_windows_render_holds_pins_through_
 
 def with_renderer(plan, root, bundle, candidate_sha256):
     from . import windows_renderer as renderer
-    bundle = Path(bundle)
+    bundle = Path(preflight.local_path_text(bundle, target='win32'))
     pins = (
         (renderer.OFFICIAL_WHEEL, renderer.OFFICIAL_SHA256),
         (renderer.PATCHED_WHEEL, candidate_sha256),
@@ -414,7 +444,8 @@ def with_renderer(plan, root, bundle, candidate_sha256):
     build = json.loads(provenance)
     for key, expected in (
             ('source_sha256', renderer.SOURCE_SHA256), ('patch_sha256', renderer.PATCH_SHA256),
-            ('postimage_sha256', renderer.POSTIMAGE), ('wheel_sha256', candidate_sha256)):
+            ('preimage_sha256', renderer.PREIMAGE), ('postimage_sha256', renderer.POSTIMAGE),
+            ('wheel_sha256', candidate_sha256)):
         if build.get(key) != expected:
             raise SetupError(f'Renderer build provenance {key}: expected {expected!r}, got {build.get(key)!r}')
     files += (('build-provenance.json', provenance),)
@@ -443,8 +474,9 @@ def install_renderer(plan, stage, run, uv_run, pip, base_python, env, status):
            '--link-mode', 'copy', '--no-build', artifacts / renderer.PATCHED_WHEEL)
     for parts, version in ((('runtime', 'Scripts', 'python.exe'), '6.3.0'),
                            (('renderer', 'Scripts', 'python.exe'), renderer.BUILD)):
-        run(parts, '-I', '-B', '-c', renderer.IDENTITY_PROBE, version,
-            stage.path.joinpath(*parts), base_python)
+        identity_output = run(parts, '-I', '-B', '-X', 'utf8', '-c', renderer.IDENTITY_PROBE, version,
+                              stage.path.joinpath(*parts), base_python)
+        print(identity_output.decode('utf-8', 'backslashreplace'), end='', flush=True)
 
     packages = child / 'Lib' / 'site-packages'
     retained = [base_python, child_python, child / 'pyvenv.cfg']
@@ -469,10 +501,16 @@ def install_renderer(plan, stage, run, uv_run, pip, base_python, env, status):
     runtime = ('runtime', 'Scripts', 'python.exe')
     controls = stage.path / 'work' / 'controls'
     report = stage.path / 'work' / 'renderer-controls.xml'
-    run(runtime, '-I', '-B', '-m', 'pytest', '-q', *RENDERER_PYTEST_OPTIONS, *RENDERER_CONTROL_SELECTION,
-        '--junitxml=' + str(report), controls / 'tests/test_renderer_packaging_equivalence.py', timeout=240)
+    status('renderer_controls', 'Checking all ten official and patched renderer equivalence controls.')
+    run(runtime, '-I', '-B', '-X', 'utf8', '-m', 'pytest', '-v', *RENDERER_PYTEST_OPTIONS, *RENDERER_CONTROL_SELECTION,
+        '--junitxml=' + str(report), controls / 'tests/test_renderer_packaging_equivalence.py',
+        cwd=controls, timeout=240)
     counts = control_counts(ET.parse(report).getroot())
-    run(runtime, '-I', '-B', controls / 'tools/ci_windows_mcp.py', '--full', timeout=180)
+    print('Renderer controls:', counts, flush=True)
+    status('mcp', 'Checking the installed MCP server, loopback notation and temporary edit lifecycle.')
+    output = run(runtime, '-I', '-B', '-X', 'utf8', controls / 'tools/ci_windows_mcp.py', '--full',
+                 cwd=controls, timeout=240)
+    print(output.decode('utf-8', 'backslashreplace'), end='', flush=True)
     return dict(target='windows-x64-full-pilot', renderer_config=str(config),
                 renderer_sha256=files['renderer-artifacts/' + renderer.PATCHED_WHEEL],
                 renderer_controls=counts, mcp_tools=18)

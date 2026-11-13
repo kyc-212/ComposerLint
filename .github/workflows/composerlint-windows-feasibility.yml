@@ -17,12 +17,12 @@ concurrency:
 
 jobs:
   windows-ntfs:
-    # One approved native renderer build and verification on run 22, with no rerun.
+    # One approved full installation on run 23, with no rerun.
     if: >-
       github.repository == 'kyc-212/ComposerLint' &&
       github.actor == github.repository_owner &&
       github.ref == 'refs/heads/codex/windows-ci-pilot' &&
-      github.run_number == '22' && github.run_attempt == '1' &&
+      github.run_number == '23' && github.run_attempt == '1' &&
       github.sha == inputs.expected_sha
     runs-on: windows-2025
     timeout-minutes: 40
@@ -57,13 +57,6 @@ jobs:
         run: |
           & $env:CI_RUNNER_PYTHON -I -S -B -X utf8 -m unittest discover -s tests -p test_windows_preflight.py -v
           exit $LASTEXITCODE
-      - name: Show the standalone Windows preflight diagnostics
-        shell: pwsh
-        env:
-          CI_RUNNER_PYTHON: ${{ steps.runner-python.outputs.path }}
-        run: |
-          & $env:CI_RUNNER_PYTHON -I -S -B -X utf8 tools/preflight_windows.py
-          exit $LASTEXITCODE
       - name: Run Windows terminal setup security fixtures
         shell: pwsh
         env:
@@ -78,10 +71,11 @@ jobs:
         run: |
           & $env:CI_RUNNER_PYTHON -I -S -B -X utf8 -m unittest discover -s tests -p test_windows_host_snapshot.py -v
           exit $LASTEXITCODE
-      - name: Build and verify the native patched Windows renderer
+      - name: Build the patched renderer and verify the full Windows installation
         shell: pwsh
         env:
           CI_RUNNER_PYTHON: ${{ steps.runner-python.outputs.path }}
+          REVIEWED_COMMIT: ${{ inputs.expected_sha }}
         run: |
           $env:COMPOSERLINT_TEMP_DIR = $env:RUNNER_TEMP
           $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
@@ -99,7 +93,7 @@ jobs:
             $file = Get-Item -LiteralPath $tool.Source
             Write-Output "$name file version $($file.VersionInfo.FileVersion) at $($file.FullName)"
           }
-          & $env:CI_RUNNER_PYTHON -I -S -B -X utf8 tools/ci_windows_renderer.py
+          & $env:CI_RUNNER_PYTHON -I -S -B -X utf8 tools/ci_windows_full_setup.py
           exit $LASTEXITCODE
       - name: Verify the checkout is clean
         if: ${{ !cancelled() && steps.reviewed-checkout.outcome == 'success' }}

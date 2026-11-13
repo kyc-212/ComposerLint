@@ -390,7 +390,6 @@ def build(args):
     if sys.version_info[:3] != (3, 12, 13) or not all(
             (python_root / item).is_file() for item in ('include/Python.h', 'libs/python3.lib')):
         raise RuntimeError('The private CPython 3.12.13 headers and stable ABI import library are required.')
-    probe(developer, tools)
     with storage.private_workspace(paths.temporary_parent(), 'cl-vr-build-') as stage:
         stage.mkdir(('tmp',))
         env = probe_environment(developer, tools, setup._system_root(), stage.path / 'tmp', os.environ)

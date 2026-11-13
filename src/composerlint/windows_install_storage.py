@@ -357,8 +357,10 @@ def transaction(destination):
         with _PrivateDirectory(disk, security, sid, chain).exclusive_lock(), ExitStack() as generation:
             name = 'install-' + secrets.token_hex(10)
             with security.private_descriptor(sid, inheritable=True) as stage_descriptor:
+                # Keep the generation pinned against replacement while
+                # allowing independent read-only renderer scopes to open it.
                 handle = disk.open_component(
-                    parent, name, access=_READ_ATTRIBUTES | _TRAVERSE | _READ_CONTROL | _WRITE_DATA,
+                    parent, name, access=_READ_ATTRIBUTES | _TRAVERSE | _READ_CONTROL,
                     share=_SHARE_READ, disposition=_FILE_CREATE,
                     options=_FILE_DIRECTORY_FILE, descriptor=stage_descriptor, refuse_reparse=True)
             generation.callback(disk.close, handle)

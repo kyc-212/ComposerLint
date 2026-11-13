@@ -620,15 +620,91 @@ class WindowsSetupTests(unittest.TestCase):
         plan = SimpleNamespace(renderer=(), controls=())
         uv_run = Mock()
         error = RuntimeError('Patched renderer identity failed')
-        run = Mock(side_effect=[None, error])
+        run = Mock(side_effect=[b"Official renderer verified.\n", error])
         with self.assertRaisesRegex(RuntimeError, str(error)):
             setup.install_renderer(plan, stage, run, uv_run, ('pip',), base, {}, Mock())
         official = ('runtime', 'Scripts', 'python.exe')
         patched = ('renderer', 'Scripts', 'python.exe')
         self.assertEqual(run.call_args_list, [
-            call(official, '-I', '-B', '-c', recipe.IDENTITY_PROBE, '6.3.0', root.joinpath(*official), base),
-            call(patched, '-I', '-B', '-c', recipe.IDENTITY_PROBE, recipe.BUILD, root.joinpath(*patched), base),
+            call(official, '-I', '-B', '-X', 'utf8', '-c', recipe.IDENTITY_PROBE, '6.3.0', root.joinpath(*official), base),
+            call(patched, '-I', '-B', '-X', 'utf8', '-c', recipe.IDENTITY_PROBE, recipe.BUILD, root.joinpath(*patched), base),
         ])
+
+    def test_full_setup_orders_controls_and_installed_mcp_before_commit(self):
+        from xml.etree import ElementTree as ET
+        recipe = import_module(f'{setup.__package__}.windows_renderer')
+        for fail in (None, 'controls', 'mcp'):
+            with self.subTest(fail=fail), tempfile.TemporaryDirectory(prefix='ComposerLint 全体 ') as directory:
+                root = Path(directory)
+                plan, assets = make_plan(root)
+                plan = setup.replace(plan, renderer=((recipe.PATCHED_WHEEL, b'wheel fixture'),))
+                stage = FakeStage(root)
+                events = []
+
+                def command(args, *, cwd, env, timeout):
+                    executable, *arguments = args
+                    if 'venv' in arguments:
+                        (Path(arguments[-1]) / 'Scripts').mkdir(parents=True)
+                        (Path(arguments[-1]) / 'Scripts' / 'python.exe').touch()
+                        (Path(arguments[-1]) / 'pyvenv.cfg').touch()
+                    if recipe.PATCHED_WHEEL in Path(arguments[-1]).name:
+                        native = root / 'renderer/Lib/site-packages/verovio/_verovio.pyd'
+                        native.parent.mkdir(parents=True)
+                        native.touch()
+                    if '--version' in arguments:
+                        return b'uv 0.12.3'
+                    if 'export' in arguments:
+                        return b'wheel==1\n'
+                    if '-c' in arguments:
+                        script = arguments[arguments.index('-c') + 1]
+                        if 'struct.calcsize' in script:
+                            return b'cpython 3.12.13 8\n'
+                        if 'hatchling.build' in script:
+                            name = 'composerlint-0.2.0-py3-none-any.whl'
+                            (root / 'work' / 'dist' / name).touch()
+                            return name.encode('ascii')
+                        if script == recipe.IDENTITY_PROBE:
+                            events.append(arguments[-3])
+                    if 'pytest' in arguments:
+                        events.append('controls')
+                        report = next(arg.split('=', 1)[1] for arg in arguments if arg.startswith('--junitxml='))
+                        ET.ElementTree(ET.Element('testsuite', tests='9' if fail == 'controls' else '10')).write(report)
+                    if '--full' in arguments:
+                        events.append('mcp')
+                        self.assertEqual(Path(executable), root / 'runtime/Scripts/python.exe')
+                        self.assertEqual(arguments, ['-I', '-B', '-X', 'utf8',
+                                                     str(root / 'work/controls/tools/ci_windows_mcp.py'), '--full'])
+                        self.assertEqual(Path(cwd), root / 'work/controls')
+                        self.assertEqual(env['COMPOSERLINT_RENDERER_CONFIG'], str(root / 'renderer.json'))
+                        self.assertFalse((root / 'complete.json').exists())
+                        if fail == 'mcp':
+                            raise RuntimeError('MCP fixture failed')
+                    return b''
+
+                build = lambda: setup.populate(plan, stage, Mock(), command=command,
+                                               fetch=lambda asset: assets[asset.filename],
+                                               windows_root=lambda: root / 'System root')
+                with redirect_stdout(io.StringIO()):
+                    if fail is None:
+                        build()
+                        self.assertEqual(json.loads((root / 'complete.json').read_bytes())['mcp_tools'], 18)
+                        self.assertFalse((root / 'work').exists())
+                    else:
+                        with self.assertRaisesRegex(RuntimeError, 'All 10' if fail == 'controls' else 'MCP fixture'):
+                            build()
+                        self.assertFalse((root / 'complete.json').exists())
+                self.assertEqual(events, ['6.3.0', recipe.BUILD, 'controls']
+                                 + ([] if fail == 'controls' else ['mcp']))
+
+    def test_installer_command_reports_exit_and_both_output_streams(self):
+        arguments = [r'D:\Private Tools\python.exe', '-I', r'D:\Control Files\probe.py']
+        failure = subprocess.CompletedProcess(arguments, 0xC0000135, b'earlier gate passed', b'cannot load DLL')
+        with patch.object(setup, 'run_setup_command', return_value=failure) as run:
+            with self.assertRaises(setup.SetupError) as error:
+                setup.checked_command(arguments, cwd=r'D:\Control Files', env={}, timeout=60)
+        run.assert_called_once_with(arguments, cwd=r'D:\Control Files', env={}, timeout=60, capture_result=True)
+        for message in ('0xC0000135', 'earlier gate passed', 'cannot load DLL', r'"D:\Private Tools\python.exe"'):
+            self.assertIn(message, str(error.exception))
 
     def test_exact_asset_pins_match_lock_and_preflight(self):
         manifest = (ROOT / 'tools/windows-setup-assets.json').read_bytes()
@@ -1232,29 +1308,18 @@ class WindowsNativeSetupTests(unittest.TestCase):
                         held.callback(stage.disk.close, handle)
                         stage.security.require_private(handle, stage.sid)
 
-    def test_same_directory_receipt_rename_avoids_verified_parent_share_conflict(self):
+    def test_receipt_rename_works_with_a_separate_held_read_scope(self):
         with tempfile.TemporaryDirectory(prefix='ComposerLint receipt ') as tmp:
             destination = Path(tmp) / 'ComposerLint' / 'setup'
             with storage.transaction(destination) as stage:
-                native = stage.disk.set_native_info
-                source_ids = []
-
-                def compare_rename_requests(handle, io_status, buffer, size, info_class):
-                    legacy = ctypes.create_string_buffer(bytes(buffer), size)
-                    storage._RenameInfo.from_buffer(legacy).parent = stage.handle
-                    status = native(handle, io_status, legacy, size, info_class)
-                    self.assertLess(status, 0)
-                    self.assertEqual(stage.disk.status_to_error(status), 32)
-                    source_ids.append(stage.disk.identity(handle))
-                    return native(handle, io_status, buffer, size, info_class)
-
-                with patch.object(stage.disk, 'set_native_info', side_effect=compare_rename_requests):
-                    stage.commit({'fixture': True})
-                final = stage._open(stage.handle, 'complete.json', directory=False)
-                try:
-                    self.assertEqual(source_ids, [stage.disk.identity(final)])
-                finally:
-                    stage.disk.close(final)
+                # Full setup reads its renderer manifest through a separate
+                # held scope while the installation generation is still open.
+                with storage.pinned_install_files(stage.path) as (read, validate):
+                    with stage.create(('renderer.json',)) as stream:
+                        stream.write(b'fixture manifest')
+                    self.assertEqual(read(('renderer.json',), limit=32), b'fixture manifest')
+                    validate()
+                stage.commit({'fixture': True})
             self.assertEqual((stage.path / 'complete.json').read_bytes(), b'{"fixture": true}\n')
             self.assertFalse((stage.path / 'receipt.pending').exists())
             self.assertFalse((destination / 'complete.json').exists())

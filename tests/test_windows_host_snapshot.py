@@ -3,6 +3,7 @@
 from contextlib import redirect_stdout
 from io import StringIO
 import json
+import os
 from pathlib import Path, PureWindowsPath
 from runpy import run_path
 import shutil
@@ -179,6 +180,59 @@ class WindowsCIOrchestrationTests(unittest.TestCase):
             self.assertEqual(snapshot.call_count, 2)
             self.assertIn('Before and after host snapshots match.', output.getvalue())
             self.assertIn('Verified completion receipt', output.getvalue())
+
+    def test_full_install_passes_the_bundle_and_requires_real_acceptance_receipt(self):
+        with TemporaryDirectory(prefix='ComposerLint 全体 ') as temporary:
+            root = Path(temporary)
+            local_app_data = root / 'Local AppData'
+            bundle = root / 'Renderer bundle'
+            digest = 'b' * 64
+            runtime = local_app_data / 'ComposerLint/setup' / ('install-' + 'a' * 20) / 'runtime/Scripts/python.exe'
+            generation = runtime.parents[2]
+            manifest = json.loads((ROOT / 'tools/windows-setup-assets.json').read_bytes())
+            receipt = {'schema': 1, 'target': 'windows-x64-full-pilot', 'plan': 'a' * 64,
+                       'lock_sha256': manifest['lock_sha256'], 'python': str(runtime),
+                       'renderer_config': str(generation / 'renderer.json'), 'renderer_sha256': digest,
+                       'renderer_controls': dict(tests=10, failures=0, errors=0, skipped=0), 'mcp_tools': 18}
+
+            def run(command, **kwargs):
+                self.assertEqual(command[-5:], ['--windows-full-pilot', '--renderer-bundle', str(bundle),
+                                                '--renderer-sha256', digest])
+                self.assertEqual(kwargs['input'], 'INSTALL\n')
+                for path in (runtime, generation / 'python/python.exe', generation / 'uv/uv.exe',
+                             generation / 'renderer/Scripts/python.exe', generation / 'renderer.json',
+                             generation.parent / 'setup.lock'):
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.touch()
+                (generation / 'renderer-artifacts').mkdir()
+                (generation / 'complete.json').write_text(json.dumps(receipt), encoding='utf-8')
+                return subprocess.CompletedProcess(command, 0, '\n'.join((
+                    f"Reviewed setup plan: {receipt['plan']}",
+                    f'Private Windows full environment verified: {runtime}',
+                    'MCP stdio discovered 18 tools.',
+                    'Verified unchanged authored sources and MCP shutdown.',
+                )))
+
+            for bad in (True, False):
+                with self.subTest(incomplete=bad), redirect_stdout(StringIO()):
+                    receipt['renderer_controls']['skipped'] = int(bad)
+                    arguments = dict(renderer_bundle=bundle, renderer_sha256=digest, run=run,
+                                     snapshot=lambda *_: self.snapshot())
+                    if bad:
+                        with self.assertRaisesRegex(ValueError, 'ten passing renderer controls'):
+                            install_once(ROOT, Path(sys.executable), local_app_data, **arguments)
+                        shutil.rmtree(local_app_data)
+                    else:
+                        install_once(ROOT, Path(sys.executable), local_app_data, **arguments)
+
+    def test_full_entry_point_refuses_unapproved_dispatch_before_setup(self):
+        env = dict(os.environ, GITHUB_RUN_NUMBER='22')
+        result = subprocess.run(
+            [sys.executable, '-I', '-S', '-B', '-X', 'utf8', str(ROOT / 'tools/ci_windows_full_setup.py')],
+            env=env, text=True, encoding='utf-8', capture_output=True, timeout=20)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('requires the guarded Windows installation dispatch', result.stderr)
+        self.assertEqual(result.stdout, '')
 
     def test_baseline_failure_never_launches_installer(self):
         with TemporaryDirectory() as profile:
