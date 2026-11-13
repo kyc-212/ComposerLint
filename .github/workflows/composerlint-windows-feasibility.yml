@@ -17,12 +17,12 @@ concurrency:
 
 jobs:
   windows-ntfs:
-    # One manually dispatched timeout verification on run 25, with no rerun.
+    # One manually dispatched timeout verification on run 26, with no rerun.
     if: >-
       github.repository == 'kyc-212/ComposerLint' &&
       github.actor == github.repository_owner &&
       github.ref == 'refs/heads/codex/windows-ci-pilot' &&
-      github.run_number == '25' && github.run_attempt == '1' &&
+      github.run_number == '26' && github.run_attempt == '1' &&
       github.sha == inputs.expected_sha
     runs-on: windows-2025
     timeout-minutes: 40
