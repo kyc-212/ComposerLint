@@ -51,6 +51,16 @@ class FullDistributionTests(unittest.TestCase):
                 setup.with_renderer(None, ROOT, r'C:\private\renderer', '0' * 64)
         read.assert_called_once_with(ROOT / recipe.FULL_MANIFEST, recipe.MANIFEST_LIMIT)
 
+    def test_full_backend_holds_the_directory_before_reading_its_inventory(self):
+        raw = manifest_bytes()
+        with (patch.object(setup, '_read_source', return_value=raw) as read,
+              patch.object(setup, 'stable_directory', side_effect=PermissionError('Unsafe NTFS chain')) as hold,
+              patch.object(Path, 'iterdir', side_effect=AssertionError('Listed without a held directory')),
+              self.assertRaisesRegex(PermissionError, 'Unsafe NTFS chain')):
+            setup.with_renderer(None, ROOT, r'C:\private\renderer', recipe.sha(raw))
+        hold.assert_called_once()
+        read.assert_called_once_with(ROOT / recipe.FULL_MANIFEST, recipe.MANIFEST_LIMIT)
+
     def test_artifact_and_provenance_bytes_are_independently_verified(self):
         payloads = {name: name.encode() for name in recipe.BUNDLE_LIMITS if name != recipe.PROVENANCE}
         obj = json.loads(manifest_bytes())

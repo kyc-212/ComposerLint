@@ -22,7 +22,7 @@ import zipfile
 
 from . import windows_preflight as preflight
 from .windows_install_storage import _component, transaction
-from .windows_private import read_stable
+from .windows_private import read_stable, stable_directory
 from .windows_read import _bind
 from .windows_workers import SetupProcessCleanupUnconfirmed, run_setup_command
 
@@ -444,10 +444,11 @@ def with_renderer(plan, root, bundle, manifest_sha256):
     if _sha(raw) != manifest_sha256:
         raise SetupError('The Windows Full manifest differs from the verified setup package.')
     manifest = renderer.full_manifest(raw)
-    if {entry.name for entry in bundle.iterdir()} != renderer.BUNDLE_LIMITS.keys():
-        raise SetupError('Expected exactly the five Windows renderer artifacts.')
-    files = tuple(renderer.verify_full_artifacts(
-        manifest, lambda name, limit: _read_source(bundle / name, limit)).items())
+    with stable_directory(bundle):
+        if {entry.name for entry in bundle.iterdir()} != renderer.BUNDLE_LIMITS.keys():
+            raise SetupError('Expected exactly the five Windows renderer artifacts.')
+        files = tuple(renderer.verify_full_artifacts(
+            manifest, lambda name, limit: _read_source(bundle / name, limit)).items())
     controls = tuple((tuple(name.split('/')), _read_source(root / name, 4 * 1024**2))
                      for name in _CONTROL_FILES)
     identity = _sha(json.dumps([plan.identity, manifest_sha256, [(name, _sha(data)) for name, data in files],

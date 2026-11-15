@@ -19,6 +19,11 @@ baseline. The two Windows wheel resource maps still need independent comparison.
 | Native build provenance | Pending native run, exact size/digest and matching source, official and patched wheel, patch, build requirements, Python, MSVC and SDK identities |
 | Windows Full manifest | Pending native run, exact manifest digest, commit, run ID/number/attempt, runner image/version and all five file identities |
 
+The expected `src/iomusxml.cpp` preimage is
+`0def2542a241989f2368fe9b54e67db474242fc0d24b27c48af8dac5ee499ab5` and the
+postimage is
+`4235d47c8cf9939ca09858a0d7d15c56eb1b9debdd8ceb6f067bdce536605ad9`.
+
 After authorized CI, record the exact GitHub run and artifact digests and
 independently check the decrypted files. Record each wheel's full inventory,
 ZIP CRCs, RECORD hashes and native extension SHA-256. Compare each resource

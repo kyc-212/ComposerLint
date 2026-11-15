@@ -332,6 +332,18 @@ def _read_open(api, handle, chain, *, limit, expected, require_private=None):
     return data, before
 
 
+@contextmanager
+def stable_directory(path):
+    """Hold and recheck a local, non-reparse NTFS directory chain while listing it."""
+    path = _native_path(path)
+    api = _StorageAPI()
+    with ExitStack() as stack:
+        # ancestors() holds every component except the final leaf.
+        chain = api.ancestors(path / 'inventory', stack)
+        yield
+        api.verify_chain(chain)
+
+
 def read_stable(path, *, limit, expected=None):
     """Return bounded data and its stamp only after rechecking held NTFS objects."""
     path = _native_path(path)

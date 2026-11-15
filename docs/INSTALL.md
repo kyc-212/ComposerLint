@@ -1,9 +1,11 @@
 # Installation and local renderer setup
 
-V0.2.0 renderer source-only distribution; the optional GUI includes ComposerLint’s own compiled launcher. Tested platform evidence is macOS Apple Silicon with
-CPython 3.12. Other platforms remain unverified. Do not infer Windows compatibility
-from the existence of upstream wheels: filesystem, process and approval adapters
-still need work. Intel dependencies remain under investigation without a downgrade.
+The macOS Apple Silicon installer builds the renderer locally. On Windows 11
+x64, Run #26 text-only setup passed on the Huawei MateBook 13. Windows Full
+setup uses a separate five-file candidate bundle and still requires its own
+native and device verification. The [Windows instructions](#windows-x64-full-setup)
+cover that package. Intel Mac and Linux results are outside this branch's
+installation evidence.
 
 ## Graphical installation (macOS Apple Silicon)
 
