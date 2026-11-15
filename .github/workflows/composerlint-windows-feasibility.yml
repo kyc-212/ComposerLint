@@ -7,6 +7,14 @@ on:
         description: Full commit SHA reviewed for this pilot
         required: true
         type: string
+      retention_public_key:
+        description: Maintainer RSA-3072 public key as base64 DER SPKI on one line
+        required: true
+        type: string
+      retention_key_sha256:
+        description: Lowercase SHA-256 of the maintainer public key DER
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -17,12 +25,12 @@ concurrency:
 
 jobs:
   windows-ntfs:
-    # One manually dispatched timeout verification on run 26, with no rerun.
+    # One manually dispatched Full renderer candidate on run 27, with no rerun.
     if: >-
       github.repository == 'kyc-212/ComposerLint' &&
       github.actor == github.repository_owner &&
       github.ref == 'refs/heads/codex/windows-ci-pilot' &&
-      github.run_number == '26' && github.run_attempt == '1' &&
+      github.run_number == '27' && github.run_attempt == '1' &&
       github.sha == inputs.expected_sha
     runs-on: windows-2025
     timeout-minutes: 40
@@ -37,7 +45,9 @@ jobs:
           lfs: false
       - name: Run the installer bootstrap deadline tests in Windows PowerShell
         shell: powershell
-        run: ./tests/test_windows_bootstrap_download.ps1
+        run: |
+          ./tests/test_windows_bootstrap_download.ps1
+          ./tests/test_windows_full_manifest.ps1
       - name: Select and verify the CI-only Python from the installed tool cache
         id: runner-python
         shell: pwsh
@@ -73,12 +83,16 @@ jobs:
           CI_RUNNER_PYTHON: ${{ steps.runner-python.outputs.path }}
         run: |
           & $env:CI_RUNNER_PYTHON -I -S -B -X utf8 -m unittest discover -s tests -p test_windows_host_snapshot.py -v
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $env:CI_RUNNER_PYTHON -I -S -B -X utf8 -m unittest discover -s tests -p test_windows_full_distribution.py -v
           exit $LASTEXITCODE
       - name: Build the patched renderer and verify the full Windows installation
         shell: pwsh
         env:
           CI_RUNNER_PYTHON: ${{ steps.runner-python.outputs.path }}
           REVIEWED_COMMIT: ${{ inputs.expected_sha }}
+          RETENTION_PUBLIC_KEY: ${{ inputs.retention_public_key }}
+          RETENTION_KEY_SHA256: ${{ inputs.retention_key_sha256 }}
         run: |
           $env:COMPOSERLINT_TEMP_DIR = $env:RUNNER_TEMP
           $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
@@ -109,3 +123,13 @@ jobs:
             throw 'Checkout changed during Windows verification.'
           }
           Write-Output 'Checkout is clean: no tracked changes or unexpected files.'
+      - name: Retain only the maintainer-encrypted renderer candidate
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ComposerLint-Windows-renderer-encrypted-review
+          path: ${{ runner.temp }}/cl-renderer-retention/windows-renderer-candidate.enc
+          if-no-files-found: error
+          include-hidden-files: false
+          overwrite: false
+          compression-level: 0
+          retention-days: 7

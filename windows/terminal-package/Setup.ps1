@@ -15,14 +15,14 @@ $PythonHash = '18bcc65b17921806b72cdc88bcf000bf67a2c99a8fc381fe1629f2b9ba56858d'
 $PythonSize = 21962247
 # Per-file elapsed budget for slow, active transfers; network timeouts are separate.
 $DownloadDeadlineSeconds = 900
-$PatchedHash = '263bda9dacfd11d64439b08ae6fee2553b34b90630a9208d7542f2e62b1fd5cf'
-$RendererFiles = [ordered]@{
-    'verovio-6.3.0-cp310-abi3-win_amd64.whl' = 'cc8bab65570ccb38d6a440fa13d3e4820df34ee9ca483decdbe8371c4291b1a8'
-    'verovio-6.3.0+composerlint.tie1-cp310-abi3-win_amd64.whl' = $PatchedHash
-    'verovio-6.3.0.tar.gz' = '33dc3b6816896a649198acd7cce291f54636fbfffa893dd78d84c3073b40d87c'
-    'verovio-6.3.0-deferred-tie-stops.patch' = '10965e05ca1ffca8e9dd8dbf940a8f9313a95b4b414979afac2ff12b91edcd60'
-    'build-provenance.json' = '651cc6bc0f10e4852228c850277e2523635ec4952b9973c31aaeb47b490adb43'
-}
+$RendererNames = @(
+    'verovio-6.3.0-cp310-abi3-win_amd64.whl'
+    'verovio-6.3.0+composerlint.tie1-cp310-abi3-win_amd64.whl'
+    'verovio-6.3.0.tar.gz'
+    'verovio-6.3.0-deferred-tie-stops.patch'
+    'build-provenance.json'
+)
+
 
 function Assert-Plain($Item, [bool]$Directory) {
     if ($Item.PSIsContainer -ne $Directory -or
@@ -87,6 +87,33 @@ function Test-Package([string]$Root) {
         [void]$expected.Remove($file.Name)
     }
     if ($expected.Count) { throw 'Package extraction is incomplete.' }
+}
+
+function Test-RendererBundle([string]$Bundle, [string]$ManifestPath) {
+    $manifestFile = Get-Item -LiteralPath $ManifestPath -Force
+    Assert-Plain $manifestFile $false
+    if ($manifestFile.Length -gt 16KB) { throw 'Unexpected renderer manifest size.' }
+    $manifest = ConvertFrom-Json -InputObject ([IO.File]::ReadAllText($ManifestPath))
+    if ($manifest.schema -cne 1 -or @($manifest.files.PSObject.Properties).Count -ne $RendererNames.Count) {
+        throw 'Unexpected renderer manifest schema or inventory.'
+    }
+    $items = @(Get-ChildItem -LiteralPath $Bundle -Force)
+    if ($items.Count -ne $RendererNames.Count) { throw 'Unexpected renderer bundle inventory.' }
+    foreach ($item in $items) {
+        Assert-Plain $item $false
+        $pin = $manifest.files.PSObject.Properties[$item.Name]
+        if ($item.Name -cnotin $RendererNames -or $null -eq $pin -or $pin.Name -cne $item.Name) {
+            throw "Unexpected renderer file: $($item.Name)"
+        }
+        $stream = [IO.File]::Open($item.FullName, 'Open', 'Read', 'Read')
+        $script:HeldFiles.Add($stream)
+        if ($stream.Length -le 0 -or $stream.Length -gt 32MB -or
+            $stream.Length -ne $pin.Value.size -or $pin.Value.sha256 -cnotmatch '^[a-f0-9]{64}$' -or
+            (Get-FileHash -InputStream $stream -Algorithm SHA256).Hash.ToLowerInvariant() -cne $pin.Value.sha256) {
+            throw "Renderer bundle differs from the reviewed manifest: $($item.Name)"
+        }
+    }
+    return (Get-FileHash -LiteralPath $ManifestPath -Algorithm SHA256).Hash.ToLowerInvariant()
 }
 
 function Copy-PinnedPythonBody($InputStream, $OutputStream, $Clock) {
@@ -180,40 +207,30 @@ function Start-Setup {
     $tar = Join-Path ([Environment]::SystemDirectory) 'tar.exe'
     Assert-Plain (Get-Item -LiteralPath $tar -Force) $false
     $local = Get-LocalDirectory ([Environment]::GetFolderPath('LocalApplicationData', 'DoNotVerify'))
-    Write-Host 'ComposerLint | Windows x64 private test | Run #24 source'
+    Write-Host 'ComposerLint | Windows x64 private setup'
     if (!$Mode) {
-        $selection = Read-Host '[1] Text analysis only  [2] Full (requires separate Run #24 renderer bundle)  [Enter] Cancel'
+        $selection = Read-Host '[1] Text analysis only  [2] Full (requires a separately verified renderer bundle)  [Enter] Cancel'
         switch ($selection) {
             '1' { $Mode = 'Text' }
             '2' { $Mode = 'Full' }
             default { Write-Host 'Cancelled. No downloads or setup writes.'; $script:SetupExitCode = 0; return }
         }
     }
+    Write-Host "Checking extracted package files ($Mode mode)..."
+    Test-Package $root
     if ($Mode -eq 'Full') {
         if (!$RendererBundle) {
-            throw 'Full mode requires -RendererBundle with the absolute path to the separately verified Run #24 bundle. This ZIP does not include it.'
+            throw 'Full mode requires -RendererBundle with the absolute path to the separately verified renderer bundle.'
         }
         $bundle = Get-LocalDirectory $RendererBundle
-        $items = @(Get-ChildItem -LiteralPath $bundle -Force)
-        if ($items.Count -ne $RendererFiles.Count) { throw 'Unexpected renderer bundle inventory.' }
-        foreach ($item in $items) {
-            Assert-Plain $item $false
-            if ($item.Name -cnotin $RendererFiles.Keys) { throw "Unexpected renderer file: $($item.Name)" }
-            $stream = [IO.File]::Open($item.FullName, 'Open', 'Read', 'Read')
-            $script:HeldFiles.Add($stream)
-            if ($stream.Length -gt 32MB -or
-                (Get-FileHash -InputStream $stream -Algorithm SHA256).Hash.ToLowerInvariant() -cne $RendererFiles[$item.Name]) {
-                throw "Renderer bundle differs from Run #24: $($item.Name)"
-            }
-        }
-        $setupArgs = @('--windows-full-pilot', '--renderer-bundle', $bundle, '--renderer-sha256', $PatchedHash)
+        $manifestPath = Join-Path $root 'tools/windows-full-artifacts.json'
+        $manifestHash = Test-RendererBundle $bundle $manifestPath
+        $setupArgs = @('--windows-full-pilot', '--renderer-bundle', $bundle, '--renderer-manifest-sha256', $manifestHash)
     } else {
         if ($RendererBundle) { throw '-RendererBundle is only for Full mode.' }
         $setupArgs = @('--windows-text-pilot')
     }
 
-    Write-Host "Checking extracted package files ($Mode mode)..."
-    Test-Package $root
     Write-Host "First step: download the pinned CPython 3.12.13 x64 archive ($PythonSize bytes)."
     Write-Host "SHA-256: $PythonHash"
     Write-Host "A temporary private folder will be created under $local. No global tools or settings will be changed."

@@ -187,17 +187,19 @@ class WindowsCIOrchestrationTests(unittest.TestCase):
             local_app_data = root / 'Local AppData'
             bundle = root / 'Renderer bundle'
             digest = 'b' * 64
+            manifest_digest = 'c' * 64
             runtime = local_app_data / 'ComposerLint/setup' / ('install-' + 'a' * 20) / 'runtime/Scripts/python.exe'
             generation = runtime.parents[2]
             manifest = json.loads((ROOT / 'tools/windows-setup-assets.json').read_bytes())
             receipt = {'schema': 1, 'target': 'windows-x64-full-pilot', 'plan': 'a' * 64,
                        'lock_sha256': manifest['lock_sha256'], 'python': str(runtime),
                        'renderer_config': str(generation / 'renderer.json'), 'renderer_sha256': digest,
+                       'renderer_manifest_sha256': manifest_digest,
                        'renderer_controls': dict(tests=10, failures=0, errors=0, skipped=0), 'mcp_tools': 18}
 
             def run(command, **kwargs):
                 self.assertEqual(command[-5:], ['--windows-full-pilot', '--renderer-bundle', str(bundle),
-                                                '--renderer-sha256', digest])
+                                                '--renderer-manifest-sha256', manifest_digest])
                 self.assertEqual(kwargs['input'], 'INSTALL\n')
                 for path in (runtime, generation / 'python/python.exe', generation / 'uv/uv.exe',
                              generation / 'renderer/Scripts/python.exe', generation / 'renderer.json',
@@ -216,7 +218,8 @@ class WindowsCIOrchestrationTests(unittest.TestCase):
             for bad in (True, False):
                 with self.subTest(incomplete=bad), redirect_stdout(StringIO()):
                     receipt['renderer_controls']['skipped'] = int(bad)
-                    arguments = dict(renderer_bundle=bundle, renderer_sha256=digest, run=run,
+                    arguments = dict(renderer_bundle=bundle, renderer_sha256=digest,
+                                     renderer_manifest_sha256=manifest_digest, run=run,
                                      snapshot=lambda *_: self.snapshot())
                     if bad:
                         with self.assertRaisesRegex(ValueError, 'ten passing renderer controls'):

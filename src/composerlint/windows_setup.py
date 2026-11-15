@@ -67,6 +67,7 @@ class Plan:
     identity: str
     renderer: tuple = ()
     controls: tuple = ()
+    renderer_manifest_sha256: str | None = None
 
 
 def _sha(data):
@@ -436,31 +437,23 @@ RENDERER_PYTEST_OPTIONS = ('-p', 'no:cacheprovider', '-p', 'no:tmpdir')
 RENDERER_CONTROL_SELECTION = ('-k', 'not test_windows_render_holds_pins_through_worker_exit')
 
 
-def with_renderer(plan, root, bundle, candidate_sha256):
+def with_renderer(plan, root, bundle, manifest_sha256):
     from . import windows_renderer as renderer
     bundle = Path(preflight.local_path_text(bundle, target='win32'))
-    pins = (
-        (renderer.OFFICIAL_WHEEL, renderer.OFFICIAL_SHA256),
-        (renderer.PATCHED_WHEEL, candidate_sha256),
-        (renderer.SOURCE_ARCHIVE, renderer.SOURCE_SHA256),
-        (renderer.PATCH, renderer.PATCH_SHA256),
-    )
-    files = tuple((name, renderer.checked_bytes(bundle / name, expected, 32 * 1024**2))
-                  for name, expected in pins)
-    provenance = _read_source(bundle / 'build-provenance.json', 16 * 1024)
-    build = json.loads(provenance)
-    for key, expected in (
-            ('source_sha256', renderer.SOURCE_SHA256), ('patch_sha256', renderer.PATCH_SHA256),
-            ('preimage_sha256', renderer.PREIMAGE), ('postimage_sha256', renderer.POSTIMAGE),
-            ('wheel_sha256', candidate_sha256)):
-        if build.get(key) != expected:
-            raise SetupError(f'Renderer build provenance {key}: expected {expected!r}, got {build.get(key)!r}')
-    files += (('build-provenance.json', provenance),)
+    raw = _read_source(root / renderer.FULL_MANIFEST, renderer.MANIFEST_LIMIT)
+    if _sha(raw) != manifest_sha256:
+        raise SetupError('The Windows Full manifest differs from the verified setup package.')
+    manifest = renderer.full_manifest(raw)
+    if {entry.name for entry in bundle.iterdir()} != renderer.BUNDLE_LIMITS.keys():
+        raise SetupError('Expected exactly the five Windows renderer artifacts.')
+    files = tuple(renderer.verify_full_artifacts(
+        manifest, lambda name, limit: _read_source(bundle / name, limit)).items())
     controls = tuple((tuple(name.split('/')), _read_source(root / name, 4 * 1024**2))
                      for name in _CONTROL_FILES)
-    identity = _sha(json.dumps([plan.identity, [(name, _sha(data)) for name, data in files],
+    identity = _sha(json.dumps([plan.identity, manifest_sha256, [(name, _sha(data)) for name, data in files],
                                [(parts, _sha(data)) for parts, data in controls]]).encode())
-    return replace(plan, identity=identity, renderer=files, controls=controls)
+    return replace(plan, identity=identity, renderer=files, controls=controls,
+                   renderer_manifest_sha256=manifest_sha256)
 
 
 def install_renderer(plan, stage, run, uv_run, pip, base_python, env, status):
@@ -520,6 +513,7 @@ def install_renderer(plan, stage, run, uv_run, pip, base_python, env, status):
     print(output.decode('utf-8', 'backslashreplace'), end='', flush=True)
     return dict(target='windows-x64-full-pilot', renderer_config=str(config),
                 renderer_sha256=files['renderer-artifacts/' + renderer.PATCHED_WHEEL],
+                renderer_manifest_sha256=plan.renderer_manifest_sha256,
                 renderer_controls=counts, mcp_tools=18)
 
 
@@ -533,7 +527,7 @@ def control_counts(tree):
 
 
 def install(root, *, status, confirm=input, inspect=preflight.inspect, make_plan=prepare,
-            storage=transaction, build=populate, renderer_bundle=None, renderer_sha256=None):
+            storage=transaction, build=populate, renderer_bundle=None, renderer_manifest_sha256=None):
     report = inspect()
     if not report.compatible:
         preflight.print_report(report)
@@ -541,7 +535,7 @@ def install(root, *, status, confirm=input, inspect=preflight.inspect, make_plan
     plan = make_plan(root, report.destination)
     assets = (plan.python, plan.uv, *plan.wheels)
     if renderer_bundle is not None:
-        plan = with_renderer(plan, root, renderer_bundle, renderer_sha256)
+        plan = with_renderer(plan, root, renderer_bundle, renderer_manifest_sha256)
         print('Windows x64 full setup pilot')
         for name, data in plan.renderer:
             print(f'  {name}\n    SHA-256 {_sha(data)}')

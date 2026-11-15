@@ -55,7 +55,7 @@ def require_absent(path):
     raise OSError(f'Expected an absent path: {path}')
 
 
-def verify_receipt(destination, manifest, output, *, renderer_sha256=None):
+def verify_receipt(destination, manifest, output, *, renderer_sha256=None, renderer_manifest_sha256=None):
     plain_entry(destination.parent, directory=True)
     plain_entry(destination, directory=True)
     lock_path = destination / 'setup.lock'
@@ -91,7 +91,8 @@ def verify_receipt(destination, manifest, output, *, renderer_sha256=None):
             plain_entry(directory, directory=True)
         for path in (renderer, config):
             plain_entry(path)
-        if (Path(receipt['renderer_config']) != config or receipt['renderer_sha256'] != renderer_sha256):
+        if (Path(receipt['renderer_config']) != config or receipt['renderer_sha256'] != renderer_sha256
+                or receipt['renderer_manifest_sha256'] != renderer_manifest_sha256):
             raise ValueError('Completion receipt does not match the reviewed renderer candidate.')
         if receipt['renderer_controls'] != dict(tests=10, failures=0, errors=0, skipped=0):
             raise ValueError('Completion receipt lacks ten passing renderer controls.')
@@ -104,7 +105,7 @@ def verify_receipt(destination, manifest, output, *, renderer_sha256=None):
     return receipt_path
 
 
-def install_once(root, runner_python, local_app_data, *, renderer_bundle=None, renderer_sha256=None,
+def install_once(root, runner_python, local_app_data, *, renderer_bundle=None, renderer_sha256=None, renderer_manifest_sha256=None,
                  run=subprocess.run, snapshot=_host['host_snapshot']):
     manifest = reviewed_manifest(root)
     destination = local_app_data / 'ComposerLint' / 'setup'
@@ -116,11 +117,14 @@ def install_once(root, runner_python, local_app_data, *, renderer_bundle=None, r
     print('Captured baseline host snapshot before installation.', flush=True)
     command = [str(runner_python), '-I', '-S', '-B', '-u', '-X', 'utf8',
                str(root / 'tools' / 'setup_composerlint.py')]
-    if renderer_bundle is None:
+    if renderer_bundle is None and renderer_sha256 is None and renderer_manifest_sha256 is None:
         command.append('--windows-text-pilot')
     else:
+        if renderer_bundle is None or not all(re.fullmatch('[0-9a-f]{64}', value or '') for value in
+                                              (renderer_sha256, renderer_manifest_sha256)):
+            raise ValueError('Full CI installation requires the bundle, wheel and manifest identities.')
         command.extend(('--windows-full-pilot', '--renderer-bundle', str(renderer_bundle),
-                        '--renderer-sha256', renderer_sha256))
+                        '--renderer-manifest-sha256', renderer_manifest_sha256))
     try:
         # Send one exact consent line to the existing terminal entry point. Its
         # prompt is reached only after preflight and plan preparation.
@@ -128,7 +132,8 @@ def install_once(root, runner_python, local_app_data, *, renderer_bundle=None, r
                      stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         print(result.stdout, end='', flush=True)
         result.check_returncode()
-        receipt = verify_receipt(destination, manifest, result.stdout, renderer_sha256=renderer_sha256)
+        receipt = verify_receipt(destination, manifest, result.stdout, renderer_sha256=renderer_sha256,
+                                 renderer_manifest_sha256=renderer_manifest_sha256)
     finally:
         after = snapshot(runner_python, local_app_data)
         changes = [scope for scope in before if before[scope] != after[scope]]
@@ -138,6 +143,7 @@ def install_once(root, runner_python, local_app_data, *, renderer_bundle=None, r
     print('Verified 61 pinned files, private CPython 3.12.13 x64 and uv 0.12.3, '
           '59 locked distributions and the locally built ComposerLint.')
     print(f'Verified completion receipt and removal of download/build staging: {receipt}')
+    return receipt
 
 
 def guarded_runner(run_number):

@@ -1,6 +1,8 @@
 """Reviewed input identities for the native Windows renderer candidate."""
 
 import hashlib
+import json
+import re
 from pathlib import Path
 
 BUILD = '6.3.0+composerlint.tie1'
@@ -13,6 +15,73 @@ PATCH = 'verovio-6.3.0-deferred-tie-stops.patch'
 PATCH_SHA256 = '10965e05ca1ffca8e9dd8dbf940a8f9313a95b4b414979afac2ff12b91edcd60'
 PREIMAGE = '0def2542a241989f2368fe9b54e67db474242fc0d24b27c48af8dac5ee499ab5'
 POSTIMAGE = '4235d47c8cf9939ca09858a0d7d15c56eb1b9debdd8ceb6f067bdce536605ad9'
+
+
+PROVENANCE = 'build-provenance.json'
+FULL_MANIFEST = 'tools/windows-full-artifacts.json'
+BUNDLE_LIMITS = {
+    OFFICIAL_WHEEL: 32 * 1024**2,
+    PATCHED_WHEEL: 32 * 1024**2,
+    SOURCE_ARCHIVE: 32 * 1024**2,
+    PATCH: 64 * 1024,
+    PROVENANCE: 16 * 1024,
+}
+FIXED_HASHES = {OFFICIAL_WHEEL: OFFICIAL_SHA256, SOURCE_ARCHIVE: SOURCE_SHA256, PATCH: PATCH_SHA256}
+MANIFEST_LIMIT = 16 * 1024
+
+
+def _unique_keys(pairs):
+    result = dict(pairs)
+    if len(result) != len(pairs):
+        raise ValueError('Duplicate keys in renderer JSON.')
+    return result
+
+
+def full_manifest(raw):
+    if len(raw) > MANIFEST_LIMIT:
+        raise ValueError('Renderer manifest exceeds its size limit.')
+    manifest = json.loads(raw.decode('ascii'), object_pairs_hook=_unique_keys)
+    if (not isinstance(manifest, dict) or set(manifest) != {'schema', 'ci', 'files'}
+            or type(manifest['schema']) is not int or manifest['schema'] != 1):
+        raise ValueError('Unexpected Windows Full renderer manifest schema.')
+    ci = manifest['ci']
+    if (not isinstance(ci, dict)
+            or set(ci) != {'commit', 'run_id', 'run_number', 'attempt', 'image', 'image_version'}
+            or not isinstance(ci['commit'], str) or not re.fullmatch('[0-9a-f]{40}', ci['commit'])
+            or any(type(ci[key]) is not int or ci[key] < 1 for key in ('run_id', 'run_number', 'attempt'))
+            or ci['attempt'] != 1
+            or any(not isinstance(ci[key], str) or not re.fullmatch('[A-Za-z0-9_.-]{1,80}', ci[key])
+                   for key in ('image', 'image_version'))):
+        raise ValueError('Unexpected Windows Full renderer run identity.')
+    files = manifest['files']
+    if not isinstance(files, dict) or files.keys() != BUNDLE_LIMITS.keys():
+        raise ValueError('Expected exactly the five Windows renderer artifacts.')
+    for name, info in files.items():
+        if (not isinstance(info, dict) or set(info) != {'size', 'sha256'}
+                or type(info['size']) is not int or not 0 < info['size'] <= BUNDLE_LIMITS[name]
+                or not isinstance(info['sha256'], str) or not re.fullmatch('[0-9a-f]{64}', info['sha256'])
+                or info['sha256'] != FIXED_HASHES.get(name, info['sha256'])):
+            raise ValueError(f'Invalid Windows Full renderer pin: {name}')
+    return manifest
+
+
+def verify_full_artifacts(manifest, read):
+    files = {}
+    for name, limit in BUNDLE_LIMITS.items():
+        pin = manifest['files'][name]
+        data = read(name, limit)
+        if len(data) != pin['size'] or sha(data) != pin['sha256']:
+            raise ValueError(f'Windows Full renderer artifact differs from the reviewed manifest: {name}')
+        files[name] = data
+    build = json.loads(files[PROVENANCE], object_pairs_hook=_unique_keys)
+    for key, expected in (
+            ('source_sha256', SOURCE_SHA256), ('official_sha256', OFFICIAL_SHA256),
+            ('patch_sha256', PATCH_SHA256), ('preimage_sha256', PREIMAGE),
+            ('postimage_sha256', POSTIMAGE), ('wheel_sha256', manifest['files'][PATCHED_WHEEL]['sha256'])):
+        if not isinstance(build, dict) or build.get(key) != expected:
+            raise ValueError(f'Renderer build provenance disagrees with the reviewed {key}.')
+    return files
+
 
 # Run in the selected virtual environment with -I -B. Keep the probe
 # self-contained so that it needs only the installed renderer and stdlib.

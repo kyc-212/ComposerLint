@@ -42,9 +42,10 @@ renderer-based notation viewer and editing workflow. Most of ComposerLint is
 written in Python, but it also relies on a native renderer and platform-specific
 filesystem, process and confirmation features.
 
-**ComposerLint has not been tested on Windows or Linux**, so we cannot confirm
-whether it installs or works correctly on those systems. Intel Mac also remains
-unverified. Python source availability does not guarantee cross-platform support.
+The Run #26 text-only package passed on the Huawei MateBook 13 (Windows 11 x64).
+Windows Full setup is a separate candidate with native CI and device verification
+pending for the new bundle. Linux and Intel Mac compatibility remain unverified
+for this branch. See the [Windows installation guide](docs/INSTALL.md#windows-x64-full-setup).
 
 ### Graphical installation — recommended for macOS Apple Silicon
 
@@ -121,11 +122,11 @@ The full verified viewer/editing workflow requires the patched native renderer
 cross-voice tie controls and is not an equivalent substitute. This project retains
 warning refusal, source correspondence and independent candidate checks.
 
-The approved full installer obtains the official hash-pinned Verovio 6.3.0 source,
-applies the included patch and builds a separate local renderer environment.
-[Manual build instructions](patches/README.md) remain available. No prebuilt patched
-renderer is supplied or downloaded. The current adapter also requires official 6.3.0 in
-the main environment as its base-version gate; the patched build runs separately.
+The approved macOS full installer builds the patched renderer from pinned
+Verovio source. [Manual build instructions](patches/README.md) remain available.
+Windows Full setup consumes a separately verified, CI-built bundle once cleared
+for distribution. The adapter requires official 6.3.0 in the main environment
+and runs the patched build separately.
 Installing only the custom build into the main environment does not satisfy that gate.
 
 Select the verified renderer with an explicit server-owner manifest; never let a

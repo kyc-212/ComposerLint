@@ -372,39 +372,93 @@ provisioning is needed. [Verovio](https://pypi.org/project/verovio/6.3.0/#files)
 · [Ninja](https://pypi.org/project/ninja/1.13.2/#files)
 · [SWIG](https://pypi.org/project/swig/4.5.1/#files)
 
-### Full setup and native acceptance
+### Windows x64 Full setup
 
-Run `tools/setup_composerlint.py --windows-full-pilot --renderer-bundle ABSOLUTE_DIRECTORY --renderer-sha256 REVIEWED_WHEEL_SHA256`
-with the usual Windows setup bootstrap. The bundle must be the locally built
-output. Review its `build-provenance.json` and candidate digest before running
-setup. Setup verifies the official wheel, source, reviewed patch and candidate
-digest, then requests explicit consent for the same 61 pinned bootstrap/runtime
-prerequisites. It installs official 6.3.0 in the base environment and
-`6.3.0+composerlint.tie1` in a separate renderer environment. The local digest
-binds the chosen wheel to the install and receipt. Build provenance is produced
-by the reviewed local build and does not independently authenticate an external
-wheel. Full setup prints the absolute MCP command and the renderer manifest
-environment value. The renderer requires the private installation tree and keeps the verified
-manifest, files, and directory handles open for the worker lifetime. Windows
-permanent Approve & Export is disabled.
+Obtain the reviewed Full setup ZIP, the separate five-file renderer ZIP and
+both expected SHA-256 digests through the trusted handoff. In a normal
+(non-administrator) Windows PowerShell window, use `Get-FileHash -Algorithm
+SHA256 -LiteralPath <ZIP>` on each downloaded ZIP and compare the full digests.
+Extract each ZIP into a separate fresh local NTFS directory you own. Avoid
+synced folders and reparse points.
 
-The prepared Windows Actions job uses the already reviewed x64 Visual Studio
-and SDK on the Windows runner. It builds the patched wheel once from the pinned
-inputs and passes its local bundle and SHA-256 to the terminal installer. The
-standalone compiler and renderer probes are covered by run 22. The integration
-job retains the existing native NTFS, cancellation and Job Object controls.
+In the extracted setup directory, verify the digest of
+`tools/windows-full-artifacts.json` against the trusted handoff. Independently
+check that the renderer directory contains exactly the five filenames under
+`files` in that manifest, and compare every file's byte length and SHA-256.
+Keep the renderer directory limited to those five files. Then run:
 
-Full setup verifies both renderer identities, including the loaded Verovio and
-Python DLL paths, and requires ten passing equivalence controls before it
-launches the installed Python's MCP server over stdio. The MCP control requires
-18 discovered tools, Unicode-path MusicXML and MXL import, a known authentic
-cadence, style records, score review, persistent passage reuse, loopback HTML and
-SVG, and a live selection. It verifies the temporary edit preview, checks that
-Windows refuses permanent export, discards the candidate, and compares source
-bytes. The completion receipt follows MCP shutdown and verified staging cleanup.
-The job compares the existing host snapshots around the terminal install.
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File .\Setup.ps1 -Mode Full -RendererBundle 'C:\absolute\path\to\verified-renderer'
+```
 
-The workflow is restricted to the approved Run 24, attempt 1, on the reviewed
-feature-branch commit. Windows 11 x64 desktop browser navigation, an actual AI
-client connection and the terminal ZIP on the target laptop require a later
-trial before graphical setup.
+If Windows blocks the unsigned script, verify its digest against
+`FILES.sha256` in the already verified ZIP before unblocking only that file.
+Respect any managed execution policy. Follow the two `INSTALL` prompts.
+Each managed download has a 900-second deadline and separate 20-second
+network protections. Setup uses private, pinned Python and uv and does not
+need Visual Studio, administrator privileges, global Python, or changes to
+the system PATH or registry.
+
+Full setup verifies both renderer identities and ten equivalence controls
+before an installed MCP smoke check. It creates a fresh private `install-<id>`
+generation under Local AppData. Add a separate local stdio MCP entry using
+the command, arguments and per-server `COMPOSERLINT_RENDERER_CONFIG` printed
+by Full setup. Keep the existing Run #26 command and installation. On an
+authored sample, check live measure selection, temporary preview, Original
+and Proposed views, and discard. Windows permanent **Approve & Export**
+is disabled.
+
+### Native CI and maintainer review
+
+The guarded workflow builds the patched wheel from pinned inputs and verifies
+the exact official PyPI wheel and patched build in isolated environments.
+It records filenames, sizes and hashes in one candidate manifest and runs the
+backend against the same source payload selected by the Full setup packager.
+A passing installation must publish a receipt bound to the manifest, finish
+all ten renderer controls and the 18-tool MCP/loopback/editing probe, and
+confirm host snapshots and staging cleanup. A failed run uploads nothing.
+
+For the separately approved manual dispatch, use the reviewed commit SHA,
+the maintainer's RSA-3072 public key as single-line base64 DER SubjectPublicKeyInfo
+and its lowercase SHA-256. Keep the private key outside GitHub and verify the
+fingerprint before dispatch. For example, with an existing OpenSSL installation,
+run the following in a private directory if a suitable key is needed:
+
+```sh
+umask 077
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -aes-256-cbc -out retention-private.pem
+openssl pkey -in retention-private.pem -pubout -outform DER -out retention-public.der
+openssl base64 -A -in retention-public.der
+openssl dgst -sha256 retention-public.der
+```
+
+The job uploads only an encrypted envelope with
+seven-day retention. Repository readers can download the ciphertext. The
+runner, public logs and repository metadata expose run identity, sizes or
+hashes. Anyone with the private key and a copied envelope can decrypt it;
+expiry does not recall copies. A hosted-runner compromise or substituted
+public key can expose the inputs. Keep the native runner and action pins in
+the review.
+
+Obtain the ciphertext and manifest digests from the successful job and verify
+the GitHub artifact digest. In an existing environment with the approved
+`cryptography` dependency, use:
+
+```text
+python tools/windows_renderer_retention.py inspect ENCRYPTED_FILE ENVELOPE_SHA256 MANIFEST_SHA256 PRIVATE_KEY NEW_PRIVATE_DIRECTORY
+```
+
+The reviewer checks both digests, decrypts locally, verifies the five member
+identities and provenance, and leaves unarchived private evidence. Once the
+exact manifest has been independently reviewed, prepare the local ZIP pair:
+
+```text
+python tools/package_windows_full.py --manifest REVIEWED_JSON --reviewed-manifest-sha256 DIGEST --bundle VERIFIED_RENDERER_DIRECTORY --output NEW_PRIVATE_DIRECTORY
+```
+
+The packager selects source from the reviewed commit, embeds the same
+manifest for the launcher and backend, and verifies the ZIP members and
+offline links. The corresponding-source and notice materials and the
+[Windows binary audit](licensing/windows-renderer-audit.md) must be completed
+before sharing binaries. Windows 11 desktop, real client and side-by-side
+Run #26 preservation still require device acceptance.

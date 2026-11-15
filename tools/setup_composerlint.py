@@ -569,12 +569,12 @@ def main(argv=None):
         modes.add_argument('--windows-text-pilot', action='store_true')
         modes.add_argument('--windows-full-pilot', action='store_true')
         parser.add_argument('--renderer-bundle', type=Path)
-        parser.add_argument('--renderer-sha256')
+        parser.add_argument('--renderer-manifest-sha256')
         options = parser.parse_args(argv)
         if options.windows_full_pilot:
-            if not options.renderer_bundle or not re.fullmatch('[0-9a-f]{64}', options.renderer_sha256 or ''):
-                parser.error('Full setup requires a local renderer bundle and the reviewed candidate SHA-256.')
-        elif options.renderer_bundle or options.renderer_sha256:
+            if not options.renderer_bundle or not re.fullmatch('[0-9a-f]{64}', options.renderer_manifest_sha256 or ''):
+                parser.error('Full setup requires a local renderer bundle and the reviewed setup manifest SHA-256.')
+        elif options.renderer_bundle or options.renderer_manifest_sha256:
             parser.error('Renderer arguments require --windows-full-pilot.')
         # The stdlib-only adapter must run before ComposerLint's dependencies
         # exist. Never import the ambient ComposerLint package for setup.
@@ -585,7 +585,7 @@ def main(argv=None):
         try:
             windows = import_module(f'{name}.windows_setup')
             return windows.install(ROOT, status=status, renderer_bundle=options.renderer_bundle,
-                                   renderer_sha256=options.renderer_sha256)
+                                   renderer_manifest_sha256=options.renderer_manifest_sha256)
         except (OSError, ValueError, RuntimeError, KeyError) as error:
             print(f'Windows setup stopped: {error}', file=sys.stderr)
             return 1

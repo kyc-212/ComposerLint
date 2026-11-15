@@ -107,7 +107,8 @@ def build_bundle(stage, python_pin, uv_pin, inputs, build_support, *, control_wh
         raise ValueError('Unexpected private uv version.')
     build_reqs = [a for a in inputs if a.filename not in (source, official)]
     build_reqs.extend(build_support)
-    setup._write(stage, ('work', 'build.txt'), requirements(build_reqs))
+    build_pins = requirements(build_reqs)
+    setup._write(stage, ('work', 'build.txt'), build_pins)
     print(run(python, '-I', '-B', '-X', 'utf8', ROOT / 'tools' / 'build_windows_renderer.py',
               '--inputs', root / 'inputs', '--wheelhouse', wheelhouse, '--uv', uv, '--output', bundle,
               '--build-requirements', cwd / 'build.txt', timeout=1800), flush=True)
@@ -115,7 +116,8 @@ def build_bundle(stage, python_pin, uv_pin, inputs, build_support, *, control_wh
     check_inventory('Renderer build artifacts', bundle, expected_artifacts)
     provenance = json.loads(setup._read_source(bundle / 'build-provenance.json', 16384))
     for key, expected in (
-            ('source_sha256', recipe.SOURCE_SHA256), ('patch_sha256', recipe.PATCH_SHA256),
+            ('source_sha256', recipe.SOURCE_SHA256), ('official_sha256', recipe.OFFICIAL_SHA256),
+            ('patch_sha256', recipe.PATCH_SHA256), ('build_requirements_sha256', recipe.sha(build_pins)),
             ('preimage_sha256', recipe.PREIMAGE), ('postimage_sha256', recipe.POSTIMAGE)):
         if provenance.get(key) != expected:
             raise ValueError(f'Renderer build provenance {key}: expected {expected!r}, got {provenance.get(key)!r}')

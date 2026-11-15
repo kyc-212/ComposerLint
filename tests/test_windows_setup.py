@@ -145,6 +145,7 @@ class WindowsCompilerProbeTests(unittest.TestCase):
                          'WindowsSDKVersion': 'fixture'}
             tools = {name: root / (name + '.exe') for name in ('cl', 'rc')}
             stage = Mock(path=root / 'stage')
+            stage.held_file.side_effect = lambda parts: nullcontext(stage.path.joinpath(*parts))
             runtime = SimpleNamespace(version_info=(3, 12, 13), _base_executable=str(python),
                                       version='3.12.13 fixture')
             stop = RuntimeError('Reached build dependency installation')
@@ -157,6 +158,8 @@ class WindowsCompilerProbeTests(unittest.TestCase):
                   patch.object(self.probe.setup, '_system_root', return_value=root / 'Windows'),
                   patch.object(self.probe.recipe, 'checked_bytes', return_value=b'verified'),
                   patch.object(self.probe.setup, 'unpack'),
+                  patch.object(self.probe.setup, '_read_source', return_value=b'verified requirements'),
+                  patch.object(self.probe.setup, '_write') as write,
                   patch.object(self.probe, 'run_probe_command', side_effect=['', stop]) as run,
                   self.assertRaisesRegex(RuntimeError, str(stop))):
                 self.probe.build(args)
@@ -166,8 +169,9 @@ class WindowsCompilerProbeTests(unittest.TestCase):
                 (*prefix, 'venv', '--python', str(python), tools_env),
                 (*prefix, 'pip', 'sync', '--python', tools_env / 'Scripts/python.exe', '--require-hashes',
                  '--no-index', '--no-build', '--link-mode', 'copy', '--find-links',
-                 args.wheelhouse, args.build_requirements),
+                 args.wheelhouse, stage.path / 'build-requirements.txt'),
             ])
+            write.assert_called_once_with(stage, ('build-requirements.txt',), b'verified requirements')
 
     def test_uv_0123_renderer_control_sync_and_both_installs_use_verified_wheels(self):
         spec = util.spec_from_file_location('ci_windows_renderer', ROOT / 'tools' / 'ci_windows_renderer.py')
@@ -184,7 +188,12 @@ class WindowsCompilerProbeTests(unittest.TestCase):
             stage.held_directory.side_effect = lambda parts: nullcontext(root.joinpath(*parts))
             pins = checkpoint.recipe
             bundle = root / 'renderer-artifacts'
-            provenance = dict(source_sha256=pins.SOURCE_SHA256, patch_sha256=pins.PATCH_SHA256,
+            assets = checkpoint.reviewed_assets()
+            build_deps = [asset for asset in assets[2] if asset.filename not in (pins.SOURCE_ARCHIVE, pins.OFFICIAL_WHEEL)]
+            build_deps.extend(asset for asset in assets[3] if asset.name == 'colorama')
+            provenance = dict(source_sha256=pins.SOURCE_SHA256, official_sha256=pins.OFFICIAL_SHA256,
+                              patch_sha256=pins.PATCH_SHA256, build_requirements_sha256=pins.sha(
+                                  checkpoint.requirements(build_deps)),
                               preimage_sha256=pins.PREIMAGE, postimage_sha256=pins.POSTIMAGE,
                               wheel_sha256='fixture')
             runtime = root / 'runtime' / 'Scripts' / 'python.exe'
@@ -223,7 +232,7 @@ class WindowsCompilerProbeTests(unittest.TestCase):
                   patch.object(checkpoint, 'run_probe_command', side_effect=command),
                   redirect_stdout(io.StringIO()),
                   self.assertRaisesRegex(RuntimeError, str(stop))):
-                checkpoint.checkpoint(stage, *checkpoint.reviewed_assets())
+                checkpoint.checkpoint(stage, *assets)
             prefix = ('--offline', '--no-config', '--no-progress', '--no-python-downloads')
             policy = ('--no-index', '--no-build', '--link-mode', 'copy')
             python = root / 'python' / 'python.exe'

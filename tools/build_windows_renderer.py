@@ -415,9 +415,12 @@ def build(args):
         tool_env = stage.path / 'build-tools'
         uv('venv', '--python', sys._base_executable, tool_env)
         tool_python = tool_env / 'Scripts/python.exe'
-        uv('pip', 'sync', '--python', tool_python, '--require-hashes', '--no-index',
-           '--no-build', '--link-mode', 'copy',
-           '--find-links', args.wheelhouse, args.build_requirements)
+        requirements = setup._read_source(args.build_requirements, 64 * 1024)
+        requirements_entry = ('build-requirements.txt',)
+        setup._write(stage, requirements_entry, requirements)
+        with stage.held_file(requirements_entry) as verified_requirements:
+            uv('pip', 'sync', '--python', tool_python, '--require-hashes', '--no-index',
+               '--no-build', '--link-mode', 'copy', '--find-links', args.wheelhouse, verified_requirements)
         env.update(VEROVIO_BUILD_VERSION=recipe.BUILD, CMAKE_GENERATOR='Ninja',
                    PATH=str(tool_python.parent) + os.pathsep + env['PATH'],
                    CMAKE_BUILD_PARALLEL_LEVEL='2')
@@ -430,7 +433,8 @@ def build(args):
         candidate, stamp = private.read_stable(dist / recipe.PATCHED_WHEEL, limit=32 * 1024**2)
         if stamp.links != 1:
             raise RuntimeError('Patched renderer wheel must have exactly one NTFS link.')
-        provenance.update(source_sha256=recipe.SOURCE_SHA256, patch_sha256=recipe.PATCH_SHA256,
+        provenance.update(source_sha256=recipe.SOURCE_SHA256, official_sha256=recipe.OFFICIAL_SHA256,
+                          build_requirements_sha256=recipe.sha(requirements), patch_sha256=recipe.PATCH_SHA256,
                           preimage_sha256=recipe.PREIMAGE, postimage_sha256=recipe.POSTIMAGE, wheel_sha256=recipe.sha(candidate))
         with private.private_directory(args.output, create=True, tree_root=True) as output:
             for name, data in ((recipe.OFFICIAL_WHEEL, official), (recipe.SOURCE_ARCHIVE, source),
