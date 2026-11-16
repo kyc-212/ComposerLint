@@ -26,7 +26,7 @@ REVIEWED_TOOLS = {
 
 def main():
     # Must match the workflow's reviewed one-run guard before any acquisition.
-    runner_python, local_app_data = guarded_runner('27')
+    runner_python, local_app_data = guarded_runner('30')
     reviewed_manifest(ROOT)
     recipient_der(os.environ['RETENTION_PUBLIC_KEY'], os.environ['RETENTION_KEY_SHA256'])
     retained = paths.temporary_parent() / 'cl-renderer-retention'

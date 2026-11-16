@@ -25,12 +25,12 @@ concurrency:
 
 jobs:
   windows-ntfs:
-    # One manually dispatched Full renderer candidate on run 27, with no rerun.
+    # One manually dispatched Full renderer candidate on run 30, with no rerun.
     if: >-
       github.repository == 'kyc-212/ComposerLint' &&
       github.actor == github.repository_owner &&
       github.ref == 'refs/heads/codex/windows-ci-pilot' &&
-      github.run_number == '27' && github.run_attempt == '1' &&
+      github.run_number == '30' && github.run_attempt == '1' &&
       github.sha == inputs.expected_sha
     runs-on: windows-2025
     timeout-minutes: 40
