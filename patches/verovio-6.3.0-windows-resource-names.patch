@@ -1,0 +1,61 @@
+--- a/src/svgdevicecontext.cpp
++++ b/src/svgdevicecontext.cpp
+@@ -1116,6 +1116,10 @@
+     pugi::xpath_node fontNode = m_currentNode.select_node("ancestor::*[@font-family][1]");
+     std::string currentFaceName = (fontNode) ? fontNode.node().attribute("font-family").value() : "";
+     std::string fontFaceName = m_fontStack.top()->GetFaceName();
++    const auto smuflFamily = [this](const std::string &name) {
++        return (name == "Leipzig" && m_smuflTextFont == SMUFLTEXTFONT_embedded)
++            ? std::string("ComposerLint Music") : name;
++    };
+ 
+     pugi::xml_node textChild = AddChild("tspan");
+     // We still add @xml:space (No: this seems to create problems with Safari)
+@@ -1126,11 +1130,11 @@
+         if (m_fontStack.top()->GetSmuflFont() != SMUFL_NONE) {
+             if (m_fontStack.top()->GetSmuflFont() == SMUFL_FONT_FALLBACK) {
+                 this->VrvTextFontFallback();
+-                textChild.append_attribute("font-family") = "Leipzig";
++                textChild.append_attribute("font-family") = smuflFamily("Leipzig").c_str();
+             }
+             else {
+                 this->VrvTextFont();
+-                textChild.append_attribute("font-family") = m_fontStack.top()->GetFaceName().c_str();
++                textChild.append_attribute("font-family") = smuflFamily(fontFaceName).c_str();
+             }
+             if (m_fontStack.top()->GetStyle() == FONTSTYLE_normal) {
+                 textChild.append_attribute("font-style") = "normal";
+--- a/setup.py
++++ b/setup.py
+@@ -140,10 +140,8 @@
+       packages=['verovio',
+                 'verovio.data',
+                 'verovio.data.Bravura',
+-                'verovio.data.Gootville',
+                 'verovio.data.Leipzig',
+                 'verovio.data.Leland',
+-                'verovio.data.Petaluma',
+                 'verovio.data.text'],
+       # cf. https://docs.python.org/3/distutils/examples.html#pure-python-distribution-by-package
+       package_dir={'verovio': './bindings/python',
+@@ -152,10 +150,8 @@
+           'verovio': ['py.typed'],
+           'verovio.data': [f for f in os.listdir('./data') if (f.endswith('.xml') or f.endswith(".css") or f.endswith(".svg") or f.endswith(".json"))],
+           'verovio.data.Bravura': os.listdir('./data/Bravura'),
+-          'verovio.data.Gootville': os.listdir('./data/Gootville'),
+           'verovio.data.Leipzig': os.listdir('./data/Leipzig'),
+           'verovio.data.Leland': os.listdir('./data/Leland'),
+-          'verovio.data.Petaluma': os.listdir('./data/Petaluma'),
+           'verovio.data.text': os.listdir('./data/text'),
+       },
+       python_requires='>=3.9',
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -10,6 +10,7 @@
+ readme = "README.md"
+ requires-python = ">=3.10"
+ license = "LGPL-3.0-only"
++license-files = ["COPYING", "COPYING.LESSER", "LICENSES/*.txt"]
+ classifiers = [
+     "Programming Language :: Python :: 3",
+     "Programming Language :: C++",

@@ -1,0 +1,67 @@
+ComposerLint Windows renderer source and wheel notices
+Revision date 2026-11-16
+
+Verovio 6.3.0 is Copyright (c) Authors and others. See the source headers
+and COPYING and COPYING.LESSER. ComposerLint changed the Windows edition
+to replace font resources, emit the renamed embedded music face and omit
+two optional fonts and footer artwork on 2026-11-16. The tie1 variant also
+carries the dated MusicXML tie modification in LOCAL-TIE-FIX-NOTICE.txt.
+Both variants are local builds. Verovio's LGPL terms apply to the
+renderer. The fonts and other third-party works retain their own terms.
+
+Native and generated components
+
+  humlib                       humlib-NOTICES.txt
+  JSON++                       JSONplusplus-LICENSE.txt
+  pugixml                      pugixml-NOTICES.txt
+  MINIZ-CPP and miniz           MINIZ-CPP-miniz-NOTICES.txt
+  Surge Synth Team Tuning      tuning-library-LICENSE.txt
+  CRC                         CRC-NOTICES.txt
+  MidiFile                     MidiFile-51eec11-LICENSE.txt
+  Modified LibMEI              LibMEI-LICENSE.txt, LibMEI-AUTHORS.txt
+  MEI compiled ODD inputs       MEI-ECL-2.0.txt, retained ODD headers
+  SWIG 4.5.1 library output     SWIG-4.5.1-LICENSE-SWIG.txt
+
+MidiFile is by Craig Stuart Sapp. Verovio retains a locally differing
+MidiMessage.cpp. Its full imported source and notices are retained.
+LibMEI is from the Distributed Digital Music Archives and Libraries Lab,
+McGill University, with Verovio's local modifications. The source kit
+includes the exact generated code, generator, schema and configuration.
+The Music Encoding Initiative Board (formerly MEI Council) publishes the
+MEI schema, derived from earlier work copyright 2001–2006 Perry Roland.
+The archived MEI input pin is 6da4dd5071303ac53d73d7b5ea0399f9cfe7bdba.
+The SWIG wrapper is generated from Verovio's bindings/python/verovio.i.
+The SWIG program is a separately provisioned build tool. The copied
+runtime fragments in its generated output have the SWIG library terms.
+
+Font Software under SIL Open Font License 1.1
+
+  Bravura 1.392                Bravura-1.392-OFL.txt
+    Unmodified Steinberg OTF. Retained SVG outlines from Steinberg's
+    original SVG and the matching SMuFL metadata. Derived engraving
+    metrics use the primary name ComposerLint Engraving Glyphs.
+
+  Leland 0.80                  Leland-0.80-OFL.txt
+    Unmodified MuseScore OTF. Regenerated engraving paths and bounding
+    boxes from that OTF. Derived metrics use the primary name
+    ComposerLint Modern Glyphs. Preserved publisher SMuFL anchors.
+    Designers Martin Keary and Simon Smith.
+
+  ComposerLint Music           Leipzig-OFL.txt
+    Based on the retained Leipzig 5.2.102 TrueType and SVG source that
+    RISM Digital Center shipped with Verovio 6.3.0. Creators Etienne
+    Darbellay, Jean-Francois Marti, Laurent Pugin and Klaus Rettinghaus.
+    The modified TrueType face uses ComposerLint Music and the PostScript
+    name ComposerLintMusic-Regular. The engraving resource keys remain
+    internal. The SVG glyph paths and SMuFL metadata retain their sources.
+
+  Liberation Serif 2.1.5       Liberation-2.1.5-OFL.txt,
+                               Liberation-2.1.5-AUTHORS.txt
+    The Regular, Bold, Italic and Bold Italic fonts are unmodified. The
+    ComposerLint Serif Metrics tables are generated from those fonts.
+    The Times filenames are internal Verovio resource keys.
+
+An eventual Windows distribution needs a separate Microsoft runtime
+entry if it includes runtime DLLs. This source material contains no
+Microsoft runtime DLLs. Microsoft terms govern any authorized DLL copies
+and do not alter rights to modify or debug the Verovio renderer.

@@ -1,0 +1,19 @@
+--- a/src/iomusxml.cpp
++++ b/src/iomusxml.cpp
+@@ -623,12 +623,10 @@
+ 
+ void MusicXmlInput::CloseTie(Note *note, int layerNum)
+ {
+-    // add all notes with identical pitch/oct to m_tieStopStack
+-    for (const musicxml::OpenTie &tie : m_tieStack) {
+-        if (note->IsEnharmonicWith(tie.m_note)) {
+-            m_tieStopStack.push_back(musicxml::CloseTie(note, layerNum));
+-        }
+-    }
++    // ComposerLint local modification, 2026-11-02: retain deferred stops once.
++    // Another voice can serialize a stop before its start; MatchTies checks
++    // pitch, onset and layer after the complete measure has been read.
++    m_tieStopStack.push_back(musicxml::CloseTie(note, layerNum));
+ }
+ 
+ void MusicXmlInput::OpenSlur(Measure *measure, short int number, Slur *slur, curvature_CURVEDIR dir)

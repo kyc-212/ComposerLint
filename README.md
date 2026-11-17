@@ -1,0 +1,180 @@
+# ComposerLint
+
+ComposerLint V0.2.0 provides local, evidence-based score analysis and bounded,
+independently verified editing through MCP tools and companion Skills. Discuss
+notes, harmony, melodies, motifs, interacting parts and stylistic intentions with
+an AI client, inspect the supporting score evidence, and keep artistic decisions
+under human control.
+
+This is a **source-only distribution**. It includes ComposerLint, three Skills,
+authored examples/tests and an LGPL-licensed Verovio patch. It does not include
+renderer binaries, fonts, dependency environments or repertoire collections.
+
+## What works
+
+- Review uncompressed partwise MusicXML and Standard MIDI, with explicit coverage,
+  uncertainty and source references. MIDI remains analysis-only.
+- Import `.mxl` through its declared MusicXML container root. Import `.mscz`
+  conditionally through a separately installed MuseScore Studio 4 converter.
+- Browse complete notation pages, zoom and select measures. Natural page layout
+  has no eight-measure display limit; conversational selections cover 1–8 measures.
+- Analyze chords and ambiguity, solo melodies, rhythmic/motif relationships and
+  source-lane ensemble relationships. Discuss qualified style characteristics and
+  goal-relative evaluation without composer attribution or universal quality scores.
+- Preview exact pitch replacement, spelled intervals, atomic pitch batches and
+  explicit whole-part shifts within 1–8 contiguous measures of one part.
+- Prepare constrained expressive alternatives involving eligible pitch/register,
+  dynamics and articulation within 1–4 measures. Rhythm alternatives and new
+  pitches/rhythms in 1–4 completely resting measures use separate bounded policies.
+- Compare Original and Proposed notation, inspect actual changes and independent
+  verification, and discard temporary proposals. Eligible M6 creative candidates
+  support separate-file export after personally operated macOS confirmation.
+
+Exact M5 pitch previews remain temporary and are not eligible for that export route.
+Automatic theory repairs, unrestricted composition, arbitrary notation restructuring,
+PDF/audio input, playback and a general-purpose notation editor are unavailable.
+Structural verification does not prove artistic improvement or a requested mood.
+
+## Quick start
+
+The demonstrated runtime is **CPython 3.12 on macOS Apple Silicon**, including the
+renderer-based notation viewer and editing workflow. Most of ComposerLint is
+written in Python, but it also relies on a native renderer and platform-specific
+filesystem, process and confirmation features.
+
+The Run #26 text-only package passed on the Huawei MateBook 13 (Windows 11 x64).
+Windows Full setup is a separate candidate with native CI and device verification
+pending for the new bundle. Linux and Intel Mac compatibility remain unverified
+for this branch. See the [Windows installation guide](docs/INSTALL.md#windows-x64-full-setup).
+
+### Graphical installation — recommended for macOS Apple Silicon
+
+From [GitHub Releases](https://github.com/kyc-212/ComposerLint/releases), download
+**`ComposerLint-Setup-macOS-arm64.zip`** when a release offers that asset. Double-click
+it to extract **ComposerLint Setup.app**, then open the app. Choose full installation
+or text analysis only, review both download/install plans, and approve when ready.
+The app provides private, hash-pinned Python 3.12 and uv tools; full setup also needs
+Apple Command Line Tools and compiles the verified patched renderer locally. If
+Apple tools are missing, follow Apple's installation and licence prompts yourself.
+Internet access and time for compilation are required for a first installation.
+
+**The app is not Developer ID signed or notarized by Apple.** ZIP extraction does
+not bypass Gatekeeper. If macOS blocks it, review the source/release and checksum
+before deciding whether to use Apple's per-app **System Settings → Privacy &
+Security → Open Anyway** procedure. [Detailed steps and limitations](docs/INSTALL.md#graphical-installation-macos-apple-silicon).
+Do not disable Gatekeeper or remove quarantine attributes. A managed Mac may prevent
+opening an unverified app; respect that policy.
+
+Installed source, Skills and environments stay under
+`~/Library/Application Support/ComposerLint/setup/`, independent of the downloaded
+app. Completion provides the exact MCP command, renderer setting and Skill folder.
+No global client settings, private scores or existing exports are changed. No renderer
+binaries/fonts are bundled. Only the currently demonstrated Apple Silicon environment
+is supported; the launcher's macOS 14 minimum is not verification of every later OS.
+
+### Terminal installation — developers and AI agents
+
+Use the complete source archive or repository file set. Provide existing **Python
+3.12, uv and Apple Command Line Tools**, then run from the source directory:
+
+```sh
+./install.sh
+```
+
+Choose full installation, text analysis only, or cancellation and review the plan.
+`./install.sh --check` is read-only; `./install.sh --offline` forbids downloads.
+Both interfaces use the same locked dependencies, exact renderer patch, independent
+verification and safe reuse. See [installation](docs/INSTALL.md) for manual setup.
+
+Connect the local stdio server with the installed interpreter:
+
+```sh
+/absolute/path/printed/by/installer/runtime/bin/python -B -m composerlint.server
+```
+
+For full setup, also copy the printed `COMPOSERLINT_RENDERER_CONFIG` environment
+setting into that server's configuration. Codex is the demonstrated client.
+Other MCP clients need local stdio and filesystem
+access; their configuration conventions and interactive viewer behavior have not
+been independently verified. Keep stdout reserved for MCP traffic.
+
+The three authoritative Skills live in `skills/composer-import`,
+`skills/composer-review` and `skills/composer-edit`. Relative links under
+`.agents/skills` expose them in the project. Keep all three folders together because
+of their cross-links. Reconnect the server and start a fresh client session after
+updating; verify the actual tool inventory rather than assuming discovery succeeded.
+
+Try these requests with an absolute path visible to the server:
+
+| Request | Result |
+| --- | --- |
+| “Review `/path/to/piece.musicxml`.” | Evidence-backed musical review |
+| “Convert `/path/to/piece.mxl` to MusicXML.” | Verified temporary working path and provenance; no unsolicited analysis |
+| “Open `/path/to/piece.mscz` and analyze measures 9–12.” | Conditional import, then the requested viewing/analysis |
+| “Raise the horn in measures 9–10 one octave.” | Clarify ambiguous targets, then an eligible temporary verified preview |
+| “Try a quieter accompaniment here; preserve the melody.” | Discuss supported constraints/brief before generating an eligible alternative |
+| “Create a short idea in these four empty measures.” | Bounded single-lane note creation if all prerequisites pass |
+
+## Renderer prerequisite
+
+The full verified viewer/editing workflow requires the patched native renderer
+`6.3.0+composerlint.tie1`. Official Verovio 6.3.0 failed the required deferred
+cross-voice tie controls and is not an equivalent substitute. This project retains
+warning refusal, source correspondence and independent candidate checks.
+
+The approved macOS full installer builds the patched renderer from pinned
+Verovio source. [Manual build instructions](patches/README.md) remain available.
+Windows Full setup consumes a separately verified, CI-built bundle once cleared
+for distribution. The adapter requires official 6.3.0 in the main environment
+and runs the patched build separately.
+Installing only the custom build into the main environment does not satisfy that gate.
+
+Select the verified renderer with an explicit server-owner manifest; never let a
+score or tool request choose executable code. The installer handles the build and
+private manifest. [Installation](docs/INSTALL.md) describes the manifest and
+its integrity checks. The text-only review route remains available without it.
+
+## Files, privacy and human approval
+
+Inputs are local server-visible files. URLs/file URIs, external score assets and
+unsafe archives refuse. Working sources/import receipts live together in private
+OS-temporary folders and may expire or be removed by the OS. They are not exports.
+Source, working file and receipt identities are checked before reuse.
+
+On macOS, configuration/data default to `~/Library/Application Support/ComposerLint`;
+new exports use its `exports/` child. Absolute server-owner overrides are documented
+in [installation](docs/INSTALL.md). Existing files are never moved automatically.
+Original bytes stay unchanged. Stale sources, missing receipts, changed candidates,
+unsupported notation and failed verification refuse rather than silently simplify.
+
+For eligible export, inspect Original/Proposed and actual changes, personally click
+Approve & Export, and personally approve the native confirmation. The AI must not
+operate that dialog. No MCP approval flag substitutes for the human decision.
+The exact candidate is checked again before exclusive creation of a new MusicXML
+file and receipt. Rejection, timeout or unavailable confirmation produces no
+successful export. M5-only previews cannot use this export route.
+
+## Development, licenses and release scope
+
+The tests use locally authored synthetic MusicXML/MIDI controls and independent
+expectations; fixture provenance is documented under `tests/fixtures/`. Preserve
+those sources and expectations. Do not regenerate fixtures to hide failures.
+
+ComposerLint-owned code is MIT licensed; see [LICENSE](LICENSE). The Verovio patch
+is **LGPL-3.0-only**, with [local attribution](LICENSES/third-party/verovio/LOCAL-TIE-FIX-NOTICE.txt)
+and full GPL/LGPL texts kept separately. Third-party components retain their own
+terms; see [notices](THIRD_PARTY_NOTICES.md) and [distribution scope](docs/licensing/renderer-redistribution.md).
+Hashes establish identity, not licensing compliance. Renderer binaries/font
+resources remain excluded and uncleared for redistribution.
+
+The [publication manifest](docs/licensing/public-source-manifest.json) records the
+previously reviewed V0.2.0 source set; it is not an updated inventory of the installer
+changes in this checkout. [Release readiness](docs/V0.2-M5-release-checklist.md) retains
+its gate history. Installer changes require separate review before any commit,
+push, tag or new release.
+
+## Building the graphical installer
+
+See [native setup packaging and release instructions](macos/README.md) for the ZIP
+build recipe, checksums, security disclosure and retained optional DMG/signing tooling.
+Local preparation does not imply a graphical asset has been published.

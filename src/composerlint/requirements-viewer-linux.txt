@@ -1,0 +1,2 @@
+# Ubuntu 24.04 x86-64 CI pilot base renderer; native acceptance pending.
+verovio==6.3.0 --hash=sha256:0896a708a5b130cc5bab3a168d70435ad8b3e54692088e7e5e281fef11c0b05d

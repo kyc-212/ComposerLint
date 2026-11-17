@@ -1,0 +1,22 @@
+Verovio 6.3.0 — isolated ComposerLint development build
+Upstream: https://github.com/rism-digital/verovio
+License: GNU Lesser General Public License, version 3 only (LGPL-3.0-only).
+Upstream source-file notice (src/iomusxml.cpp):
+// Author: Laurent Pugin and Klaus Rettinghaus
+// Copyright (c) Authors and others. All rights reserved.
+
+Local modification: 2026-11-02, ComposerLint.
+Only MusicXmlInput::CloseTie is changed: retain a deferred tie stop once,
+including a stop serialized before its start in another voice.
+Patch: patches/verovio-6.3.0-deferred-tie-stops.patch
+This patch to Verovio is provided under the same LGPL-3.0-only terms as
+the upstream library, with the GPLv3 terms incorporated by LGPLv3.
+The upstream copyright, license and warranty notices are preserved.
+COPYING and COPYING.LESSER in this directory are verbatim upstream texts.
+
+The custom build is retained for authorized local use, including the viewer.
+It has not been distributed or cleared for public redistribution.
+It is not an official upstream release and carries no upstream endorsement.
+Redistribution, if separately approved, requires the exact corresponding
+modified source and applicable notices, license and relinking obligations.
+See THIRD_PARTY_NOTICES.md for the bounded review and remaining release gates.
