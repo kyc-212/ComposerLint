@@ -101,7 +101,7 @@ def inventory(archive, *, expanded, member_limit, max_items, directories=False):
                 or folder and (not directories or item.file_size)):
             raise ValueError('Unsafe renderer ZIP member.')
         if folded in explicit:
-            raise ValueError('Duplicate renderer ZIP member.')
+            raise ValueError('Duplicate or case-colliding renderer ZIP member.')
         explicit.add(folded)
         for i in range(1, len(parts) + 1):
             key = folded[:i]
@@ -139,22 +139,28 @@ def bundle_files(raw, *, built=False):
                 or not all(valid_sha(pin) for pin in pins.values())):
             raise ValueError('Standalone renderer inventory differs from the ZIP.')
         result = {}
+        control_names = {'/'.join(parts) for parts in CONTROLS}
         for name in pins:
+            data = archive.read(name)
             if name in ('patched/' + EXE, 'comparison/' + EXE):
-                if not _amd64(archive.read(name)):
+                if not _amd64(data):
                     raise ValueError('Expected a native x64 Windows renderer executable.')
             elif name.startswith('resources/data/'):
                 if Path(name).suffix.lower() not in RESOURCE_SUFFIXES:
                     raise ValueError('Unexpected file type in the renderer resources.')
-            elif name not in {'/'.join(parts) for parts in CONTROLS} and not name.startswith('LICENSES/'):
+            elif name.startswith('LICENSES/'):
+                if not data or b'\0' in data:
+                    raise ValueError('Expected a text renderer notice.')
+                data.decode('utf-8')
+            elif name not in control_names:
                 raise ValueError('Unexpected standalone renderer ZIP member.')
-            data = archive.read(name)
             if sha(data) != pins[name]:
                 raise ValueError(f'Standalone renderer file differs from its pin: {name}')
             result[name] = data
         if (not {f'{kind}/{EXE}' for kind in ('patched', 'comparison')} <= result.keys()
-                or not any(name.startswith('resources/data/') for name in result)):
-            raise ValueError('Expected both renderers and their shared resources.')
+                or not any(name.startswith('resources/data/') for name in result)
+                or not any(name.startswith('LICENSES/') for name in result)):
+            raise ValueError('Expected both renderers, their shared resources and notices.')
         return result
 
 

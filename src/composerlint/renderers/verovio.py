@@ -115,7 +115,7 @@ def windows_renderer_scope(config):
         yield str(config.parent.joinpath(*executable.split('/'))), pinned.BUILD
 
 
-def require_wheel():
+def _require_wheel():
     try:
         if version('verovio') != '6.3.0':
             fail('renderer_unavailable', 'Viewer requires the approved optional Verovio 6.3.0.')
@@ -127,8 +127,8 @@ def render(xml, start=None, end=None, width=1800, *, notation_page=None):
     windows = host.platform_name() == 'win32'
     if windows:
         from composerlint.windows_renderer_native import EXE
-    if not windows:
-        require_wheel()
+    else:
+        _require_wheel()
     request = json.dumps(dict(xml=xml, start=start, end=end, width=width, notation_page=notation_page))
     try:
         with renderer_scope() as (executable, expected_build):
@@ -140,7 +140,7 @@ def render(xml, start=None, end=None, width=1800, *, notation_page=None):
                     env={'SystemRoot': str(system), 'WINDIR': str(system), 'PATH': str(system / 'System32')})
             else:
                 if windows:
-                    require_wheel()
+                    _require_wheel()
                 cp = host.run_owned([executable, '-I', '-B', str(Path(__file__).with_name('verovio_worker.py'))],
                     input=request, capture_output=True, text=True, timeout=15)
     except host.UnsupportedPlatformOperation as exc:

@@ -510,8 +510,9 @@ def terminate_owned(process):
         pass
 
 
-def run_windows_json(command, payload, *, timeout, cancelled=None, **context):
+def run_windows_json(command, payload, *, timeout, cancelled=None, cwd=None, env=None):
     from . import windows_workers
+    context = {'cwd': cwd, 'env': env} if cwd is not None or env is not None else {}
     try:
         result = windows_workers.run_json_worker(
             command, payload.encode('utf-8'), timeout=timeout, cancelled=cancelled, **context)
