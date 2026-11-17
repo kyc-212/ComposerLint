@@ -1,0 +1,29 @@
+name: ComposerLint Windows graphical smoke test
+
+on:
+  push:
+    branches:
+      - codex/windows-graphical-ci
+    paths:
+      - '.github/workflows/composerlint-windows-graphical-smoke.yml'
+      - 'windows/graphical-setup/**'
+
+permissions:
+  contents: read
+
+jobs:
+  graphical-smoke:
+    if: github.repository == 'kyc-212/ComposerLint'
+    runs-on: windows-2025
+    timeout-minutes: 8
+    steps:
+      - name: Check out the candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Check the native wizard layout and approval transport
+        shell: powershell
+        run: |
+          & "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -STA -File windows\graphical-setup\Test-WindowsWizard.ps1
+          exit $LASTEXITCODE

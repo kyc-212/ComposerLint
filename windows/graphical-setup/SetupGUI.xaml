@@ -1,0 +1,202 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="ComposerLint Setup" Width="1100" Height="820" MinWidth="710" MinHeight="490"
+        WindowStartupLocation="CenterScreen" Background="#1E1E1E" Foreground="#E5E5E5"
+        FontFamily="Segoe UI" FontSize="15" UseLayoutRounding="True" TextOptions.TextFormattingMode="Display">
+  <Window.Resources>
+    <SolidColorBrush x:Key="Secondary" Color="#B0B4BC"/>
+    <Style TargetType="TextBlock">
+      <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <Style x:Key="Caption" TargetType="TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource Secondary}"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="FontSize" Value="13"/>
+    </Style>
+    <Style x:Key="Card" TargetType="Border">
+      <Setter Property="Background" Value="#272727"/>
+      <Setter Property="CornerRadius" Value="16"/>
+      <Setter Property="Padding" Value="20"/>
+      <Setter Property="Margin" Value="0,16,0,0"/>
+    </Style>
+    <Style TargetType="Button">
+      <Setter Property="Foreground" Value="White"/>
+      <Setter Property="Background" Value="#303437"/>
+      <Setter Property="BorderBrush" Value="#566268"/>
+      <Setter Property="Padding" Value="17,8"/>
+      <Setter Property="MinHeight" Value="36"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="Frame" CornerRadius="18" Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+                    Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Frame" Property="BorderBrush" Value="#B9D7D4"/></Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Frame" Property="BorderBrush" Value="White"/></Trigger>
+              <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.54"/></Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style TargetType="RadioButton">
+      <Setter Property="Foreground" Value="#E5E5E5"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Margin" Value="0,0,0,13"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="RadioButton">
+            <Border x:Name="Frame" BorderThickness="2" CornerRadius="17" BorderBrush="#383838"
+                    Background="#1E1E1E" Padding="20,15">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="31"/>
+                </Grid.ColumnDefinitions>
+                <ContentPresenter/>
+                <Ellipse Grid.Column="1" x:Name="Indicator" Width="17" Height="17" Stroke="#AEB6BC" StrokeThickness="2"/>
+                <Ellipse Grid.Column="1" x:Name="Dot" Width="7" Height="7" Fill="White" Visibility="Collapsed"/>
+              </Grid>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="Frame" Property="Background" Value="#202631"/>
+                <Setter TargetName="Frame" Property="BorderBrush" Value="#1890FF"/>
+                <Setter TargetName="Indicator" Property="Fill" Value="#137ED9"/>
+                <Setter TargetName="Indicator" Property="Stroke" Value="#137ED9"/>
+                <Setter TargetName="Dot" Property="Visibility" Value="Visible"/>
+              </Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Frame" Property="BorderBrush" Value="White"/></Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style TargetType="TextBox">
+      <Setter Property="Foreground" Value="#E5E5E5"/>
+      <Setter Property="Background" Value="#17191A"/>
+      <Setter Property="BorderBrush" Value="#60666A"/>
+      <Setter Property="CaretBrush" Value="White"/>
+      <Setter Property="Padding" Value="10"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+  </Window.Resources>
+  <Grid>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="28*" MinWidth="180" MaxWidth="305"/>
+      <ColumnDefinition Width="72*"/>
+    </Grid.ColumnDefinitions>
+    <Border>
+      <Border.Background>
+        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+          <GradientStop Color="#10223B" Offset="0"/>
+          <GradientStop Color="#103D43" Offset="1"/>
+        </LinearGradientBrush>
+      </Border.Background>
+      <DockPanel Margin="23,25,19,19">
+        <StackPanel DockPanel.Dock="Bottom" x:Name="Privacy">
+          <TextBlock Text="Local by design" Foreground="White" FontWeight="SemiBold"/>
+          <TextBlock Text="Your scores stay on this device. You connect your AI client yourself."
+                     Foreground="#BBD0D3" Margin="0,7,0,0" FontSize="13"/>
+        </StackPanel>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <Image x:Name="BrandIcon" HorizontalAlignment="Left" Width="76" Height="76"/>
+            <TextBlock Text="ComposerLint" Foreground="White" FontWeight="Bold" FontSize="25" Margin="0,16,0,3"/>
+            <TextBlock x:Name="Platform" Style="{StaticResource Caption}"/>
+            <StackPanel x:Name="StepList" Margin="0,25,0,12"/>
+          </StackPanel>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+    <Grid Grid.Column="1" Margin="29,23,29,14">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="Auto"/>
+      </Grid.RowDefinitions>
+      <ScrollViewer x:Name="Page" VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="0,0,9,18">
+          <DockPanel Margin="0,4,0,15">
+            <TextBlock x:Name="Version" DockPanel.Dock="Right" Style="{StaticResource Caption}"/>
+            <TextBlock x:Name="StepCounter" Style="{StaticResource Caption}"/>
+          </DockPanel>
+          <TextBlock x:Name="Heading" FontSize="34" FontWeight="Bold" Margin="0,0,0,7"/>
+          <TextBlock x:Name="Subtitle" Foreground="{StaticResource Secondary}" Margin="0,0,0,18"/>
+          <StackPanel x:Name="ChoosePanel">
+            <TextBlock Text="Choose your installation" FontSize="17" FontWeight="Bold" Margin="0,0,0,11"/>
+            <RadioButton x:Name="Full" GroupName="Mode" IsChecked="True" AutomationProperties.Name="Full experience">
+              <StackPanel>
+                <TextBlock Text="Full experience" FontSize="18" FontWeight="Bold"/>
+                <TextBlock Text="Notation, analysis and verified temporary editing" Foreground="{StaticResource Secondary}"/>
+              </StackPanel>
+            </RadioButton>
+            <RadioButton x:Name="TextOnly" GroupName="Mode" AutomationProperties.Name="Text analysis only">
+              <StackPanel>
+                <TextBlock Text="Text analysis only" FontSize="18" FontWeight="Bold"/>
+                <TextBlock Text="Score analysis with a smaller installation" Foreground="{StaticResource Secondary}"/>
+              </StackPanel>
+            </RadioButton>
+            <Border Style="{StaticResource Card}">
+              <StackPanel>
+                <TextBlock Text="Before you begin" FontSize="18" FontWeight="Bold" Margin="0,0,0,9"/>
+                <TextBlock x:Name="Requirements"/>
+                <TextBlock Text="Installation folder" FontWeight="SemiBold" Margin="0,12,0,3"/>
+                <TextBlock x:Name="Destination" Foreground="{StaticResource Secondary}"/>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+          <StackPanel x:Name="ToolPanel" Visibility="Collapsed">
+            <Border Style="{StaticResource Card}">
+              <StackPanel>
+                <TextBlock Text="Already downloaded some setup files?" FontSize="17" FontWeight="Bold"/>
+                <TextBlock Text="Choose their folder. Setup checks those files and fetches the pinned files that are missing."
+                           Foreground="{StaticResource Secondary}" Margin="0,5,0,9"/>
+                <WrapPanel>
+                  <Button x:Name="BrowseCache" Content="Choose folder"/>
+                  <Button x:Name="ClearCache" Content="Clear" IsEnabled="False" Margin="8,0,0,0"/>
+                </WrapPanel>
+                <TextBlock x:Name="CachePath" Foreground="{StaticResource Secondary}" Margin="0,6,0,0"/>
+              </StackPanel>
+            </Border>
+            <Border x:Name="RendererPanel" Style="{StaticResource Card}">
+              <StackPanel>
+                <TextBlock Text="Renderer for notation" FontSize="17" FontWeight="Bold"/>
+                <TextBlock Text="Setup looks for a verified renderer. You can also select a reviewed renderer ZIP. If a build is needed, setup will explain any missing tools."
+                           Foreground="{StaticResource Secondary}" Margin="0,5,0,9"/>
+                <WrapPanel>
+                  <Button x:Name="BrowseRenderer" Content="Choose renderer ZIP"/>
+                  <Button x:Name="ClearRenderer" Content="Clear" IsEnabled="False" Margin="8,0,0,0"/>
+                </WrapPanel>
+                <TextBlock x:Name="RendererPath" Foreground="{StaticResource Secondary}" Margin="0,6,0,0"/>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+          <StackPanel x:Name="WorkPanel" Visibility="Collapsed">
+            <TextBlock x:Name="Status" Margin="0,3,0,12" AutomationProperties.LiveSetting="Polite"/>
+            <ProgressBar x:Name="BusyBar" Height="5" IsIndeterminate="True" Foreground="#55CFAF" Visibility="Collapsed"/>
+            <TextBox x:Name="Details" IsReadOnly="True" MaxHeight="280" VerticalScrollBarVisibility="Auto"
+                     Margin="0,13,0,0" AutomationProperties.Name="Setup plan"/>
+            <TextBox x:Name="Answer" Visibility="Collapsed" MaxLength="32" Margin="0,12,0,0"
+                     AutomationProperties.Name="Response to the installer request"/>
+            <Expander x:Name="LogPanel" Header="Setup log" Foreground="#CED6D9" Margin="0,14,0,0">
+              <TextBox x:Name="Log" IsReadOnly="True" MaxHeight="150" VerticalScrollBarVisibility="Auto"
+                       AutomationProperties.Name="Local setup log"/>
+            </Expander>
+          </StackPanel>
+        </StackPanel>
+      </ScrollViewer>
+      <DockPanel Grid.Row="1" Margin="0,7,0,0">
+        <Border DockPanel.Dock="Top" Background="#383838" Height="1" Margin="0,0,0,10"/>
+        <Button x:Name="Primary" DockPanel.Dock="Right" Background="#117767" BorderBrush="#117767"
+                Content="Review setup" IsDefault="True"/>
+        <Button x:Name="Back" DockPanel.Dock="Left" Content="Close" HorizontalAlignment="Left"/>
+        <Border/>
+      </DockPanel>
+    </Grid>
+  </Grid>
+</Window>
