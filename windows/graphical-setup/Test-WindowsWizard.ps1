@@ -20,6 +20,41 @@ function Get-CheckedScript([string]$Name) {
     return $syntax
 }
 
+function Assert-InBounds($Element, $Surface, [Windows.Size]$Size) {
+    Assert-Check ($null -ne $Element) 'An expected wizard control is absent.'
+    $bounds = $Element.TransformToAncestor($Surface).TransformBounds(
+        [Windows.Rect]::new($Element.RenderSize))
+    $visible = $bounds.Width -gt 0 -and $bounds.Height -gt 0 -and
+               $bounds.Left -ge 0 -and $bounds.Top -ge 0 -and
+               $bounds.Right -le $Size.Width -and $bounds.Bottom -le $Size.Height
+    Assert-Check $visible "$($Element.Name) was outside the wizard at $Size."
+}
+
+function Assert-IconRenders($Icon, [int]$Dpi) {
+    $size = $Icon.RenderSize
+    $width = [int][Math]::Ceiling($size.Width * $Dpi / 96)
+    $height = [int][Math]::Ceiling($size.Height * $Dpi / 96)
+    $rectangle = [Windows.Rect]::new($size)
+    $brush = [Windows.Media.VisualBrush]::new($Icon)
+    $brush.ViewboxUnits = 'Absolute'
+    $brush.Viewbox = $rectangle
+    $visual = [Windows.Media.DrawingVisual]::new()
+    $drawing = $visual.RenderOpen()
+    try { $drawing.DrawRectangle($brush, $null, $rectangle) } finally { $drawing.Close() }
+    $artwork = [Windows.Media.Imaging.RenderTargetBitmap]::new(
+        $width, $height, $Dpi, $Dpi, [Windows.Media.PixelFormats]::Pbgra32)
+    $artwork.Render($visual)
+    $pixels = [byte[]]::new($width * $height * 4)
+    $artwork.CopyPixels($pixels, $width * 4, 0)
+    $ink = 0
+    for ($offset = 3; $offset -lt $pixels.Length; $offset += 4) {
+        if ($pixels[$offset] -ge 128) { $ink++ }
+    }
+    $coverage = $ink / ($width * $height)
+    $distinct = $coverage -gt 0.05 -and $coverage -lt 0.65
+    Assert-Check $distinct "$($Icon.Name) did not render as a distinct icon at $Dpi DPI (coverage $coverage)."
+}
+
 $syntax = Get-CheckedScript 'SetupGUI.ps1'
 [void](Get-CheckedScript 'GraphicalWorker.ps1')
 Write-Host 'Windows PowerShell 5.1 parsed both wizard scripts.'
@@ -47,14 +82,16 @@ try {
         $surface.Measure($size)
         $surface.Arrange([Windows.Rect]::new($size))
         $surface.UpdateLayout()
-        $primary = $window.FindName('Primary')
-        $bounds = $primary.TransformToAncestor($surface).TransformBounds(
-            [Windows.Rect]::new($primary.RenderSize))
-        $visible = $bounds.Width -gt 0 -and $bounds.Height -gt 0 -and
-                   $bounds.Right -le $size.Width -and $bounds.Bottom -le $size.Height
-        Assert-Check $visible "The primary action was outside the wizard at $size."
+        Assert-InBounds ($window.FindName('Primary')) $surface $size
+        foreach ($name in @('FullIcon', 'TextOnlyIcon', 'PrivacyIcon')) {
+            $icon = $window.FindName($name)
+            Assert-InBounds $icon $surface $size
+            Assert-IconRenders $icon 96
+            Assert-IconRenders $icon 144
+        }
     }
     Write-Host 'WPF loaded the production layout. Control references, mode switching and primary action layout checks passed.'
+    Write-Host 'All three polished icons rendered at 100% and 150% scaling at both window sizes.'
 } finally { $window.Close() }
 
 . (Join-Path $PSScriptRoot 'GraphicalWorker.ps1')

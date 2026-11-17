@@ -19,6 +19,19 @@
       <Setter Property="Padding" Value="20"/>
       <Setter Property="Margin" Value="0,16,0,0"/>
     </Style>
+    <Style x:Key="ModeIcon" TargetType="Viewbox">
+      <Setter Property="DockPanel.Dock" Value="Left"/>
+      <Setter Property="Width" Value="26"/>
+      <Setter Property="Height" Value="26"/>
+      <Setter Property="Margin" Value="0,0,16,0"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style x:Key="IconBar" TargetType="Rectangle">
+      <Setter Property="Height" Value="2"/>
+      <Setter Property="RadiusX" Value="1"/>
+      <Setter Property="RadiusY" Value="1"/>
+      <Setter Property="Fill" Value="#E5E5E5"/>
+    </Style>
     <Style TargetType="Button">
       <Setter Property="Foreground" Value="White"/>
       <Setter Property="Background" Value="#303437"/>
@@ -100,7 +113,21 @@
       </Border.Background>
       <DockPanel Margin="23,25,19,19">
         <StackPanel DockPanel.Dock="Bottom" x:Name="Privacy">
-          <TextBlock Text="Local by design" Foreground="White" FontWeight="SemiBold"/>
+          <DockPanel>
+            <Viewbox x:Name="PrivacyIcon" DockPanel.Dock="Left" Width="20" Height="20" Margin="0,0,8,0"
+                     VerticalAlignment="Center">
+              <Canvas Width="24" Height="24">
+                <Path Stroke="White" StrokeThickness="1.9" StrokeLineJoin="Round"
+                      Data="M12,2.25 L20.5,5.75 V11 C20.5,15.7 17.7,19 12,21.75 C6.3,19 3.5,15.7 3.5,11 V5.75 Z"/>
+                <Path Stroke="White" StrokeThickness="1.6"
+                      Data="M9.5,11 V9.2 C9.5,6 14.5,6 14.5,9.2 V11"/>
+                <Path Fill="White"
+                      Data="F0 M8.8,10.5 H15.2 Q16,10.5 16,11.3 V15.7 Q16,16.5 15.2,16.5 H8.8 Q8,16.5 8,15.7 V11.3 Q8,10.5 8.8,10.5 Z
+                               M11.25,12.25 H12.75 V14.75 H11.25 Z"/>
+              </Canvas>
+            </Viewbox>
+            <TextBlock Text="Local by design" Foreground="White" FontWeight="SemiBold"/>
+          </DockPanel>
           <TextBlock Text="Your scores stay on this device. You connect your AI client yourself."
                      Foreground="#BBD0D3" Margin="0,7,0,0" FontSize="13"/>
         </StackPanel>
@@ -125,21 +152,45 @@
             <TextBlock x:Name="Version" DockPanel.Dock="Right" Style="{StaticResource Caption}"/>
             <TextBlock x:Name="StepCounter" Style="{StaticResource Caption}"/>
           </DockPanel>
-          <TextBlock x:Name="Heading" FontSize="34" FontWeight="Bold" Margin="0,0,0,7"/>
+          <TextBlock x:Name="Heading" FontFamily="Arial Rounded MT Bold, Trebuchet MS, Segoe UI"
+                     FontSize="36" FontWeight="Bold" Margin="0,0,0,7"/>
           <TextBlock x:Name="Subtitle" Foreground="{StaticResource Secondary}" Margin="0,0,0,18"/>
           <StackPanel x:Name="ChoosePanel">
             <TextBlock Text="Choose your installation" FontSize="17" FontWeight="Bold" Margin="0,0,0,11"/>
             <RadioButton x:Name="Full" GroupName="Mode" IsChecked="True" AutomationProperties.Name="Full experience">
-              <StackPanel>
-                <TextBlock Text="Full experience" FontSize="18" FontWeight="Bold"/>
-                <TextBlock Text="Notation, analysis and verified temporary editing" Foreground="{StaticResource Secondary}"/>
-              </StackPanel>
+              <DockPanel>
+                <Viewbox x:Name="FullIcon" Style="{StaticResource ModeIcon}">
+                  <Canvas Width="24" Height="24">
+                    <Rectangle Style="{StaticResource IconBar}" Canvas.Left="2" Canvas.Top="5.5" Width="7.25"/>
+                    <Rectangle Style="{StaticResource IconBar}" Canvas.Left="2" Canvas.Top="10" Width="7.25"/>
+                    <Rectangle Style="{StaticResource IconBar}" Canvas.Left="2" Canvas.Top="14.5" Width="4.5"/>
+                    <Path Fill="#E5E5E5"
+                          Data="M12,5.6 L22,2.75 V7.8 L15.2,9.75 V17.1
+                                C15.2,19.35 13.5,21 11.15,21 C9.35,21 8,20 8,18.55
+                                C8,16.85 9.55,15.55 11.4,15.55 C11.65,15.55 11.83,15.57 12,15.62 Z"/>
+                  </Canvas>
+                </Viewbox>
+                <StackPanel>
+                  <TextBlock Text="Full experience" FontSize="18" FontWeight="Bold"/>
+                  <TextBlock Text="Notation, analysis and verified temporary editing" Foreground="{StaticResource Secondary}"/>
+                </StackPanel>
+              </DockPanel>
             </RadioButton>
             <RadioButton x:Name="TextOnly" GroupName="Mode" AutomationProperties.Name="Text analysis only">
-              <StackPanel>
-                <TextBlock Text="Text analysis only" FontSize="18" FontWeight="Bold"/>
-                <TextBlock Text="Score analysis with a smaller installation" Foreground="{StaticResource Secondary}"/>
-              </StackPanel>
+              <DockPanel>
+                <Viewbox x:Name="TextOnlyIcon" Style="{StaticResource ModeIcon}">
+                  <Canvas Width="24" Height="24">
+                    <Rectangle Style="{StaticResource IconBar}" Canvas.Left="2.5" Canvas.Top="4.5" Width="19"/>
+                    <Rectangle Style="{StaticResource IconBar}" Canvas.Left="2.5" Canvas.Top="9" Width="14.5"/>
+                    <Rectangle Style="{StaticResource IconBar}" Canvas.Left="2.5" Canvas.Top="13.5" Width="19"/>
+                    <Rectangle Style="{StaticResource IconBar}" Canvas.Left="2.5" Canvas.Top="18" Width="11.5"/>
+                  </Canvas>
+                </Viewbox>
+                <StackPanel>
+                  <TextBlock Text="Text analysis only" FontSize="18" FontWeight="Bold"/>
+                  <TextBlock Text="Score analysis with a smaller installation" Foreground="{StaticResource Secondary}"/>
+                </StackPanel>
+              </DockPanel>
             </RadioButton>
             <Border Style="{StaticResource Card}">
               <StackPanel>
