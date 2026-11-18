@@ -127,7 +127,9 @@ def test_shared_union_is_exact_lossless_complete_and_deduplicated():
     records={r['record_ref']:r['data'] for r in observer.rows}
     assert audited_events(records)
     for row in audited_events(records):assert row['part']['id']==row['voice']['part_id']
-    bad=deepcopy(pages[-1]);bad.items[0].data['encoded_chunk']='A'+bad.items[0].data['encoded_chunk'][1:]
+    bad = deepcopy(pages[-1])
+    chunk = bad.items[0].data['encoded_chunk']
+    bad.items[0].data['encoded_chunk'] = ('B' if chunk.startswith('A') else 'A') + chunk[1:]
     check=SharedProofObserver()
     for page in pages[:-1]:check.add(page)
     with pytest.raises(ValueError,match='forged'):check.add(bad)
