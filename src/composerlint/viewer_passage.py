@@ -53,9 +53,10 @@ def checked_selection(token,path,expected_source,options=None,*,instance=None,re
 
 
 def bound_passage(args):
-    """Keep live checks and the existing isolated computation inside 25 seconds."""
+    """Keep live checks and the existing isolated computation within the combined preparation and passage deadline."""
     from composerlint.advanced_runtime import request_worker,LIMITS
-    started=time.monotonic()
+    from composerlint.passage_session import PREPARATION_SECONDS
+    deadline = time.monotonic() + PREPARATION_SECONDS + LIMITS['deadline_seconds']
     from composerlint.viewer_source import ViewerFailure
     def checked():
         try:return checked_selection(args.viewer_selection_ref,args.path,args.expected_source_snapshot,args.options,query=args.query())
@@ -66,9 +67,9 @@ def bound_passage(args):
     # Exact additional canonical bytes when these fields join the result object.
     overhead=len(canonical(viewer_fields).encode())-1
     result=request_worker({'operation':'passage','arguments':args.model_dump(mode='json'),'response_overhead':overhead},
-        timeout=max(0,LIMITS['deadline_seconds']-(time.monotonic()-started)))
+        timeout=max(0,deadline-time.monotonic()))
     checked()
-    if time.monotonic()-started>=LIMITS['deadline_seconds']:
+    if time.monotonic() >= deadline:
         raise AdvancedFailure('analysis_timeout','Live passage request exceeded its existing deadline.')
     page=ViewerPassagePage(**result,**viewer_fields)
     if len(canonical(page.model_dump(mode='json')).encode())>args.max_bytes:

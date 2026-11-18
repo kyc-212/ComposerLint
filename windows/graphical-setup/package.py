@@ -159,6 +159,19 @@ def wire_backend(source):
     return 0""").encode('utf-8')
 
 
+def overlay_score_runtime(files):
+    # Keep the terminal package's native Windows job, pipe and file adapters.
+    native = 'src/composerlint/windows_workers.py'
+    worker = replace(files[native].decode(), 'def exchange(self, payload, deadline):',
+                     'def exchange(self, payload, deadline, *, cancelled=None):')
+    files[native] = replace(worker, 'self._handles, payload, deadline, None,',
+                            'self._handles, payload, deadline, cancelled,').encode()
+    for module in ('score_import', 'windows_score_import', 'windows_musescore',
+                   'engine/timeline', 'passage', 'passage_session', 'server', 'viewer_passage'):
+        name = f'src/composerlint/{module}.py'
+        files[name] = (HERE.parents[1] / name).read_bytes()
+
+
 def graphical_files(files, baseline_hash):
     backend = 'src/composerlint/windows_setup.py'
     if ('src/composerlint/windows_renderer_native.py' not in files
@@ -166,6 +179,14 @@ def graphical_files(files, baseline_hash):
         raise ValueError('Use a standalone Windows terminal package.')
     files['Setup.ps1'] = wire_launcher(files['Setup.ps1'].decode('utf-8'))
     files[backend] = wire_backend(files[backend].decode('utf-8'))
+    # The released terminal base carries a branch-specific Windows MXL importer.
+    # Replace only the reviewed predecessor when packaging the shared importer.
+    importer = 'src/composerlint/score_import.py'
+    if sha(files[importer]) != '7d488a99bc0dd20af30fba7f6427af96cfd699c5452d3e665e43311be41b62dc':
+        raise ValueError('The standalone terminal importer changed. Review it before packaging.')
+    overlay_score_runtime(files)
+    skill = 'skills/composer-import/SKILL.md'
+    files[skill] = (HERE.parents[1] / skill).read_bytes()
 
     resources = ('SetupGUI.ps1', 'SetupGUI.xaml', 'GraphicalWorker.ps1', 'GraphicalBackend.py',
                  'Open-ComposerLint-Setup.cmd', 'GRAPHICAL-SETUP.md')

@@ -1,4 +1,5 @@
 """Exact half-open occupancy, evidence roles, and safe melodic baselines."""
+from collections import defaultdict
 from fractions import Fraction
 from composerlint.models import Eligibility, EvidenceLists, Part, PitchedEvent, RestEvent, VoiceRegion, rt
 
@@ -11,12 +12,21 @@ def build_regions(part: Part) -> None:
     end = part.measures[-1].end.fraction()
     for voice in part.voices:
         events = [e for e in part.events if e.voice_id == voice.id and e.participates_in_timeline]
-        boundaries = sorted({start, end, *(e.onset.fraction() for e in events), *(e.end.fraction() for e in events)})
+        starts, ends = defaultdict(list), defaultdict(list)
+        for index, event in enumerate(events):
+            onset, stop = event.onset.fraction(), event.end.fraction()
+            if stop > onset:
+                starts[onset].append(index)
+                ends[stop].append(index)
+        boundaries = sorted({start, end, *starts, *ends})
+        sounding = set()
         regions = []
         for a, b in zip(boundaries, boundaries[1:]):
             if a == b:
                 continue
-            occupied = [e for e in events if e.onset.fraction() <= a < e.end.fraction()]
+            sounding.difference_update(ends.get(a, ()))
+            sounding.update(starts.get(a, ()))
+            occupied = [events[i] for i in sorted(sounding)]
             pitched = [e for e in occupied if isinstance(e, PitchedEvent)]
             active = [e.id for e in pitched if e.sounding_pitch is not None]
             rests = [e for e in occupied if isinstance(e, RestEvent)]

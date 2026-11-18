@@ -1,6 +1,6 @@
 """Source-bound descriptive passages using the existing M3 predicates, without M1.
 
-No preparation cache: every worker request loads the complete source once.
+The session worker can supply a score validated during import.
 Musical construction and independent reconstruction stay within admitted support.
 """
 from dataclasses import dataclass
@@ -9,6 +9,7 @@ import base64
 import hashlib
 import json
 import time
+import zlib
 
 from composerlint.models import NormalizedScore
 from composerlint.advanced_models import (PASSAGE_POLICY, FEATURES, AdvancedFailure,
@@ -31,9 +32,13 @@ class PreparedSource:
     score: NormalizedScore
     source_context: object
     audit: dict
-    sealed_score: bytes
+    compressed_score: bytes
     code_id: str
     source_snapshot_id: str
+
+    @property
+    def sealed_score(self):
+        return zlib.decompress(self.compressed_score)
 
 
 @dataclass(frozen=True)
@@ -49,7 +54,7 @@ def source_identity(payload,context,audit,code):
         'code_identity':code})
 
 
-def prepare(path,options,timings):
+def prepare(path,options,timings, *, validated_score=None):
     from composerlint.engine.parser import load_score
     from composerlint.engine.source_context import read_source_context
     from composerlint.report_reuse import code_identity
@@ -58,25 +63,29 @@ def prepare(path,options,timings):
         raise AdvancedFailure('unsupported_format','Source-bound Stage 1 supports uncompressed MusicXML; legacy MIDI review is unchanged.')
     if local.is_file() and local.stat().st_size>LIMITS['source_bytes']:
         raise AdvancedFailure('analysis_limit_exceeded','Source exceeds the existing 10 MiB limit.')
-    if local.is_file() and b'<!ENTITY' in local.read_bytes().upper():
+    from composerlint.score_import import read_regular
+    raw = read_regular(local) if local.is_file() else b''
+    if b'<!ENTITY' in raw.upper():
         raise AdvancedFailure('unsupported_analysis_case','XML entity declarations are not supported.')
-    t=time.monotonic();score=load_score(local,options);preflight(score)
+    t=time.monotonic()
+    score = validated_score if validated_score is not None else load_score(local,options)
+    preflight(score)
     timings['loading_normalization_seconds']=time.monotonic()-t
-    raw=local.read_bytes();t=time.monotonic();audit=audit_source(score,raw)
+    t=time.monotonic();audit=audit_source(score,raw)
     context=read_source_context(local,score)
     timings['metadata_audit_seconds']=time.monotonic()-t
     payload=canonical(score.model_dump(mode='json')).encode();code=code_identity()
     identity=source_identity(payload,context,audit,code)
-    timings.update(preparation_seconds=time.monotonic()-started,source_loads=1.0,
+    timings.update(preparation_seconds=time.monotonic()-started,source_loads=float(validated_score is None),
         preparation_runs=1.0,preparation_reused_between_requests=0.0,
         normalized_source_revalidations=0.0,transpose_audit_passes=1.0)
-    return PreparedSource(local,raw,score,context,audit,payload,code,identity)
+    return PreparedSource(local,raw,score,context,audit,zlib.compress(payload, level=1),code,identity)
 
 
 def fresh(source):
-    from composerlint.score_import import verify_import
+    from composerlint.score_import import read_regular, verify_import
     verify_import(source.path)
-    if hashlib.sha256(source.path.read_bytes()).hexdigest()!=source.score.source_sha256:
+    if hashlib.sha256(read_regular(source.path)).hexdigest()!=source.score.source_sha256:
         raise AdvancedFailure('stale_snapshot','Source changed during passage preparation/computation.')
 
 
@@ -275,17 +284,25 @@ def _validate_owned_passage(bundle,timings,*,score,audit,_started=None):
 class PassageGraph(AdvancedGraph):
     def __init__(self,source,snapshot=None):
         self.raw={};self.items={};self.links={};self.parts={};self.measures={}
-        score=source.score.model_dump(mode='json');self.data={'score':score}
-        self.raw.update({'options:effective':score['options'],
+        self.source = source
+        score = source.score
+        options = score.options.model_dump(mode='json')
+        self.raw.update({'options:effective': options,
             'metadata:analysis':{'execution_policy':PASSAGE_POLICY,'global_musical_report_constructed':False},
-            'normalization:score':score['normalization_metadata'],
-            'source:assumptions':{'values':score['assumptions']},'source:limitations':{'values':score['limitations']}})
-        self.index_source(score)
-        self.raw['source:prepared']={'source_sha256':score['source_sha256'],'source_snapshot_id':source.source_snapshot_id,
-            'options_sha256':digest(score['options']),'part_refs':['part:'+p['id'] for p in score['parts']],
-            'part_count':len(score['parts']),'lane_count':sum(len(p['voices']) for p in score['parts']),
-            'event_count':sum(len(p['events']) for p in score['parts']),
-            'measures_by_part':{p['id']:len(p['measures']) for p in score['parts']},
+            'normalization:score':score.normalization_metadata.model_dump(mode='json'),
+            'source:assumptions':{'values':score.assumptions},'source:limitations':{'values':score.limitations}})
+        for part in score.parts:
+            header = part.model_dump(mode='json', exclude={'voices','measures','events','source_segments','chord_groups'})
+            self.parts[part.id] = self.raw['part:'+part.id] = header
+            for voice in part.voices:
+                self.raw['voice:'+voice.id] = voice.model_dump(mode='json', exclude={'regions'})
+            for measure in part.measures:
+                self.measures[measure.id] = self.raw['measure:'+measure.id] = measure.model_dump(mode='json')
+        self.raw['source:prepared']={'source_sha256':score.source_sha256,'source_snapshot_id':source.source_snapshot_id,
+            'options_sha256':digest(options),'part_refs':['part:'+p.id for p in score.parts],
+            'part_count':len(score.parts),'lane_count':sum(len(p.voices) for p in score.parts),
+            'event_count':sum(len(p.events) for p in score.parts),
+            'measures_by_part':{p.id:len(p.measures) for p in score.parts},
             'whole_source_preparation':True,'global_analysis_performed':False}
         self.snapshot=snapshot;self.extra_edges={};self.index_refs=[]
         if snapshot is not None:
@@ -319,8 +336,33 @@ class PassageGraph(AdvancedGraph):
                     self.extra_edges[anchor.id]={anchor.record_ref,'advanced:query'}
                 self.raw['advanced:overview']['expression_ref']='expression:overview'
                 self.index_refs.append('expression:overview')
-        self.extra_edges['source:prepared']={'part:'+p['id'] for p in score['parts']}
-        self.extra_edges['source:prepared'].update('voice:'+v['id'] for p in score['parts'] for v in p['voices'])
+        self.extra_edges['source:prepared']={'part:'+p.id for p in score.parts}
+        self.extra_edges['source:prepared'].update('voice:'+v.id for p in score.parts for v in p.voices)
+
+    def load_record(self, ref):
+        if ref in self.raw:
+            return
+        kind, _, ident = ref.partition(':')
+        field = {'event': 'events', 'segment': 'source_segments', 'chord_group': 'chord_groups'}.get(kind)
+        if not field and kind != 'region':
+            return
+        for part in self.source.score.parts:
+            if not ident.startswith(part.id + ':'):
+                continue
+            records = (getattr(part, field) if field else
+                       (region for voice in part.voices for region in voice.regions))
+            for record in records:
+                if record.id == ident:
+                    self.raw[ref] = record.model_dump(mode='json')
+                    return
+
+    def materialize(self, ref):
+        self.load_record(ref)
+        super().materialize(ref)
+
+    def closure(self, ref):
+        self.load_record(ref.split('#', 1)[0])
+        return super().closure(ref)
 
     def source_rows(self):
         refs=['source:prepared',*['part:'+k for k in self.parts],

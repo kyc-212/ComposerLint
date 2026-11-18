@@ -22,7 +22,20 @@ def create_server():
         if params.name not in TOOL_BY_NAME:
             raise MCPError(INVALID_PARAMS, 'Unknown ComposerLint tool: '+params.name)
         try:
-            result,is_error=dispatch(params.name,params.arguments)
+            args = params.arguments or {}
+            if params.name == 'import_score' or (params.name == 'get_advanced_analysis' and
+                    args.get('execution_policy') == 'source_bound_passage_v1'):
+                from threading import Event
+                from .passage_session import cancel_event
+                cancelled = Event()
+                token = cancel_event.set(cancelled)
+                try:
+                    result, is_error = await asyncio.to_thread(dispatch, params.name, args)
+                finally:
+                    cancelled.set()
+                    cancel_event.reset(token)
+            else:
+                result, is_error = dispatch(params.name, params.arguments)
             payload=result.model_dump(mode='json')
             return types.CallToolResult(is_error=is_error,structured_content=payload,
                 content=[types.TextContent(type='text',text=canonical_payload(result))])

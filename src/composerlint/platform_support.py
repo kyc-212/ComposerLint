@@ -529,7 +529,7 @@ class PipeLimitError(ValueError):
     pass
 
 
-def exchange_line(process, payload, deadline, *, max_bytes=64 * 1024 * 1024):
+def exchange_line(process, payload, deadline, *, max_bytes=64 * 1024 * 1024, cancelled=None):
     """Existing bounded Unix pipe transport; Windows transport is not enabled."""
     require_security('Worker pipe transport')
     for stream in (process.stdin, process.stdout, process.stderr):
@@ -544,7 +544,9 @@ def exchange_line(process, payload, deadline, *, max_bytes=64 * 1024 * 1024):
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise subprocess.TimeoutExpired('owned passage worker', 0)
-            for event, _ in selector.select(remaining):
+            if cancelled is not None and cancelled.is_set():
+                raise InterruptedError('Request cancelled')
+            for event, _ in selector.select(min(remaining, .1) if cancelled is not None else remaining):
                 stream = event.fileobj
                 if stream is process.stdin:
                     offset += os.write(stream.fileno(), payload[offset:])

@@ -1,0 +1,48 @@
+name: Packaged passage analysis
+on:
+  workflow_dispatch:
+  push:
+    branches: ['codex/passage-reuse', 'codex/windows-graphical-ci']
+    paths: ['src/composerlint/**', 'tools/check_passage_reuse.py', 'windows/graphical-setup/package.py', '.github/workflows/passage-reuse.yml']
+  pull_request:
+    paths: ['src/composerlint/**', 'tools/check_passage_reuse.py', 'windows/graphical-setup/package.py', '.github/workflows/passage-reuse.yml']
+permissions:
+  contents: read
+
+jobs:
+  passages:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, ubuntu-24.04, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Assemble Windows runtime from the verified preview and candidate sources
+        if: runner.os == 'Windows'
+        shell: python
+        run: |
+          from io import BytesIO
+          import hashlib, pathlib, runpy, urllib.request
+          package = runpy.run_path('windows/graphical-setup/package.py')
+          url = 'https://github.com/kyc-212/ComposerLint/releases/download/v0.2.0-windows-setup-preview.1/ComposerLint-Graphical-Setup-Windows-x64-preview.zip'
+          with urllib.request.urlopen(url, timeout=60) as response:
+              raw = response.read(32 * 1024**2)
+          assert hashlib.sha256(raw).hexdigest() == '427b5877587695ccbf7f51f76de9e4939d4fb21ac305f608bb04198f52720281'
+          files = package['read_package'](BytesIO(raw))
+          package['overlay_score_runtime'](files)
+          root = pathlib.Path('candidate')
+          for name, data in files.items():
+              path = root / name
+              path.parent.mkdir(parents=True, exist_ok=True)
+              path.write_bytes(data)
+      - if: runner.os == 'Windows'
+        run: python -m pip install ./candidate
+      - if: runner.os != 'Windows'
+        run: python -m pip install .
+      - name: Compare verified passages and measure MCP replies
+        run: python tools/check_passage_reuse.py

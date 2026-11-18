@@ -74,6 +74,9 @@ class MuseScoreFailure(ComposerLintError):
 
 def read_regular(path, limit=MAX_SOURCE):
     try:
+        if sys.platform == 'win32':
+            from .windows_private import read_stable
+            return read_stable(path, limit=limit)[0]
         with host.open_regular(path) as stream:
             before = os.fstat(stream.fileno())
             if not stat.S_ISREG(before.st_mode) or before.st_size > limit:
@@ -85,8 +88,10 @@ def read_regular(path, limit=MAX_SOURCE):
         return data
     except host.UnsupportedPlatformOperation as exc:
         fail(str(exc))
-    except OSError as exc:
-        fail('Import file is missing, unreadable or an unsafe link.')
+    except ComposerLintError:
+        raise
+    except (OSError, ValueError):
+        fail('Import file is missing, oversized, unreadable or an unsafe link.')
 
 
 def sha(data):
@@ -262,6 +267,17 @@ def verify_import(path):
         fail('Import provenance is missing or invalid; import the original again.')
 
 
+def validate_for_reuse(path, fingerprint):
+    from .passage_session import worker
+    from .advanced_models import AdvancedFailure
+
+    try:
+        worker.request({'operation': 'validate_import', 'path': str(path),
+                        'fingerprint': fingerprint})
+    except AdvancedFailure as exc:
+        raise ComposerLintError('parse_failed', exc.reason) from exc
+
+
 def import_score(path):
     try:
         host.local_path_text(path)
@@ -274,11 +290,13 @@ def import_score(path):
     original = read_regular(source)
     if suffix in ('.xml', '.musicxml'):
         verify_import(source); validate_musicxml(original)
-        from composerlint.engine.parser import load_score
-        load_score(source)
+        validate_for_reuse(source, sha(original))
         return ImportResult(original_path=str(source), source_format='musicxml', original_sha256=sha(original),
             working_path=str(source), musicxml_sha256=sha(original), conversion_method='existing_musicxml',
             message='Using your MusicXML score. The original file remains unchanged.')
+    if sys.platform == 'win32':
+        from .windows_score_import import import_compressed_score
+        return import_compressed_score(source, original, suffix)
     entries = archive_entries(original)
     directory = Path(tempfile.mkdtemp(prefix=PREFIX, dir=temporary_parent())).resolve()
     try:
@@ -299,10 +317,11 @@ def import_score(path):
                 failed = exc
             data = read_regular(output); method = 'musescore_cli_musicxml'
         validate_musicxml(data)
-        staging = directory / 'validated.musicxml'; staging.write_bytes(data)
-        from composerlint.engine.parser import load_score
-        normalized = load_score(staging)
         if failed is not None:
+            from composerlint.engine.parser import load_score
+            staging = directory / 'validated.musicxml'
+            staging.write_bytes(data)
+            normalized = load_score(staging)
             from composerlint.import_recovery import verify_music
             evidence = verify_music(entries, data, normalized, xml_root)
             diagnostics_path = directory / 'converter-diagnostics.txt'
@@ -335,6 +354,8 @@ def import_score(path):
                 if item.is_dir(): shutil.rmtree(item)
                 else: item.unlink()
         verify_import(working)
+        if failed is None:
+            validate_for_reuse(working, result.musicxml_sha256)
         return result
     except OSError as exc:
         shutil.rmtree(directory)
