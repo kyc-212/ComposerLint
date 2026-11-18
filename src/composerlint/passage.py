@@ -410,6 +410,10 @@ def project(source,bundle,args,timings,*,_response_overhead=0,_graph=None,_deliv
         end=n
     timings['projection_seconds']=time.monotonic()-started
     result=page(end)
+    # Adding measured timings can push a nearly full page over its budget.
+    while end > start and len(canonical(result.model_dump(mode='json')).encode()) + _response_overhead > args.max_bytes:
+        end -= 1
+        result = page(end)
     if end==start and start<len(rows) or len(canonical(result.model_dump(mode='json')).encode())+_response_overhead>args.max_bytes:
         raise AdvancedFailure('oversized_record','Complete indivisible passage record exceeds the unchanged byte budget.')
     return result
