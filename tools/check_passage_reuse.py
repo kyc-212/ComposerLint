@@ -87,7 +87,8 @@ async def check(path):
                 assert result['timings']['source_loads'] == 0
                 assert baseline['timings']['source_loads'] == (1 if start == 1 else 0)
                 assert result['passage_snapshot_id'] == baseline['passage_snapshot_id']
-                details = {**args, 'section': 'observations', 'expected_passage_snapshot': result['passage_snapshot_id']}
+                details = {**args, 'section': 'observations', 'max_bytes': 32768, 'page_size': 1,
+                           'expected_passage_snapshot': result['passage_snapshot_id']}
                 observed = await reused('get_advanced_analysis', details)
                 reference = await fresh('get_advanced_analysis', details)
                 assert observed['items'] and observed['items'] == reference['items']
