@@ -56,6 +56,10 @@ function Invoke-GraphicalBackend([string]$Python, [string]$Archive) {
                     $reply = Wait-SetupDecision 'choice' $event.plan_id @{ message = $event.message }
                     Write-BackendInput $process $reply
                 }
+                'musescore_plan' {
+                    $reply = Wait-SetupDecision 'musescore_plan' $event.plan_id @{ message = $event.message }
+                    Write-BackendInput $process $reply
+                }
                 'log' { Send-SetupMessage 'log' @{ message = $event.message } }
                 'progress' { Send-SetupMessage 'progress' @{ message = $event.message } }
                 'complete' { $completion = $event }

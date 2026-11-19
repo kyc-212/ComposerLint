@@ -182,6 +182,12 @@ function Show-Request($Event) {
             $ui.Primary.Content = 'Continue'
             [void]$ui.Answer.Focus()
         }
+        'musescore_plan' {
+            $ui.Status.Text = 'Optional MuseScore Studio 4 for MSCZ import'
+            $ui.Details.Text = $Event.message
+            $ui.Primary.Content = 'Install MuseScore'
+            $ui.Back.Content = 'Skip'
+        }
     }
 }
 
@@ -201,7 +207,7 @@ function Reply-Installer([bool]$Approved) {
     if ($Approved -and $event.type -eq 'plan') {
         Show-Step 4 'Install & verify' 'Keep this window open while ComposerLint sets up and checks the private environment.'
     }
-    Set-Busy $(if ($Approved) { 'Continuing with setup...' } else { 'Cancelling at this approval step...' })
+    Set-Busy $(if ($Approved -or $event.type -eq 'musescore_plan') { 'Continuing with setup...' } else { 'Cancelling at this approval step...' })
 }
 
 function Add-Log([string]$Message) {
@@ -223,7 +229,7 @@ function Show-Complete($Result) {
         settings = (ConvertTo-Json -InputObject $settings -Depth 5)
         skills = $Result.skills
     }
-    $ui.Status.Text = 'Private installation verified. Copy these server settings into your client.'
+    $ui.Status.Text = "Private installation verified. Copy these server settings into your client.`n$($Result.musescore_status)"
     $ui.Details.Text = $state.result.settings + "`n`nSkills folder: " + $state.result.skills
     $ui.Details.Visibility = 'Visible'
     $ui.Primary.Content = 'Copy server settings'
@@ -261,7 +267,7 @@ $timer.Add_Tick({
     $event = $null
     for ($count = 0; $count -lt 80 -and $state.session.events.TryDequeue([ref]$event); $count++) {
         switch ($event.type) {
-            { $_ -in 'bootstrap_plan', 'plan', 'choice' } { Show-Request $event }
+            { $_ -in 'bootstrap_plan', 'plan', 'choice', 'musescore_plan' } { Show-Request $event }
             'progress' { $ui.Status.Text = $event.message; Add-Log $event.message }
             'log' { Add-Log $event.message }
             default { $state.terminal = $event }

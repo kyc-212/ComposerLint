@@ -8,6 +8,8 @@ This graphical preview targets 64-bit Windows 11 on a local NTFS drive.
 
 Choose **Full experience** for notation and verified temporary edits, or **Text analysis only** to skip the renderer. Review both installation prompts. Full setup can reuse an approved renderer bundle or find tools for a local build. If a renderer tool is missing, setup explains the pinned portable download and asks for a decision. An optional local folder of reviewed files lets setup check and reuse those present. Missing files still require network access and approval. A changed local file causes setup to stop so you can check it.
 
+Both setup modes support importing MSCZ scores with MuseScore Studio 4. Setup checks for an existing installation and offers the official MuseScore installer when needed. Select **Install MuseScore** to download the verified installer and complete its Windows prompts, or select **Skip** to continue. To use a custom installation, set `COMPOSERLINT_MUSESCORE` to the absolute path of `MuseScore4.exe` in your local ComposerLint server's environment.
+
 After installation, copy the local MCP command and arguments into your AI client. In Full mode copy the supplied server-specific renderer setting. Keep the extracted folder if your client loads Skills from it. ComposerLint setup does not configure your AI client, use system-wide installation, or grant permission to export scores.
 
 The preview supports cancellation during review prompts. During downloads or builds, leave the window open until the current setup operation finishes or the installer reports an error. Review the local log before sharing excerpts because it can show file paths.

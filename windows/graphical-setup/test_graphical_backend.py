@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from GraphicalBackend import Wizard, setup
+from GraphicalBackend import MUSESCORE_ASSET, Wizard, setup
 
 
 def event_stream(text):
@@ -85,8 +85,10 @@ def scenario(tmp_path):
 
     windows = SimpleNamespace(install=install, acquire=acquire, populate=populate)
     native = SimpleNamespace(checked_input=checked_input)
+    musescore = SimpleNamespace(find_musescore=lambda: SimpleNamespace(version='4.7.5'))
     return SimpleNamespace(options=options, windows=windows, native=native, local=local,
-                           acquire_calls=acquire_calls, commits=commits, destination=destination)
+                           musescore=musescore, asset_class=Asset, acquire_calls=acquire_calls,
+                           commits=commits, destination=destination)
 
 
 class ReplyStream:
@@ -102,7 +104,7 @@ class ReplyStream:
 def run(scenario, incoming=None):
     output = io.StringIO()
     wizard = Wizard(incoming or ReplyStream(), output)
-    setup(wizard, scenario.options, scenario.windows, scenario.native)
+    setup(wizard, scenario.options, scenario.windows, scenario.native, scenario.musescore)
     return event_stream(output)
 
 
@@ -114,6 +116,7 @@ def test_reuses_verified_files_and_reports_completed_install(scenario):
     assert scenario.commits == ['reviewed']
     assert Path(events[-1]['renderer']) == scenario.destination / 'renderer.json'
     assert events[-1]['type'] == 'complete'
+    assert '4.7.5 detected' in events[-1]['musescore_status']
 
 
 def test_cancel_does_not_fetch_or_commit(scenario):
@@ -151,3 +154,43 @@ def test_cancelling_an_optional_tool_prompt_ends_the_attempt(scenario):
     scenario.windows.install = choose_tool
     events = run(scenario, io.StringIO())
     assert [item['type'] for item in events] == ['choice', 'cancelled']
+
+
+@pytest.mark.parametrize('decision', ['cancel', 'approve', 'failed-download'])
+def test_musescore_offer_is_optional_and_preserves_verified_setup(scenario, decision, monkeypatch):
+    monkeypatch.setattr('GraphicalBackend.uuid4', lambda: SimpleNamespace(hex='musescore'))
+    output = io.StringIO()
+    replies = [{'action': 'approve', 'plan_id': 'reviewed'},
+               {'action': 'cancel' if decision == 'cancel' else 'approve', 'plan_id': 'musescore'}]
+    wizard = Wizard(io.StringIO(''.join(json.dumps(reply) + '\n' for reply in replies)), output)
+    launched = []
+
+    def acquire(asset):
+        if asset.filename == MUSESCORE_ASSET['filename']:
+            assert scenario.commits == ['reviewed']
+            assert asset.sha256 == MUSESCORE_ASSET['sha256']
+            scenario.acquire_calls.append(asset.filename)
+            if decision == 'failed-download':
+                raise ValueError('Artifact integrity check failed')
+            return b'verified MSI'
+        scenario.acquire_calls.append(asset.filename)
+        return b'checked'
+
+    def launch(asset, data):
+        launched.append(asset.filename)
+        assert data == b'verified MSI'
+        return 0
+
+    scenario.windows.Asset = scenario.asset_class
+    scenario.windows.acquire = acquire
+    scenario.musescore.find_musescore = lambda: SimpleNamespace(version='4.7.5') if launched else None
+    scenario.musescore.launch_installer = launch
+    setup(wizard, scenario.options, scenario.windows, scenario.native, scenario.musescore)
+    events = event_stream(output)
+    offer = next(event for event in events if event['type'] == 'musescore_plan')
+    assert MUSESCORE_ASSET['sha256'] in offer['message']
+    assert (MUSESCORE_ASSET['filename'] in scenario.acquire_calls) == (decision != 'cancel')
+    assert bool(launched) == (decision == 'approve')
+    assert events[-1]['type'] == 'complete'
+    status = {'cancel': 'skipped', 'approve': '4.7.5 detected', 'failed-download': 'ComposerLint setup is complete'}
+    assert status[decision] in events[-1]['musescore_status']

@@ -12,6 +12,13 @@ from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parent
 MAX_MESSAGE = 128 * 1024
+MUSESCORE_ASSET = dict(
+    filename='MuseScore-Studio-4.7.5.260831071-x86_64.msi',
+    url='https://github.com/musescore/MuseScore/releases/download/v4.7.5/'
+        'MuseScore-Studio-4.7.5.260831071-x86_64.msi',
+    sha256='07b0f3292612e2df4c7e0632deb790add51b218f0ee33f7fecaa6111dd279ec6',
+    size=128745472,
+)
 
 
 class SetupCancelled(Exception):
@@ -46,7 +53,7 @@ class Wizard:
         reply = self.read()
         if reply in ({}, {'action': 'cancel', 'plan_id': identity}):
             return None
-        if reply == {'action': 'approve', 'plan_id': identity} and kind == 'plan':
+        if reply == {'action': 'approve', 'plan_id': identity} and kind in ('plan', 'musescore_plan'):
             return 'approve'
         if kind == 'choice' and reply.keys() == {'action', 'plan_id', 'answer'} and (
             reply['action'] == 'answer' and reply['plan_id'] == identity
@@ -67,7 +74,37 @@ class Wizard:
         self.outgoing.flush()
 
 
-def setup(wizard, options, windows, native):
+def prepare_musescore(wizard, windows, musescore):
+    try:
+        converter = musescore.find_musescore()
+        if converter:
+            return f'MuseScore Studio {converter.version} detected for MSCZ import.'
+        asset = windows.Asset(**MUSESCORE_ASSET)
+        message = (f'Download {asset.filename} ({asset.size:,} bytes) from MuseScore and open its '
+                   f'Windows installer? Follow the installer prompts. Windows may ask for permission.\n\n'
+                   f'{asset.url}\nSHA-256: {asset.sha256}')
+        if wizard.ask('musescore_plan', message=message) != 'approve':
+            return 'MuseScore setup skipped. You can install MuseScore Studio 4 later for MSCZ import.'
+        wizard.send('progress', stage='musescore', message='Downloading and verifying the MuseScore installer...')
+        data = windows.acquire(asset)
+        wizard.send('progress', stage='musescore', message='Finish in the MuseScore installer window.')
+        code = musescore.launch_installer(asset, data)
+        if code == 1602:
+            return 'MuseScore installation was cancelled. ComposerLint setup is complete.'
+        if code in (1641, 3010):
+            return 'Windows Installer requested a restart. Restart Windows before trying MSCZ import.'
+        if code != 0:
+            return f'MuseScore setup exited with code {code}. ComposerLint setup is complete.'
+        converter = musescore.find_musescore()
+        if converter:
+            return f'MuseScore Studio {converter.version} detected for MSCZ import.'
+        return 'MuseScore setup completed. Set COMPOSERLINT_MUSESCORE if ComposerLint cannot find it.'
+    except (OSError, RuntimeError, ValueError) as error:
+        wizard.send('log', message=f'MuseScore setup: {error}'[:4096])
+        return 'MuseScore setup could not finish. ComposerLint setup is complete.'
+
+
+def setup(wizard, options, windows, native, musescore):
     mode = options['mode']
     if mode not in ('Full', 'Text'):
         raise ValueError('Choose a supported installer mode.')
@@ -141,6 +178,7 @@ def setup(wizard, options, windows, native):
     if verified is None:
         wizard.send('cancelled')
     else:
+        verified['musescore_status'] = prepare_musescore(wizard, windows, musescore)
         wizard.send('complete', **verified)
 
 
@@ -155,7 +193,7 @@ def main():
         sys.modules[name] = module_from_spec(spec)
         with contextlib.redirect_stdout(wizard):
             setup(wizard, wizard.read(), import_module(f'{name}.windows_setup'),
-                  import_module(f'{name}.windows_renderer_native'))
+                  import_module(f'{name}.windows_renderer_native'), import_module(f'{name}.windows_musescore'))
     except (OSError, RuntimeError, ValueError, KeyError) as error:
         wizard.send('error', message=str(error)[:4096])
         return 1
