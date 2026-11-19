@@ -45,6 +45,8 @@ TOOL_EXECUTABLES = {
 }
 PROOF_DRIVER = ('tools', 'windows_renderer_native', 'prove.py')
 CONTROLS = (PROOF_DRIVER, ('tools', 'ci_windows_mcp.py'),
+            ('tests', 'fixtures', 'basic.musicxml'),
+            ('tests', 'fixtures', 'm3', 'cadence_authentic_end.musicxml'),
             ('tests', 'fixtures', 'v02_m2', 'multipage.musicxml'),
             ('tests', 'fixtures', 'v02_m2', 'grandstaff.musicxml'))
 RESOURCE_SUFFIXES = {'.xml', '.json', '.css', '.svg'}
@@ -444,6 +446,14 @@ def _build(stage, selection, acquire, command, env, confirm, status, *, offline)
     return data
 
 
+def stage_controls(selection, stage):
+    from .windows_setup import _write
+
+    for parts, code in selection.controls:
+        _write(stage, ('work', 'controls', *parts), code)
+    return stage.path / 'work' / 'controls'
+
+
 def install(selection, stage, run_python, acquire, command, env, confirm, status, *, offline):
     from .windows_setup import _write
 
@@ -470,9 +480,7 @@ def install(selection, stage, run_python, acquire, command, env, confirm, status
     _write(stage, (BUNDLE,), raw)
     _write(stage, ('renderer.json',), json.dumps(dict(kind=KIND, package_version=BUILD, files_sha256=manifest),
                                                 sort_keys=True).encode('utf-8'))
-    for parts, code in selection.controls:
-        _write(stage, ('work', 'controls', *parts), code)
-    control = stage.path / 'work' / 'controls'
+    control = stage_controls(selection, stage)
     config = stage.path / 'renderer.json'
     resource = stage.path.joinpath(*TREE)
     runtime = ('runtime', 'Scripts', 'python.exe')

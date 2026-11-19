@@ -16,13 +16,6 @@ import urllib.request
 import xml.etree.ElementTree as ET
 import zipfile
 
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
-
-from composerlint.platform_support import approval_method
-from composerlint.runtime_paths import temporary_parent
-from composerlint.tool_contracts import TOOLS
-
 
 def require(condition, message):
     if not condition:
@@ -86,16 +79,25 @@ def asset(url, route, data=None, *, content_type=None, expected_status=200):
         return body
 
 
-@contextmanager
-def authored_sources(root, original):
+def load_sample_inputs():
+    fixtures = Path(__file__).resolve().parents[1] / 'tests/fixtures'
+    original = (fixtures / 'basic.musicxml').read_bytes()
     compressed = io.BytesIO()
     with zipfile.ZipFile(compressed, 'w') as mxl:
         mxl.writestr('META-INF/container.xml',
                      '<container><rootfiles><rootfile full-path="score.musicxml"/></rootfiles></container>')
         mxl.writestr('score.musicxml', original)
-    files = {'控制 score.musicxml': original, '控制 compressed.mxl': compressed.getvalue(),
-             '控制 cadence.musicxml': (root / 'm3/cadence_authentic_end.musicxml').read_bytes()}
+    return fixtures, {
+        '控制 score.musicxml': original,
+        '控制 compressed.mxl': compressed.getvalue(),
+        '控制 cadence.musicxml': (fixtures / 'm3/cadence_authentic_end.musicxml').read_bytes(),
+    }
+
+
+@contextmanager
+def authored_sources(files):
     if sys.platform == 'win32':
+        from composerlint.runtime_paths import temporary_parent
         from composerlint.windows_install_storage import private_workspace
         from composerlint.windows_workers import SetupProcessCleanupUnconfirmed
         with private_workspace(temporary_parent(), 'cl-mcp-') as stage:
@@ -103,7 +105,7 @@ def authored_sources(root, original):
                 with stage.create((name,)) as stream:
                     stream.write(data)
             try:
-                yield stage.path, files
+                yield stage.path
             except BaseException as error:
                 # The installer owns the outer process job. Let it confirm
                 # termination before rollback removes the probe's files.
@@ -115,18 +117,19 @@ def authored_sources(root, original):
             directory = Path(temporary)
             for name, data in files.items():
                 (directory / name).write_bytes(data)
-            yield directory, files
+            yield directory
 
 
 async def exercise(full):
-    fixtures = Path(__file__).resolve().parents[1] / 'tests/fixtures'
-    original = (fixtures / 'basic.musicxml').read_bytes()
-    with authored_sources(fixtures, original) as (directory, files):
+    fixtures, files = load_sample_inputs()
+    with authored_sources(files) as directory:
         source, archive, harmony = (directory / name for name in files)
         await exercise_stdio(full, source, archive, harmony, fixtures)
         for name, data in files.items():
             require((directory / name).read_bytes() == data, f'Original bytes changed: {name}.')
         if sys.platform == 'win32':
+            from composerlint.platform_support import approval_method
+
             leftovers = sorted(p.name for p in directory.iterdir() if p.name not in files)
             require(not leftovers, f'MCP shutdown left private workspace entries: {leftovers!r}.')
             require(approval_method() is None, 'Native permanent export approval is enabled on Windows.')
@@ -134,6 +137,11 @@ async def exercise(full):
 
 
 async def exercise_stdio(full, source, archive, harmony, unrelated_cwd):
+    from mcp import ClientSession, StdioServerParameters
+    from mcp.client.stdio import stdio_client
+
+    from composerlint.tool_contracts import TOOLS
+
     source_bytes = source.read_bytes()
     source_hash = hashlib.sha256(source_bytes).hexdigest()
     archive_hash = hashlib.sha256(archive.read_bytes()).hexdigest()
