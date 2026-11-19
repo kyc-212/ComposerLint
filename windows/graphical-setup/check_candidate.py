@@ -6,7 +6,7 @@ from importlib.machinery import ModuleSpec
 from importlib.util import module_from_spec
 from io import BytesIO
 from pathlib import Path
-from runpy import run_path
+import subprocess
 import sys
 import tempfile
 from unittest.mock import patch
@@ -51,8 +51,11 @@ def check_staged_samples(root, work):
         selection = native.select(root, work / 'unused-install', stock=None, owner=None,
                                   owner_digest=None, source=None, overrides={}, confirm=lambda _: '')
     controls = native.stage_controls(selection, WorkingFolder(work))
-    verifier = run_path(str(controls / 'tools' / 'ci_windows_mcp.py'))
-    verifier['load_sample_inputs']()
+    subprocess.run(
+        [sys.executable, '-I', '-S', '-B', '-c',
+         "from runpy import run_path; run_path('tools/ci_windows_mcp.py')['load_sample_inputs']()"],
+        cwd=controls, check=True,
+    )
     print('The packaged MCP verifier loaded its samples from the staged working folder.')
 
 
