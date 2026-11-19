@@ -3,14 +3,60 @@ on:
   workflow_dispatch:
   push:
     branches: ['codex/passage-reuse', 'codex/windows-graphical-ci']
-    paths: ['src/composerlint/**', 'tools/check_passage_reuse.py', 'windows/graphical-setup/package.py', '.github/workflows/passage-reuse.yml']
+    paths: &candidate-paths
+      - 'src/composerlint/**'
+      - 'skills/composer-import/**'
+      - 'linux/composerlint.png'
+      - 'tools/check_passage_reuse.py'
+      - 'windows/graphical-setup/**'
+      - '.github/workflows/passage-reuse.yml'
+      - '.github/workflows/composerlint-windows-graphical-smoke.yml'
   pull_request:
-    paths: ['src/composerlint/**', 'tools/check_passage_reuse.py', 'windows/graphical-setup/package.py', '.github/workflows/passage-reuse.yml']
+    paths: *candidate-paths
 permissions:
   contents: read
 
 jobs:
+  build-windows-setup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Check out the pinned standalone terminal installer source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: kyc-212/ComposerLint
+          ref: bc45ca6bfce83627c932c77f725a0114f9fb0a3e # codex/windows-terminal-source
+          path: terminal-source
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build the terminal ZIP and graphical preview
+        shell: bash
+        run: |
+          terminal_zip="$RUNNER_TEMP/terminal/ComposerLint-Setup-Windows-x64-Full.zip"
+          python -B terminal-source/tools/package_windows_full.py --standalone \
+            --commit "$(git -C terminal-source rev-parse HEAD)" --output "$(dirname "$terminal_zip")"
+          read -r digest filename < "$terminal_zip.sha256"
+          python -B windows/graphical-setup/package.py "$terminal_zip" --sha256 "$digest" --output candidate
+      - name: Check the MCP verifier can load its samples from installer staging
+        run: python -B windows/graphical-setup/check_candidate.py candidate/ComposerLint-Graphical-Setup-Windows-x64-preview.zip
+      - name: Share the candidate ZIP and checksum with test jobs
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-setup-candidate
+          path: candidate/
+          if-no-files-found: error
+
+  windows-setup:
+    needs: build-windows-setup
+    uses: ./.github/workflows/composerlint-windows-graphical-smoke.yml
+
   passages:
+    needs: build-windows-setup
     strategy:
       fail-fast: false
       matrix:
@@ -19,30 +65,39 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Assemble Windows runtime from the verified preview and candidate sources
+      - name: Download the exact Windows ZIP built for this run
         if: runner.os == 'Windows'
-        shell: python
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: windows-setup-candidate
+          path: candidate
+      - name: Verify and install the packaged Windows runtime
+        if: runner.os == 'Windows'
         run: |
-          from io import BytesIO
-          import hashlib, pathlib, runpy, urllib.request
-          package = runpy.run_path('windows/graphical-setup/package.py')
-          url = 'https://github.com/kyc-212/ComposerLint/releases/download/v0.2.0-windows-setup-preview.1/ComposerLint-Graphical-Setup-Windows-x64-preview.zip'
-          with urllib.request.urlopen(url, timeout=60) as response:
-              raw = response.read(32 * 1024**2)
-          assert hashlib.sha256(raw).hexdigest() == '427b5877587695ccbf7f51f76de9e4939d4fb21ac305f608bb04198f52720281'
-          files = package['read_package'](BytesIO(raw))
-          package['overlay_score_runtime'](files)
-          root = pathlib.Path('candidate')
-          for name, data in files.items():
-              path = root / name
-              path.parent.mkdir(parents=True, exist_ok=True)
-              path.write_bytes(data)
-      - if: runner.os == 'Windows'
-        run: python -m pip install ./candidate
+          python -B windows/graphical-setup/check_candidate.py candidate/ComposerLint-Graphical-Setup-Windows-x64-preview.zip --extract packaged
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m pip install ./packaged
       - if: runner.os != 'Windows'
         run: python -m pip install .
       - name: Compare verified passages and measure MCP replies
         run: python tools/check_passage_reuse.py
+
+  retain-tested-windows-setup:
+    needs: [windows-setup, passages]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: windows-setup-candidate
+          path: tested
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-setup-tested
+          path: tested/
+          if-no-files-found: error

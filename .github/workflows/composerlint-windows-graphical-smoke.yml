@@ -1,29 +1,46 @@
 name: ComposerLint Windows graphical smoke test
 
 on:
-  push:
-    branches:
-      - codex/windows-graphical-ci
-    paths:
-      - '.github/workflows/composerlint-windows-graphical-smoke.yml'
-      - 'windows/graphical-setup/**'
+  workflow_call:
 
 permissions:
   contents: read
 
 jobs:
   graphical-smoke:
-    if: github.repository == 'kyc-212/ComposerLint'
     runs-on: windows-2025
-    timeout-minutes: 8
+    timeout-minutes: 85
     steps:
       - name: Check out the candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: x64
+      - name: Download the exact Windows ZIP built for this run
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: windows-setup-candidate
+          path: candidate
+      - name: Verify and extract the candidate
+        shell: pwsh
+        run: python -B windows/graphical-setup/check_candidate.py candidate/ComposerLint-Graphical-Setup-Windows-x64-preview.zip --extract packaged
       - name: Check the native wizard layout and approval transport
         shell: powershell
         run: |
-          & "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -STA -File windows\graphical-setup\Test-WindowsWizard.ps1
+          & "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -STA -File windows\graphical-setup\Test-WindowsWizard.ps1 -PackageRoot (Resolve-Path packaged)
           exit $LASTEXITCODE
+      - name: Run Full experience with a locally built renderer
+        shell: pwsh
+        timeout-minutes: 78
+        run: python -B windows/graphical-setup/check_full_setup.py packaged windows-full-setup.log
+      - name: Save the Full experience setup log
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-full-setup-failure-log
+          path: windows-full-setup.log
+          if-no-files-found: ignore

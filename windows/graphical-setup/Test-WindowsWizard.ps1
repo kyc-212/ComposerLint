@@ -1,4 +1,6 @@
 #requires -Version 5.1
+param([string]$PackageRoot = $PSScriptRoot)
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 if ($PSVersionTable.PSEdition -ne 'Desktop' -or
@@ -15,7 +17,7 @@ function Get-CheckedScript([string]$Name) {
     $tokens = $null
     $errors = $null
     $syntax = [Management.Automation.Language.Parser]::ParseFile(
-        (Join-Path $PSScriptRoot $Name), [ref]$tokens, [ref]$errors)
+        (Join-Path $PackageRoot $Name), [ref]$tokens, [ref]$errors)
     if ($errors.Count) { throw ($errors -join [Environment]::NewLine) }
     return $syntax
 }
@@ -60,7 +62,7 @@ $syntax = Get-CheckedScript 'SetupGUI.ps1'
 Write-Host 'Windows PowerShell 5.1 parsed both wizard scripts.'
 
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
-$markup = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'SetupGUI.xaml'))
+$markup = [IO.File]::ReadAllText((Join-Path $PackageRoot 'SetupGUI.xaml'))
 $window = [Windows.Markup.XamlReader]::Parse($markup)
 try {
     Assert-Check ($window -is [Windows.Window]) 'Wizard markup did not create a WPF window.'
@@ -94,7 +96,7 @@ try {
     Write-Host 'All three polished icons rendered at 100% and 150% scaling at both window sizes.'
 } finally { $window.Close() }
 
-. (Join-Path $PSScriptRoot 'GraphicalWorker.ps1')
+. (Join-Path $PackageRoot 'GraphicalWorker.ps1')
 $GraphicalSession = @{
     events = [Collections.Concurrent.ConcurrentQueue[object]]::new()
     replies = [Collections.Concurrent.BlockingCollection[object]]::new()
